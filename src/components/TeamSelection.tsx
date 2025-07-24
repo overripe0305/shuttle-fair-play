@@ -1,34 +1,34 @@
 import { useState } from 'react';
-import { Player } from '@/types/player';
+import { GameMatch, getLevelDisplay } from '@/types/player';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Zap } from 'lucide-react';
 
 interface TeamSelectionProps {
-  onSelectTeam: () => Player[];
-  onStartGame: (players: Player[]) => void;
+  onSelectMatch: () => GameMatch | null;
+  onStartGame: (match: GameMatch) => void;
 }
 
 const levelColors = {
-  A: 'bg-level-a text-white',
-  B: 'bg-level-b text-white',
-  C: 'bg-level-c text-white',
-  D: 'bg-level-d text-white',
+  'Newbie': 'bg-level-newbie text-white',
+  'Beginner': 'bg-level-beginner text-white',
+  'Intermediate': 'bg-level-intermediate text-white',
+  'Advance': 'bg-level-advance text-white',
 };
 
-export function TeamSelection({ onSelectTeam, onStartGame }: TeamSelectionProps) {
-  const [selectedTeam, setSelectedTeam] = useState<Player[]>([]);
+export function TeamSelection({ onSelectMatch, onStartGame }: TeamSelectionProps) {
+  const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
 
-  const handleSelectTeam = () => {
-    const team = onSelectTeam();
-    setSelectedTeam(team);
+  const handleSelectMatch = () => {
+    const match = onSelectMatch();
+    setSelectedMatch(match);
   };
 
   const handleStartGame = () => {
-    if (selectedTeam.length === 4) {
-      onStartGame(selectedTeam);
-      setSelectedTeam([]);
+    if (selectedMatch) {
+      onStartGame(selectedMatch);
+      setSelectedMatch(null);
     }
   };
 
@@ -43,29 +43,62 @@ export function TeamSelection({ onSelectTeam, onStartGame }: TeamSelectionProps)
         </CardHeader>
         <CardContent className="space-y-4">
           <Button 
-            onClick={handleSelectTeam}
+            onClick={handleSelectMatch}
             size="lg"
             className="w-full"
           >
             <Users className="h-4 w-4 mr-2" />
-            Pick Fair Team
+            Pick Fair Match
           </Button>
           
-          {selectedTeam.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="font-semibold">Selected Team:</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {selectedTeam.map((player) => (
-                  <div 
-                    key={player.id} 
-                    className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                  >
-                    <span className="font-medium truncate">{player.name}</span>
-                    <Badge className={levelColors[player.level]} variant="secondary">
-                      {player.level}
-                    </Badge>
-                  </div>
-                ))}
+          {selectedMatch && (
+            <div className="space-y-4">
+              <h3 className="font-semibold">Selected Match:</h3>
+              
+              {/* Team 1 */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">
+                  Team 1 ({selectedMatch.pair1.pairType} - Avg: {selectedMatch.pair1.averageLevel})
+                </div>
+                <div className="space-y-1">
+                  {selectedMatch.pair1.players.map((player) => (
+                    <div 
+                      key={player.id} 
+                      className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium truncate">{player.name}</span>
+                        <span className="text-xs text-muted-foreground">{getLevelDisplay(player.level)}</span>
+                      </div>
+                      <Badge className={levelColors[player.level.major]} variant="secondary">
+                        {player.level.bracket}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Team 2 */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">
+                  Team 2 ({selectedMatch.pair2.pairType} - Avg: {selectedMatch.pair2.averageLevel})
+                </div>
+                <div className="space-y-1">
+                  {selectedMatch.pair2.players.map((player) => (
+                    <div 
+                      key={player.id} 
+                      className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium truncate">{player.name}</span>
+                        <span className="text-xs text-muted-foreground">{getLevelDisplay(player.level)}</span>
+                      </div>
+                      <Badge className={levelColors[player.level.major]} variant="secondary">
+                        {player.level.bracket}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
               </div>
               
               <Button 

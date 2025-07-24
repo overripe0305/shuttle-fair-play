@@ -53,10 +53,10 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				level: {
-					a: 'hsl(var(--level-a))',
-					b: 'hsl(var(--level-b))',
-					c: 'hsl(var(--level-c))',
-					d: 'hsl(var(--level-d))'
+					newbie: 'hsl(var(--level-newbie))',
+					beginner: 'hsl(var(--level-beginner))',
+					intermediate: 'hsl(var(--level-intermediate))',
+					advance: 'hsl(var(--level-advance))'
 				},
 				status: {
 					available: 'hsl(var(--status-available))',

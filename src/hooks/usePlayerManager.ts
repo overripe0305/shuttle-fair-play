@@ -1,19 +1,27 @@
 import { useState, useCallback } from 'react';
-import { Player, Game, PlayerLevel } from '@/types/player';
+import { 
+  Player, 
+  Game, 
+  PlayerLevel, 
+  GamePair, 
+  GameMatch, 
+  PairType,
+  getBracketFromMajorSub 
+} from '@/types/player';
 import { toast } from '@/hooks/use-toast';
 
 // Sample players for demo
 const samplePlayers: Player[] = [
-  { id: '1', name: 'Alice Chen', eligible: true, gamesPlayed: 2, status: 'Available', level: 'A' },
-  { id: '2', name: 'Bob Smith', eligible: true, gamesPlayed: 1, status: 'Available', level: 'B' },
-  { id: '3', name: 'Charlie Wong', eligible: true, gamesPlayed: 3, status: 'Available', level: 'C' },
-  { id: '4', name: 'Diana Lee', eligible: true, gamesPlayed: 0, status: 'Available', level: 'D' },
-  { id: '5', name: 'Eva Martinez', eligible: true, gamesPlayed: 2, status: 'Available', level: 'A' },
-  { id: '6', name: 'Frank Johnson', eligible: true, gamesPlayed: 1, status: 'Available', level: 'B' },
-  { id: '7', name: 'Grace Liu', eligible: true, gamesPlayed: 0, status: 'Available', level: 'C' },
-  { id: '8', name: 'Henry Davis', eligible: true, gamesPlayed: 4, status: 'Available', level: 'D' },
-  { id: '9', name: 'Iris Kim', eligible: true, gamesPlayed: 1, status: 'Available', level: 'B' },
-  { id: '10', name: 'Jack Thompson', eligible: true, gamesPlayed: 2, status: 'Available', level: 'C' },
+  { id: '1', name: 'Alice Chen', eligible: true, gamesPlayed: 2, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 2, major: 'Beginner', sub: 'Mid' } },
+  { id: '2', name: 'Bob Smith', eligible: true, gamesPlayed: 1, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 4, major: 'Intermediate', sub: 'Low' } },
+  { id: '3', name: 'Charlie Wong', eligible: true, gamesPlayed: 3, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 5, major: 'Intermediate', sub: 'Mid' } },
+  { id: '4', name: 'Diana Lee', eligible: true, gamesPlayed: 0, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 1, major: 'Beginner', sub: 'Low' } },
+  { id: '5', name: 'Eva Martinez', eligible: true, gamesPlayed: 2, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 7, major: 'Advance', sub: 'Low' } },
+  { id: '6', name: 'Frank Johnson', eligible: true, gamesPlayed: 1, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 3, major: 'Beginner', sub: 'High' } },
+  { id: '7', name: 'Grace Liu', eligible: true, gamesPlayed: 0, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 6, major: 'Intermediate', sub: 'High' } },
+  { id: '8', name: 'Henry Davis', eligible: true, gamesPlayed: 4, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 8, major: 'Advance', sub: 'Mid' } },
+  { id: '9', name: 'Iris Kim', eligible: true, gamesPlayed: 1, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 0, major: 'Newbie' } },
+  { id: '10', name: 'Jack Thompson', eligible: true, gamesPlayed: 2, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 9, major: 'Advance', sub: 'High' } },
 ];
 
 export function usePlayerManager() {
@@ -21,7 +29,40 @@ export function usePlayerManager() {
   const [games, setGames] = useState<Game[]>([]);
   const [gameCounter, setGameCounter] = useState(1);
 
-  const selectFairTeam = useCallback((): Player[] => {
+  const createPair = (player1: Player, player2: Player): GamePair => {
+    const levelDiff = Math.abs(player1.level.bracket - player2.level.bracket);
+    const pairType: PairType = levelDiff <= 1 ? 'Balanced' : 'Mixed';
+    const averageLevel = (player1.level.bracket + player2.level.bracket) / 2;
+    
+    return {
+      players: [player1, player2],
+      averageLevel,
+      pairType
+    };
+  };
+
+  const canPairMatch = (pair1: GamePair, pair2: GamePair): boolean => {
+    const avgDiff = Math.abs(pair1.averageLevel - pair2.averageLevel);
+    
+    // Average level difference must be <= 0.5
+    if (avgDiff > 0.5) return false;
+    
+    // Check pairing type priority rules
+    if (pair1.pairType === 'Balanced' && pair2.pairType === 'Balanced') return true;
+    if (pair1.pairType === 'Mixed' && pair2.pairType === 'Mixed') return true;
+    
+    // Balanced vs Mixed - mixed should have higher or equal average for balance
+    if (pair1.pairType === 'Balanced' && pair2.pairType === 'Mixed') {
+      return pair2.averageLevel >= pair1.averageLevel;
+    }
+    if (pair1.pairType === 'Mixed' && pair2.pairType === 'Balanced') {
+      return pair1.averageLevel >= pair2.averageLevel;
+    }
+    
+    return true;
+  };
+
+  const selectFairMatch = useCallback((): GameMatch | null => {
     // Filter eligible and available players
     const availablePlayers = players.filter(
       p => p.eligible && p.status === 'Available'
@@ -30,68 +71,79 @@ export function usePlayerManager() {
     if (availablePlayers.length < 4) {
       toast({
         title: "Not enough players",
-        description: "Need at least 4 available players to form a team.",
+        description: "Need at least 4 available players to form a match.",
         variant: "destructive"
       });
-      return [];
+      return null;
     }
 
-    // Sort by games played (ascending), then by name (alphabetical)
+    // Sort by adjusted games played (games + penalty/bonus), then by name
     const sortedPlayers = [...availablePlayers].sort((a, b) => {
-      if (a.gamesPlayed !== b.gamesPlayed) {
-        return a.gamesPlayed - b.gamesPlayed;
+      const aAdjusted = a.gamesPlayed + a.gamePenaltyBonus;
+      const bAdjusted = b.gamesPlayed + b.gamePenaltyBonus;
+      if (aAdjusted !== bAdjusted) {
+        return aAdjusted - bAdjusted;
       }
       return a.name.localeCompare(b.name);
     });
 
-    // Apply team selection rules
-    const selectedPlayers: Player[] = [];
-    const levelCounts: Record<PlayerLevel, number> = { A: 0, B: 0, C: 0, D: 0 };
-    const hasLevelA = sortedPlayers.some(p => p.level === 'A');
-    const hasLevelD = sortedPlayers.some(p => p.level === 'D');
-
-    for (const player of sortedPlayers) {
-      if (selectedPlayers.length >= 4) break;
-
-      // Check level count limit (max 2 per level)
-      if (levelCounts[player.level] >= 2) continue;
-
-      // Check A-D mixing rule
-      if (player.level === 'A' && selectedPlayers.some(p => p.level === 'D')) continue;
-      if (player.level === 'D' && selectedPlayers.some(p => p.level === 'A')) continue;
-
-      selectedPlayers.push(player);
-      levelCounts[player.level]++;
+    // Try to find valid pairs and matches
+    for (let i = 0; i < sortedPlayers.length - 3; i++) {
+      for (let j = i + 1; j < sortedPlayers.length - 2; j++) {
+        const pair1 = createPair(sortedPlayers[i], sortedPlayers[j]);
+        
+        // Skip if mixed pair has too large level difference (>3)
+        if (pair1.pairType === 'Mixed' && 
+            Math.abs(pair1.players[0].level.bracket - pair1.players[1].level.bracket) > 3) {
+          continue;
+        }
+        
+        for (let k = j + 1; k < sortedPlayers.length - 1; k++) {
+          for (let l = k + 1; l < sortedPlayers.length; l++) {
+            const pair2 = createPair(sortedPlayers[k], sortedPlayers[l]);
+            
+            // Skip if mixed pair has too large level difference (>3)
+            if (pair2.pairType === 'Mixed' && 
+                Math.abs(pair2.players[0].level.bracket - pair2.players[1].level.bracket) > 3) {
+              continue;
+            }
+            
+            if (canPairMatch(pair1, pair2)) {
+              return { pair1, pair2 };
+            }
+          }
+        }
+      }
     }
 
-    if (selectedPlayers.length < 4) {
-      toast({
-        title: "Cannot form fair team",
-        description: "Unable to form a team of 4 players with current constraints.",
-        variant: "destructive"
-      });
-      return [];
-    }
-
-    return selectedPlayers;
+    toast({
+      title: "Cannot form fair match",
+      description: "Unable to form a balanced match with current players.",
+      variant: "destructive"
+    });
+    return null;
   }, [players]);
 
-  const startGame = useCallback((selectedPlayers: Player[]) => {
-    if (selectedPlayers.length !== 4) return;
-
+  const startGame = useCallback((match: GameMatch) => {
+    const allPlayers = [...match.pair1.players, ...match.pair2.players];
+    
     // Create new game
     const newGame: Game = {
       id: Date.now().toString(),
-      players: selectedPlayers,
+      match,
       gameNumber: gameCounter,
       timestamp: new Date(),
       completed: false
     };
 
-    // Update player statuses
+    // Update player statuses and match history
     setPlayers(prev => prev.map(player => {
-      if (selectedPlayers.some(sp => sp.id === player.id)) {
-        return { ...player, status: 'In progress' as const };
+      if (allPlayers.some(sp => sp.id === player.id)) {
+        return { 
+          ...player, 
+          status: 'In progress' as const,
+          matchHistory: [...player.matchHistory, newGame.id]
+        };
       }
       return player;
     }));
@@ -100,15 +152,18 @@ export function usePlayerManager() {
     setGames(prev => [newGame, ...prev]);
     setGameCounter(prev => prev + 1);
 
+    const playerNames = allPlayers.map(p => p.name).join(', ');
     toast({
       title: "Game started!",
-      description: `Game #${gameCounter} with ${selectedPlayers.map(p => p.name).join(', ')}`,
+      description: `Game #${gameCounter} with ${playerNames}`,
     });
   }, [gameCounter]);
 
   const markGameDone = useCallback((gameId: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
+
+    const allPlayers = [...game.match.pair1.players, ...game.match.pair2.players];
 
     // Update game status
     setGames(prev => prev.map(g => 
@@ -117,7 +172,7 @@ export function usePlayerManager() {
 
     // Update players: increment games played and set to Available
     setPlayers(prev => prev.map(player => {
-      if (game.players.some(gp => gp.id === player.id)) {
+      if (allPlayers.some(gp => gp.id === player.id)) {
         return {
           ...player,
           status: 'Available' as const,
@@ -151,7 +206,9 @@ export function usePlayerManager() {
       name,
       eligible: true,
       gamesPlayed: 0,
+      gamePenaltyBonus: 0,
       status: 'Available',
+      matchHistory: [],
       level
     };
 
@@ -159,7 +216,7 @@ export function usePlayerManager() {
     
     toast({
       title: "Player added",
-      description: `${name} (Level ${level}) added to the roster.`,
+      description: `${name} added to the roster.`,
     });
   }, []);
 
@@ -181,7 +238,7 @@ export function usePlayerManager() {
   return {
     players,
     games,
-    selectFairTeam,
+    selectFairMatch,
     startGame,
     markGameDone,
     resetAllPlayers,

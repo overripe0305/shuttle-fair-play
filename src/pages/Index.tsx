@@ -17,13 +17,13 @@ import {
   Filter
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
-import { PlayerLevel } from '@/types/player';
+import { MajorLevel } from '@/types/player';
 
 const Index = () => {
   const {
     players,
     games,
-    selectFairTeam,
+    selectFairMatch,
     startGame,
     markGameDone,
     resetAllPlayers,
@@ -32,11 +32,11 @@ const Index = () => {
   } = usePlayerManager();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [levelFilter, setLevelFilter] = useState<PlayerLevel | 'All'>('All');
+  const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
 
   const filteredPlayers = players.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = levelFilter === 'All' || player.level === levelFilter;
+    const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
     return matchesSearch && matchesLevel;
   });
 
@@ -118,7 +118,7 @@ const Index = () => {
                     >
                       All
                     </Button>
-                    {(['A', 'B', 'C', 'D'] as PlayerLevel[]).map(level => (
+                    {(['Newbie', 'Beginner', 'Intermediate', 'Advance'] as MajorLevel[]).map(level => (
                       <Button
                         key={level}
                         variant={levelFilter === level ? 'default' : 'outline'}
@@ -126,7 +126,7 @@ const Index = () => {
                         onClick={() => setLevelFilter(level)}
                         className={levelFilter === level ? 'text-white' : ''}
                       >
-                        Level {level}
+                        {level}
                       </Button>
                     ))}
                   </div>
@@ -150,7 +150,7 @@ const Index = () => {
           {/* Center Panel - Team Selection */}
           <div className="lg:col-span-1">
             <TeamSelection 
-              onSelectTeam={selectFairTeam}
+              onSelectMatch={selectFairMatch}
               onStartGame={startGame}
             />
           </div>

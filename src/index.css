@@ -34,11 +34,11 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 142 76% 36%;
 
-    /* Skill Level Colors */
-    --level-a: 0 84% 60%;
-    --level-b: 35 91% 65%;
-    --level-c: 142 76% 36%;
-    --level-d: 217 91% 60%;
+    /* Major level colors */
+    --level-newbie: 220 14% 70%;
+    --level-beginner: 45 93% 65%;
+    --level-intermediate: 142 76% 45%;
+    --level-advance: 217 91% 60%;
 
     /* Game Status Colors */
     --status-available: 142 76% 36%;
