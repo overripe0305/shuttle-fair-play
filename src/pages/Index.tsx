@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Link } from "react-router-dom";
 import { 
   Users, 
   Trophy, 
@@ -74,6 +75,12 @@ const Index = () => {
               </div>
               
               <div className="flex gap-2">
+                <Link to="/players">
+  <Button variant="default">
+    Manage Players
+  </Button>
+</Link>
+
                 <AddPlayerDialog onAddPlayer={addPlayer} />
                 <Button variant="outline" onClick={resetAllPlayers}>
                   <RotateCcw className="h-4 w-4 mr-2" />
