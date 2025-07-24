@@ -52,6 +52,17 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				level: {
+					a: 'hsl(var(--level-a))',
+					b: 'hsl(var(--level-b))',
+					c: 'hsl(var(--level-c))',
+					d: 'hsl(var(--level-d))'
+				},
+				status: {
+					available: 'hsl(var(--status-available))',
+					'in-progress': 'hsl(var(--status-in-progress))',
+					done: 'hsl(var(--status-done))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
