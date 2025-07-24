@@ -218,5 +218,22 @@ const Index = () => {
     </div>
   );
 };
+// src/pages/Index.tsx
+import { Link } from "react-router-dom";
+
+export default function Index() {
+  return (
+    <div className="p-4">
+      <div className="flex justify-end mb-4">
+        <Link to="/players">
+          <button className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">
+            Manage Players
+          </button>
+        </Link>
+      </div>
+      {/* ...rest of your homepage */}
+    </div>
+  );
+}
 
 export default Index;
