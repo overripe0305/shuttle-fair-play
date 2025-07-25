@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 // src/pages/PlayerManagement.tsx
 const PlayerManagement = () => (
   <div className="p-4">
