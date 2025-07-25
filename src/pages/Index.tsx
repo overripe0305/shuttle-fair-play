@@ -46,6 +46,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Link to="/">
+  <button className="mb-4 text-blue-600 underline hover:text-blue-800 transition-colors">
+    ← Back to Home
+  </button>
+</Link>
       {/* Header */}
       <header className="bg-card border-b">
         <div className="container mx-auto px-6 py-4">
