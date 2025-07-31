@@ -3,11 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import PlayerManagement from "./pages/PlayerManagement";
-// ...inside <Routes>
-<Route path="/players" element={<PlayerManagement />} />
+import EnhancedPlayerManagement from "./pages/EnhancedPlayerManagement";
+import CreateEvent from "./pages/CreateEvent";
+import EventDetails from "./pages/EventDetails";
 
 const queryClient = new QueryClient();
 
@@ -17,11 +18,15 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-<Routes>
-  <Route path="/" element={<Index />} />
-  <Route path="/players" element={<PlayerManagement />} />
-  <Route path="*" element={<NotFound />} />
-</Routes>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/app" element={<Index />} />
+          <Route path="/players" element={<EnhancedPlayerManagement />} />
+          <Route path="/create-event" element={<CreateEvent />} />
+          <Route path="/event/:eventId" element={<EventDetails />} />
+          <Route path="/event/:eventId/play" element={<Index />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
 
       </BrowserRouter>
     </TooltipProvider>
