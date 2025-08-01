@@ -260,7 +260,7 @@ const Index = () => {
           {/* Center Panel - Team Selection */}
           <div className="lg:col-span-1">
             <TeamSelection 
-              onSelectMatch={selectFairMatch}
+              onSelectMatch={() => selectFairMatch(eventPlayers)}
               onStartGame={startGame}
               onReplacePlayer={replacePlayerInTeam}
             />

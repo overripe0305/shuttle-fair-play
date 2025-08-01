@@ -49,9 +49,12 @@ export function usePlayerManager() {
     return true;
   };
 
-  const selectFairMatch = useCallback((): GameMatch | null => {
+  const selectFairMatch = useCallback((eventPlayers?: any[]): GameMatch | null => {
+    // Use provided players or fall back to local players state
+    const playersToUse = eventPlayers || players;
+    
     // Filter eligible and available players
-    const availablePlayers = players.filter(
+    const availablePlayers = playersToUse.filter(
       p => p.eligible && p.status === 'Available'
     );
 
