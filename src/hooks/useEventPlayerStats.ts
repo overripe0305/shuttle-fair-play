@@ -18,21 +18,25 @@ export const useEventPlayerStats = (eventId?: string) => {
       
       // Set up real-time subscription for games table
       const channel = supabase
-        .channel('games-changes')
+        .channel(`event-games-${eventId}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
           table: 'games',
           filter: `event_id=eq.${eventId}`
         }, (payload) => {
-          console.log('Game change detected:', payload);
-          loadEventPlayerStats();
+          console.log('Event game change detected:', payload);
+          // Add a small delay to ensure database is consistent
+          setTimeout(() => {
+            loadEventPlayerStats();
+          }, 100);
         })
         .subscribe((status) => {
-          console.log('Real-time subscription status:', status);
+          console.log('Event stats subscription status:', status);
         });
 
       return () => {
+        console.log('Cleaning up event stats subscription');
         supabase.removeChannel(channel);
       };
     }

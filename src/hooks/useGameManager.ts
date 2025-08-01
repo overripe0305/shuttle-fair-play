@@ -28,21 +28,25 @@ export function useGameManager(eventId?: string) {
       
       // Set up real-time subscription
       const channel = supabase
-        .channel('games-changes')
+        .channel(`active-games-${eventId}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
           table: 'games',
           filter: `event_id=eq.${eventId}`
         }, (payload) => {
-          console.log('Real-time game update:', payload);
-          loadActiveGames();
+          console.log('Active games real-time update:', payload);
+          // Add a small delay to ensure database is consistent
+          setTimeout(() => {
+            loadActiveGames();
+          }, 100);
         })
         .subscribe((status) => {
-          console.log('Games subscription status:', status);
+          console.log('Active games subscription status:', status);
         });
 
       return () => {
+        console.log('Cleaning up active games subscription');
         supabase.removeChannel(channel);
       };
     }
