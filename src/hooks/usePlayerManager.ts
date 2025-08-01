@@ -82,6 +82,9 @@ export function usePlayerManager() {
       return a.name.localeCompare(b.name);
     });
 
+    // Collect all valid matches instead of returning the first one
+    const validMatches: GameMatch[] = [];
+
     // Try to find valid pairs and matches
     for (let i = 0; i < sortedPlayers.length - 3; i++) {
       for (let j = i + 1; j < sortedPlayers.length - 2; j++) {
@@ -104,19 +107,25 @@ export function usePlayerManager() {
             }
             
             if (canPairMatch(pair1, pair2)) {
-              return { pair1, pair2 };
+              validMatches.push({ pair1, pair2 });
             }
           }
         }
       }
     }
 
-    toast({
-      title: "Cannot form fair match",
-      description: "Unable to form a balanced match with current players.",
-      variant: "destructive"
-    });
-    return null;
+    if (validMatches.length === 0) {
+      toast({
+        title: "Cannot form fair match",
+        description: "Unable to form a balanced match with current players.",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    // Randomly select from valid matches to ensure variety
+    const randomIndex = Math.floor(Math.random() * validMatches.length);
+    return validMatches[randomIndex];
   }, [players]);
 
   const startGame = useCallback((match: GameMatch) => {

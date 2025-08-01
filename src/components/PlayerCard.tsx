@@ -2,6 +2,8 @@ import { Player, getLevelDisplay } from '@/types/player';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface PlayerCardProps {
   player: Player;
@@ -23,6 +25,34 @@ const statusColors = {
 };
 
 export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
+  const [idleTime, setIdleTime] = useState('0m');
+  const [idleStartTime] = useState(() => new Date().getTime());
+
+  // Calculate idle time for available players
+  useEffect(() => {
+    if (player.status !== 'Available') {
+      setIdleTime('');
+      return;
+    }
+
+    const updateIdleTime = () => {
+      const now = new Date().getTime();
+      const idleMinutes = Math.floor((now - idleStartTime) / 60000);
+      
+      if (idleMinutes < 60) {
+        setIdleTime(`${idleMinutes}m`);
+      } else {
+        const hours = Math.floor(idleMinutes / 60);
+        const remainingMinutes = idleMinutes % 60;
+        setIdleTime(`${hours}h ${remainingMinutes}m`);
+      }
+    };
+
+    updateIdleTime();
+    const interval = setInterval(updateIdleTime, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [player.status, idleStartTime]);
   return (
     <Card 
       className={cn(
@@ -40,6 +70,13 @@ export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
             {player.status}
           </Badge>
         </div>
+        
+        {player.status === 'Available' && idleTime && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+            <Clock className="h-3 w-3" />
+            <span>Idle: {idleTime}</span>
+          </div>
+        )}
         
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground">
