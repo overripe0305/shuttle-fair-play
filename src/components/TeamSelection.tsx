@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Zap, UserX, Play, Clock } from 'lucide-react';
+import { Users, Zap, UserX, Play, Clock, Search } from 'lucide-react';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
 
 interface TeamSelectionProps {
@@ -34,6 +35,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
     open: boolean;
     playerToReplace?: any;
   }>({ open: false });
+  const [searchTerm, setSearchTerm] = useState('');
   
   const { waitingMatches, addWaitingMatch, startWaitingMatch } = useWaitingMatchManager(eventId);
 
@@ -77,6 +79,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
     
     onReplacePlayer(substitutionDialog.playerToReplace.id, newPlayerId);
     setSubstitutionDialog({ open: false });
+    setSearchTerm('');
     
     // Update the selected match with the new player
     if (selectedMatch) {
@@ -100,6 +103,11 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
       setSelectedMatch(updatedMatch);
     }
   };
+
+  // Filter players based on search term
+  const filteredPlayers = availablePlayers
+    .filter(p => p.status === 'Available' && p.eligible)
+    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="space-y-6">
@@ -165,10 +173,13 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setSubstitutionDialog({
-                            open: true,
-                            playerToReplace: player
-                          })}
+                          onClick={() => {
+                            setSubstitutionDialog({
+                              open: true,
+                              playerToReplace: player
+                            });
+                            setSearchTerm('');
+                          }}
                         >
                           <UserX className="h-3 w-3" />
                         </Button>
@@ -200,10 +211,13 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setSubstitutionDialog({
-                            open: true,
-                            playerToReplace: player
-                          })}
+                          onClick={() => {
+                            setSubstitutionDialog({
+                              open: true,
+                              playerToReplace: player
+                            });
+                            setSearchTerm('');
+                          }}
                         >
                           <UserX className="h-3 w-3" />
                         </Button>
@@ -288,10 +302,13 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
         </Card>
       )}
 
-      {/* Player Substitution Dialog */}
+      {/* Player Substitution Dialog with Search */}
       <Dialog 
         open={substitutionDialog.open} 
-        onOpenChange={(open) => setSubstitutionDialog({ open })}
+        onOpenChange={(open) => {
+          setSubstitutionDialog({ open });
+          if (!open) setSearchTerm('');
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -301,18 +318,38 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
             <p>
               Replace <strong>{substitutionDialog.playerToReplace?.name}</strong> with:
             </p>
+            
+            {/* Search Input */}
+            <div className="space-y-2">
+              <Label htmlFor="player-search">Search Players</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="player-search"
+                  placeholder="Search by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            
             <Select onValueChange={handlePlayerSubstitution}>
               <SelectTrigger>
                 <SelectValue placeholder="Select replacement player" />
               </SelectTrigger>
               <SelectContent>
-                {availablePlayers
-                  .filter(p => p.status === 'Available' && p.eligible)
-                  .map((player) => (
+                {filteredPlayers.length > 0 ? (
+                  filteredPlayers.map((player) => (
                     <SelectItem key={player.id} value={player.id}>
                       {player.name} - {player.level.major} Level {player.level.bracket}
                     </SelectItem>
-                  ))}
+                  ))
+                ) : (
+                  <SelectItem value="" disabled>
+                    No players found
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

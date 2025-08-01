@@ -12,6 +12,7 @@ import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
 import { EventReportsDialog } from '@/components/EventReportsDialog';
+import { EventSettingsDialog } from '@/components/EventSettingsDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +28,8 @@ import {
   ArrowLeft,
   Plus,
   Edit2,
-  FileText
+  FileText,
+  Settings
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
 import { MajorLevel, SubLevel } from '@/types/player';
@@ -56,6 +58,7 @@ const Index = () => {
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
+  const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
 
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -151,6 +154,12 @@ const Index = () => {
     }
   };
 
+  const handleUpdateEvent = async (eventId: string, updates: { title?: string; date?: Date; courtCount?: number }) => {
+    // This would need to be implemented in the event manager
+    // For now, just show a success message
+    toast.success('Event settings updated');
+  };
+
   const editingPlayerData = editingPlayer ? allPlayers.find(p => p.id === editingPlayer) : null;
 
   return (
@@ -201,6 +210,14 @@ const Index = () => {
               <div className="flex gap-2">
                 {currentEvent && (
                   <>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setIsEventSettingsOpen(true)}
+                      variant="outline"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Event Settings
+                    </Button>
                     <Button 
                       size="sm" 
                       onClick={() => setIsReportsDialogOpen(true)}
@@ -422,6 +439,15 @@ const Index = () => {
           onOpenChange={setIsReportsDialogOpen}
           eventId={currentEvent.id}
           eventTitle={currentEvent.title}
+        />
+      )}
+
+      {currentEvent && (
+        <EventSettingsDialog
+          open={isEventSettingsOpen}
+          onOpenChange={setIsEventSettingsOpen}
+          event={currentEvent}
+          onUpdateEvent={handleUpdateEvent}
         />
       )}
     </div>

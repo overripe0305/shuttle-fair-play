@@ -93,16 +93,16 @@ export function useWaitingMatchManager(eventId?: string) {
         return;
       }
 
-      // Update player statuses to 'Queued'
+      // Update player statuses to 'Waiting'
       for (const playerId of playerIds) {
         await supabase
           .from('players')
-          .update({ status: 'queued' })
+          .update({ status: 'waiting' })
           .eq('id', playerId);
         
         // Update local state immediately
         if (onPlayerStatusUpdate) {
-          onPlayerStatusUpdate(playerId, 'queued');
+          onPlayerStatusUpdate(playerId, 'waiting');
         }
       }
 

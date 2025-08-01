@@ -21,6 +21,8 @@ const levelColors = {
 const statusColors = {
   Available: 'bg-status-available text-white',
   'In progress': 'bg-status-in-progress text-white',
+  'Waiting': 'bg-orange-500 text-white',
+  'Queued': 'bg-yellow-500 text-white',
   Done: 'bg-status-done text-white',
 };
 

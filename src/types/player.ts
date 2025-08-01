@@ -1,7 +1,7 @@
 export type MajorLevel = 'Newbie' | 'Beginner' | 'Intermediate' | 'Advance';
 export type SubLevel = 'Low' | 'Mid' | 'High';
 export type BracketLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-export type PlayerStatus = 'Available' | 'In progress' | 'Queued' | 'Done';
+export type PlayerStatus = 'Available' | 'In progress' | 'Waiting' | 'Queued' | 'Done';
 export type PairType = 'Balanced' | 'Mixed';
 
 export interface PlayerLevel {
