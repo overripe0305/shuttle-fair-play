@@ -66,41 +66,52 @@ const Index = () => {
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
   
-  // Get players for current event or all players
-  const eventPlayers = currentEvent 
-    ? allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id)).map(player => {
-        // For event context, use event-specific stats
-        if (eventId) {
-          const eventStats = getPlayerStats(player.id);
-          return {
-            ...player,
-            gamesPlayed: eventStats.gamesPlayed
-          };
-        }
-        return player;
-      })
-    : allPlayers;
+  // Get players for current event or all players - memoize with proper dependencies
+  const eventPlayers = React.useMemo(() => {
+    if (!currentEvent) return allPlayers;
+    
+    console.log('Recalculating eventPlayers with stats:', eventPlayerStats?.length || 0, 'players');
+    
+    return allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id)).map(player => {
+      // For event context, use event-specific stats
+      if (eventId) {
+        const eventStats = getPlayerStats(player.id);
+        console.log(`Player ${player.name} games: ${eventStats.gamesPlayed}`);
+        return {
+          ...player,
+          gamesPlayed: eventStats.gamesPlayed
+        };
+      }
+      return player;
+    });
+  }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats]);
 
-  // Trigger re-render when event player stats change
-  React.useEffect(() => {
-    // This effect will run whenever eventPlayerStats changes
-  }, [eventPlayerStats]);
+  const filteredPlayers = React.useMemo(() => {
+    return eventPlayers.filter(player => {
+      const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
+      return matchesSearch && matchesLevel;
+    });
+  }, [eventPlayers, searchTerm, levelFilter]);
 
-  const filteredPlayers = eventPlayers.filter(player => {
-    const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
-    return matchesSearch && matchesLevel;
-  });
+  const availablePlayers = React.useMemo(() => {
+    return eventPlayers.filter(p => p.eligible && p.status === 'available');
+  }, [eventPlayers]);
 
-  const availablePlayers = eventPlayers.filter(p => p.eligible && p.status === 'available');
-  const inProgressPlayers = eventPlayers.filter(p => p.status === 'in_progress');
+  const inProgressPlayers = React.useMemo(() => {
+    return eventPlayers.filter(p => p.status === 'in_progress');
+  }, [eventPlayers]);
   
-  // Use database active games instead of local state
-  const currentActiveGames = dbActiveGames || [];
+  // Use database active games instead of local state - memoized
+  const currentActiveGames = React.useMemo(() => {
+    return dbActiveGames || [];
+  }, [dbActiveGames]);
 
-  const availablePlayersForEvent = allPlayers.filter(player => 
-    !currentEvent?.selectedPlayerIds.includes(player.id)
-  );
+  const availablePlayersForEvent = React.useMemo(() => {
+    return allPlayers.filter(player => 
+      !currentEvent?.selectedPlayerIds.includes(player.id)
+    );
+  }, [allPlayers, currentEvent]);
 
   const handleAddExistingPlayer = async (playerId: string) => {
     if (!currentEvent) return;
@@ -417,7 +428,12 @@ const Index = () => {
           
             <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{eventId ? Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4) : Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4)}</div>
+              <div className="text-2xl font-bold">
+                {React.useMemo(() => 
+                  Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4), 
+                  [eventPlayers]
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">Total Games</div>
             </CardContent>
           </Card>
