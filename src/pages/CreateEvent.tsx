@@ -47,41 +47,49 @@ const CreateEvent = () => {
     );
   };
 
-  const handleAddNewPlayer = () => {
+  const handleAddNewPlayer = async () => {
     if (!newPlayer.name || !newPlayer.majorLevel) return;
     
-    const player = addPlayer({
-      name: newPlayer.name,
-      majorLevel: newPlayer.majorLevel,
-      subLevel: newPlayer.subLevel,
-    });
+    try {
+      const player = await addPlayer({
+        name: newPlayer.name,
+        majorLevel: newPlayer.majorLevel,
+        subLevel: newPlayer.subLevel,
+      });
 
-    // Auto-select the newly added player
-    setSelectedPlayerIds(prev => [...prev, player.id]);
+      // Auto-select the newly added player
+      setSelectedPlayerIds(prev => [...prev, player.id]);
 
-    setNewPlayer({
-      name: '',
-      majorLevel: '' as MajorLevel,
-      subLevel: undefined,
-    });
-    setIsAddPlayerDialogOpen(false);
-    toast.success(`${player.name} added and selected for the event`);
+      setNewPlayer({
+        name: '',
+        majorLevel: '' as MajorLevel,
+        subLevel: undefined,
+      });
+      setIsAddPlayerDialogOpen(false);
+      toast.success(`${player.name} added and selected for the event`);
+    } catch (error) {
+      toast.error('Failed to add player');
+    }
   };
 
-  const handleCreateEvent = () => {
+  const handleCreateEvent = async () => {
     if (!eventTitle || !eventDate || selectedPlayerIds.length === 0) {
       toast.error('Please fill in all required fields and select at least one player');
       return;
     }
 
-    createEvent({
-      title: eventTitle,
-      date: new Date(eventDate),
-      selectedPlayerIds
-    });
+    try {
+      await createEvent({
+        title: eventTitle,
+        date: new Date(eventDate),
+        selectedPlayerIds
+      });
 
-    toast.success('Event created successfully!');
-    navigate('/');
+      toast.success('Event created successfully!');
+      navigate('/');
+    } catch (error) {
+      toast.error('Failed to create event');
+    }
   };
 
   const needsSubLevel = (major: MajorLevel) => {

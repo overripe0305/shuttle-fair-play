@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      event_players: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          player_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          player_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_players_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      players: {
+        Row: {
+          birthday: string | null
+          created_at: string
+          games_played: number
+          id: string
+          major_level: string
+          name: string
+          penalty_bonus: number
+          photo: string | null
+          status: string
+          sub_level: string | null
+          updated_at: string
+        }
+        Insert: {
+          birthday?: string | null
+          created_at?: string
+          games_played?: number
+          id?: string
+          major_level: string
+          name: string
+          penalty_bonus?: number
+          photo?: string | null
+          status?: string
+          sub_level?: string | null
+          updated_at?: string
+        }
+        Update: {
+          birthday?: string | null
+          created_at?: string
+          games_played?: number
+          id?: string
+          major_level?: string
+          name?: string
+          penalty_bonus?: number
+          photo?: string | null
+          status?: string
+          sub_level?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

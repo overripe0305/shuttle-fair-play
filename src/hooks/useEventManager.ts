@@ -1,32 +1,121 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BadmintonEvent } from '@/types/event';
 import { EnhancedPlayer } from '@/types/enhancedPlayer';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useEventManager = () => {
   const [events, setEvents] = useState<BadmintonEvent[]>([]);
 
-  const createEvent = (eventData: Omit<BadmintonEvent, 'id' | 'createdAt' | 'status'>) => {
-    const newEvent: BadmintonEvent = {
-      ...eventData,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-      status: 'upcoming'
-    };
-    
-    setEvents(prev => [...prev, newEvent]);
-    return newEvent;
+  // Load events from Supabase on mount
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          event_players(player_id)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const badmintonEvents: BadmintonEvent[] = data?.map(event => ({
+        id: event.id,
+        title: event.title,
+        date: new Date(event.date),
+        selectedPlayerIds: event.event_players?.map(ep => ep.player_id) || [],
+        createdAt: new Date(event.created_at),
+        status: event.status as 'upcoming' | 'active' | 'completed'
+      })) || [];
+
+      setEvents(badmintonEvents);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    }
   };
 
-  const updateEventStatus = (eventId: string, status: BadmintonEvent['status']) => {
-    setEvents(prev => 
-      prev.map(event => 
-        event.id === eventId ? { ...event, status } : event
-      )
-    );
+  const createEvent = async (eventData: Omit<BadmintonEvent, 'id' | 'createdAt' | 'status'>) => {
+    try {
+      // First, create the event
+      const { data: eventDbData, error: eventError } = await supabase
+        .from('events')
+        .insert({
+          title: eventData.title,
+          date: eventData.date.toISOString(),
+          status: 'upcoming'
+        })
+        .select()
+        .single();
+
+      if (eventError) throw eventError;
+
+      // Then, create the event-player associations
+      if (eventData.selectedPlayerIds.length > 0) {
+        const { error: playersError } = await supabase
+          .from('event_players')
+          .insert(
+            eventData.selectedPlayerIds.map(playerId => ({
+              event_id: eventDbData.id,
+              player_id: playerId
+            }))
+          );
+
+        if (playersError) throw playersError;
+      }
+
+      const newEvent: BadmintonEvent = {
+        id: eventDbData.id,
+        title: eventDbData.title,
+        date: new Date(eventDbData.date),
+        selectedPlayerIds: eventData.selectedPlayerIds,
+        createdAt: new Date(eventDbData.created_at),
+        status: 'upcoming'
+      };
+      
+      setEvents(prev => [...prev, newEvent]);
+      return newEvent;
+    } catch (error) {
+      console.error('Error creating event:', error);
+      throw error;
+    }
   };
 
-  const deleteEvent = (eventId: string) => {
-    setEvents(prev => prev.filter(event => event.id !== eventId));
+  const updateEventStatus = async (eventId: string, status: BadmintonEvent['status']) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ status })
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setEvents(prev => 
+        prev.map(event => 
+          event.id === eventId ? { ...event, status } : event
+        )
+      );
+    } catch (error) {
+      console.error('Error updating event status:', error);
+    }
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setEvents(prev => prev.filter(event => event.id !== eventId));
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    }
   };
 
   return {
