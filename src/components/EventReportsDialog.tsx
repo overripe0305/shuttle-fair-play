@@ -43,7 +43,7 @@ interface EventReportsDialogProps {
 }
 
 export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: EventReportsDialogProps) {
-  const { getPlayerStats } = useEventPlayerStats(eventId);
+  const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId);
   const [playerReports, setPlayerReports] = useState<PlayerReport[]>([]);
   const [sortedReports, setSortedReports] = useState<PlayerReport[]>([]);
   const [sortField, setSortField] = useState<SortField>('name');
@@ -60,7 +60,7 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
       loadPlayerReports();
       loadPaymentTotals();
     }
-  }, [open, eventId]);
+  }, [open, eventId, eventPlayerStats]); // Add eventPlayerStats as dependency
 
   useEffect(() => {
     const sorted = [...playerReports].sort((a, b) => {

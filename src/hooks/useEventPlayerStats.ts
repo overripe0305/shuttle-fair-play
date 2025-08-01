@@ -24,10 +24,13 @@ export const useEventPlayerStats = (eventId?: string) => {
           schema: 'public', 
           table: 'games',
           filter: `event_id=eq.${eventId}`
-        }, () => {
+        }, (payload) => {
+          console.log('Game change detected:', payload);
           loadEventPlayerStats();
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Real-time subscription status:', status);
+        });
 
       return () => {
         supabase.removeChannel(channel);

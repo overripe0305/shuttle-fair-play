@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { useEventManager } from '@/hooks/useEventManager';
@@ -53,7 +54,7 @@ const Index = () => {
   const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
-  const { getPlayerStats } = useEventPlayerStats(eventId);
+  const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
@@ -79,6 +80,11 @@ const Index = () => {
         return player;
       })
     : allPlayers;
+
+  // Trigger re-render when event player stats change
+  React.useEffect(() => {
+    // This effect will run whenever eventPlayerStats changes
+  }, [eventPlayerStats]);
 
   const filteredPlayers = eventPlayers.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());

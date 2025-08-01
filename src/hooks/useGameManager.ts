@@ -26,13 +26,21 @@ export function useGameManager(eventId?: string) {
     if (eventId) {
       loadActiveGames();
       
-      // Subscribe to real-time updates
+      // Set up real-time subscription
       const channel = supabase
         .channel('games-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => {
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'games',
+          filter: `event_id=eq.${eventId}`
+        }, (payload) => {
+          console.log('Real-time game update:', payload);
           loadActiveGames();
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Games subscription status:', status);
+        });
 
       return () => {
         supabase.removeChannel(channel);
@@ -195,7 +203,8 @@ export function useGameManager(eventId?: string) {
         description: `Game on Court ${game.courtId} has been marked as complete.`,
       });
 
-      loadActiveGames();
+      // Reload active games to refresh the list
+      await loadActiveGames();
     } catch (error) {
       console.error('Error completing game:', error);
       toast({
