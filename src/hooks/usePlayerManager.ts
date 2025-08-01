@@ -224,6 +224,16 @@ export function usePlayerManager() {
     });
   }, []);
 
+  const replacePlayerInTeam = useCallback((oldPlayerId: string, newPlayerId: string) => {
+    // Implementation for replacing player in team selection
+    // This would need to be coordinated with team selection logic
+  }, []);
+
+  const replacePlayerInGame = useCallback((gameId: string, oldPlayerId: string, newPlayerId: string) => {
+    // Implementation for replacing player in active game
+    // This would need to be coordinated with game logic
+  }, []);
+
   return {
     players,
     games,
@@ -234,6 +244,8 @@ export function usePlayerManager() {
     addPlayer,
     updatePlayer,
     deletePlayer,
+    replacePlayerInTeam,
+    replacePlayerInGame,
     activeGames: games.filter(g => !g.completed)
   };
 }

@@ -8,6 +8,7 @@ import { Users, Zap } from 'lucide-react';
 interface TeamSelectionProps {
   onSelectMatch: () => GameMatch | null;
   onStartGame: (match: GameMatch) => void;
+  onReplacePlayer?: (oldPlayerId: string, newPlayerId: string) => void;
 }
 
 const levelColors = {
@@ -17,7 +18,7 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function TeamSelection({ onSelectMatch, onStartGame }: TeamSelectionProps) {
+export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
 
   const handleSelectMatch = () => {
@@ -58,7 +59,7 @@ export function TeamSelection({ onSelectMatch, onStartGame }: TeamSelectionProps
               {/* Team 1 */}
               <div className="space-y-2">
                 <div className="text-sm font-medium">
-                  Team 1 ({selectedMatch.pair1.pairType} - Avg: {selectedMatch.pair1.averageLevel})
+                  Team 1 ({selectedMatch.pair1.pairType})
                 </div>
                 <div className="space-y-1">
                   {selectedMatch.pair1.players.map((player) => (
@@ -68,10 +69,10 @@ export function TeamSelection({ onSelectMatch, onStartGame }: TeamSelectionProps
                     >
                       <div className="flex flex-col">
                         <span className="font-medium truncate">{player.name}</span>
-                        <span className="text-xs text-muted-foreground">{getLevelDisplay(player.level)}</span>
+                        <span className="text-xs text-muted-foreground">{player.level.major}</span>
                       </div>
                       <Badge className={levelColors[player.level.major]} variant="secondary">
-                        {player.level.bracket}
+                        Level {player.level.bracket}
                       </Badge>
                     </div>
                   ))}
@@ -81,7 +82,7 @@ export function TeamSelection({ onSelectMatch, onStartGame }: TeamSelectionProps
               {/* Team 2 */}
               <div className="space-y-2">
                 <div className="text-sm font-medium">
-                  Team 2 ({selectedMatch.pair2.pairType} - Avg: {selectedMatch.pair2.averageLevel})
+                  Team 2 ({selectedMatch.pair2.pairType})
                 </div>
                 <div className="space-y-1">
                   {selectedMatch.pair2.players.map((player) => (
@@ -91,10 +92,10 @@ export function TeamSelection({ onSelectMatch, onStartGame }: TeamSelectionProps
                     >
                       <div className="flex flex-col">
                         <span className="font-medium truncate">{player.name}</span>
-                        <span className="text-xs text-muted-foreground">{getLevelDisplay(player.level)}</span>
+                        <span className="text-xs text-muted-foreground">{player.level.major}</span>
                       </div>
                       <Badge className={levelColors[player.level.major]} variant="secondary">
-                        {player.level.bracket}
+                        Level {player.level.bracket}
                       </Badge>
                     </div>
                   ))}

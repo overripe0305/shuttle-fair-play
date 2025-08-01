@@ -36,14 +36,14 @@ export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold truncate">{player.name}</h3>
-          <Badge className={levelColors[player.level.major]} variant="secondary">
-            {player.level.bracket}
+          <Badge className={statusColors[player.status]} variant="outline">
+            {player.status}
           </Badge>
         </div>
         
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground">
-            {getLevelDisplay(player.level)}
+            {player.level.major}
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
@@ -54,8 +54,8 @@ export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
                 </span>
               )}
             </span>
-            <Badge className={statusColors[player.status]} variant="outline">
-              {player.status}
+            <Badge className={levelColors[player.level.major]} variant="secondary">
+              Level {player.level.bracket}
             </Badge>
           </div>
         </div>

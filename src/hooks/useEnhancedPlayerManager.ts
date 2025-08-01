@@ -51,6 +51,12 @@ export const useEnhancedPlayerManager = () => {
     birthday?: Date;
     photo?: string;
   }) => {
+    // Check for duplicate names
+    const existingPlayer = players.find(p => p.name.toLowerCase() === playerData.name.toLowerCase());
+    if (existingPlayer) {
+      throw new Error('A player with this name already exists');
+    }
+
     try {
       const { data, error } = await supabase
         .from('players')

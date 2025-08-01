@@ -7,6 +7,7 @@ import { CheckCircle, Clock, Users } from 'lucide-react';
 interface GameCardProps {
   game: Game;
   onMarkDone: (gameId: string, winner?: 'team1' | 'team2') => void;
+  onReplacePlayer?: (gameId: string, oldPlayerId: string, newPlayerId: string) => void;
 }
 
 const levelColors = {
@@ -16,7 +17,7 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function GameCard({ game, onMarkDone }: GameCardProps) {
+export function GameCard({ game, onMarkDone, onReplacePlayer }: GameCardProps) {
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -37,17 +38,17 @@ export function GameCard({ game, onMarkDone }: GameCardProps) {
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Users className="h-3 w-3" />
-              Team 1 ({game.match.pair1.pairType} - Avg: {game.match.pair1.averageLevel})
+              Team 1 ({game.match.pair1.pairType})
             </div>
             <div className="grid grid-cols-1 gap-1 pl-5">
               {game.match.pair1.players.map((player) => (
                 <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                   <div className="flex flex-col">
                     <span className="font-medium truncate">{player.name}</span>
-                    <span className="text-xs text-muted-foreground">{getLevelDisplay(player.level)}</span>
+                    <span className="text-xs text-muted-foreground">{player.level.major}</span>
                   </div>
                   <Badge className={levelColors[player.level.major]} variant="secondary">
-                    {player.level.bracket}
+                    Level {player.level.bracket}
                   </Badge>
                 </div>
               ))}
@@ -58,17 +59,17 @@ export function GameCard({ game, onMarkDone }: GameCardProps) {
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Users className="h-3 w-3" />
-              Team 2 ({game.match.pair2.pairType} - Avg: {game.match.pair2.averageLevel})
+              Team 2 ({game.match.pair2.pairType})
             </div>
             <div className="grid grid-cols-1 gap-1 pl-5">
               {game.match.pair2.players.map((player) => (
                 <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                   <div className="flex flex-col">
                     <span className="font-medium truncate">{player.name}</span>
-                    <span className="text-xs text-muted-foreground">{getLevelDisplay(player.level)}</span>
+                    <span className="text-xs text-muted-foreground">{player.level.major}</span>
                   </div>
                   <Badge className={levelColors[player.level.major]} variant="secondary">
-                    {player.level.bracket}
+                    Level {player.level.bracket}
                   </Badge>
                 </div>
               ))}

@@ -1,9 +1,13 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { usePlayerManager } from '@/hooks/usePlayerManager';
+import { useEventManager } from '@/hooks/useEventManager';
+import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
-import { AddPlayerDialog } from '@/components/AddPlayerDialog';
+import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
+import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,12 +19,17 @@ import {
   Trophy, 
   RotateCcw, 
   Search,
-  Filter
+  Filter,
+  ArrowLeft,
+  Plus,
+  Edit2
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
-import { MajorLevel } from '@/types/player';
+import { MajorLevel, SubLevel } from '@/types/player';
+import { toast } from 'sonner';
 
 const Index = () => {
+  const { eventId } = useParams();
   const {
     players,
     games,
@@ -28,21 +37,100 @@ const Index = () => {
     startGame,
     markGameDone,
     resetAllPlayers,
-    addPlayer,
-    activeGames
+    activeGames,
+    replacePlayerInTeam,
+    replacePlayerInGame
   } = usePlayerManager();
+
+  const { events, addPlayerToEvent } = useEventManager();
+  const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
+  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
 
-  const filteredPlayers = players.filter(player => {
+  // Get current event if we're in event context
+  const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
+  
+  // Get players for current event or all players
+  const eventPlayers = currentEvent 
+    ? allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id))
+    : players;
+
+  const filteredPlayers = eventPlayers.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
     return matchesSearch && matchesLevel;
   });
 
-  const availablePlayers = players.filter(p => p.eligible && p.status === 'Available');
-  const inProgressPlayers = players.filter(p => p.status === 'In progress');
+  const availablePlayers = eventPlayers.filter(p => p.eligible && p.status === 'Available');
+  const inProgressPlayers = eventPlayers.filter(p => p.status === 'In progress');
+
+  const availablePlayersForEvent = allPlayers.filter(player => 
+    !currentEvent?.selectedPlayerIds.includes(player.id)
+  );
+
+  const handleAddExistingPlayer = async (playerId: string) => {
+    if (!currentEvent) return;
+    try {
+      await addPlayerToEvent(currentEvent.id, playerId);
+      toast.success('Player added to event');
+    } catch (error) {
+      toast.error('Failed to add player to event');
+    }
+  };
+
+  const handleAddNewPlayer = async (playerData: { name: string; majorLevel: MajorLevel; subLevel?: SubLevel }) => {
+    // Check for duplicate names
+    const existingPlayer = allPlayers.find(p => p.name.toLowerCase() === playerData.name.toLowerCase());
+    if (existingPlayer) {
+      toast.error('A player with this name already exists');
+      return;
+    }
+
+    try {
+      const newPlayer = await addPlayer(playerData);
+      if (currentEvent) {
+        await addPlayerToEvent(currentEvent.id, newPlayer.id);
+        toast.success(`${newPlayer.name} created and added to event`);
+      } else {
+        toast.success(`${newPlayer.name} created`);
+      }
+    } catch (error) {
+      toast.error('Failed to create player');
+    }
+  };
+
+  const handleUpdatePlayer = async (playerId: string, updates: { name?: string; majorLevel?: MajorLevel; subLevel?: SubLevel }) => {
+    // Check for duplicate names if name is being updated
+    if (updates.name) {
+      const existingPlayer = allPlayers.find(p => p.id !== playerId && p.name.toLowerCase() === updates.name!.toLowerCase());
+      if (existingPlayer) {
+        toast.error('A player with this name already exists');
+        return;
+      }
+    }
+
+    try {
+      const updateData: any = {};
+      if (updates.name) updateData.name = updates.name;
+      if (updates.majorLevel) {
+        updateData.level = {
+          major: updates.majorLevel,
+          sub: updates.subLevel,
+          bracket: 1 // This will be recalculated
+        };
+      }
+      
+      await updatePlayer(playerId, updateData);
+      toast.success('Player updated successfully');
+    } catch (error) {
+      toast.error('Failed to update player');
+    }
+  };
+
+  const editingPlayerData = editingPlayer ? allPlayers.find(p => p.id === editingPlayer) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,11 +138,19 @@ const Index = () => {
       <header className="bg-card border-b">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={badmintonLogo} alt="BadmintonPro" className="h-10 w-10" />
-              <div>
-                <h1 className="text-2xl font-bold">BadmintonPro</h1>
-                <p className="text-sm text-muted-foreground">Smart Club Management</p>
+            <div className="flex items-center gap-4">
+              <Link to="/">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Button>
+              </Link>
+              <div className="flex items-center gap-3">
+                <img src={badmintonLogo} alt="BadmintonPro" className="h-10 w-10" />
+                <div>
+                  <h1 className="text-2xl font-bold">{currentEvent ? currentEvent.title : 'BadmintonPro'}</h1>
+                  <p className="text-sm text-muted-foreground">Smart Club Management</p>
+                </div>
               </div>
             </div>
             
@@ -75,23 +171,14 @@ const Index = () => {
               </div>
               
               <div className="flex gap-2">
-                <Link to="/view-events">
-                  <Button variant="outline">
-                    View Events
-                  </Button>
-                </Link>
-                <Link to="/create-event">
-                  <Button variant="outline">
-                    Create Event
-                  </Button>
-                </Link>
-                <Link to="/players">
-                  <Button variant="default">
-                    Manage Players
-                  </Button>
-                </Link>
-
-                <AddPlayerDialog onAddPlayer={addPlayer} />
+                <Button 
+                  size="sm" 
+                  onClick={() => setIsAddPlayerDialogOpen(true)}
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Player
+                </Button>
                 <Button variant="outline" onClick={resetAllPlayers}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reset All
@@ -152,7 +239,13 @@ const Index = () => {
               
               <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
                 {filteredPlayers.map((player) => (
-                  <PlayerCard key={player.id} player={player} />
+                  <div 
+                    key={player.id} 
+                    className="cursor-pointer"
+                    onClick={() => setEditingPlayer(player.id)}
+                  >
+                    <PlayerCard player={player} />
+                  </div>
                 ))}
                 
                 {filteredPlayers.length === 0 && (
@@ -169,6 +262,7 @@ const Index = () => {
             <TeamSelection 
               onSelectMatch={selectFairMatch}
               onStartGame={startGame}
+              onReplacePlayer={replacePlayerInTeam}
             />
           </div>
 
@@ -188,6 +282,7 @@ const Index = () => {
                     key={game.id} 
                     game={game} 
                     onMarkDone={markGameDone}
+                    onReplacePlayer={replacePlayerInGame}
                   />
                 ))}
                 
@@ -203,9 +298,9 @@ const Index = () => {
 
         {/* Stats Summary */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+            <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{players.length}</div>
+              <div className="text-2xl font-bold">{eventPlayers.length}</div>
               <div className="text-sm text-muted-foreground">Total Players</div>
             </CardContent>
           </Card>
@@ -232,6 +327,23 @@ const Index = () => {
           </Card>
         </div>
       </div>
+
+      <AddPlayerToEventDialog
+        open={isAddPlayerDialogOpen}
+        onOpenChange={setIsAddPlayerDialogOpen}
+        availablePlayers={availablePlayersForEvent}
+        onAddExistingPlayer={handleAddExistingPlayer}
+        onAddNewPlayer={handleAddNewPlayer}
+      />
+
+      {editingPlayerData && (
+        <PlayerEditDialog
+          player={editingPlayerData}
+          open={!!editingPlayer}
+          onOpenChange={(open) => !open && setEditingPlayer(null)}
+          onSave={handleUpdatePlayer}
+        />
+      )}
     </div>
   );
 };
