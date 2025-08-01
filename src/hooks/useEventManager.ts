@@ -118,10 +118,36 @@ export const useEventManager = () => {
     }
   };
 
+  const addPlayerToEvent = async (eventId: string, playerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('event_players')
+        .insert({
+          event_id: eventId,
+          player_id: playerId
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setEvents(prev => 
+        prev.map(event => 
+          event.id === eventId 
+            ? { ...event, selectedPlayerIds: [...event.selectedPlayerIds, playerId] }
+            : event
+        )
+      );
+    } catch (error) {
+      console.error('Error adding player to event:', error);
+      throw error;
+    }
+  };
+
   return {
     events,
     createEvent,
     updateEventStatus,
-    deleteEvent
+    deleteEvent,
+    addPlayerToEvent
   };
 };

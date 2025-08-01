@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
@@ -5,21 +6,28 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
+import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { 
   ArrowLeft,
   Calendar,
   Users,
   Play,
-  Camera
+  Camera,
+  Plus,
+  Edit
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { getLevelDisplay } from '@/types/player';
+import { getLevelDisplay, MajorLevel, SubLevel } from '@/types/player';
+import { toast } from 'sonner';
 
 const EventDetails = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { events, updateEventStatus } = useEventManager();
-  const { players } = useEnhancedPlayerManager();
+  const { events, updateEventStatus, addPlayerToEvent } = useEventManager();
+  const { players, addPlayer, updatePlayer } = useEnhancedPlayerManager();
+  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
 
   const event = events.find(e => e.id === eventId);
   
@@ -40,10 +48,44 @@ const EventDetails = () => {
     event.selectedPlayerIds.includes(player.id)
   );
 
+  const availablePlayersForEvent = players.filter(player => 
+    !event.selectedPlayerIds.includes(player.id)
+  );
+
   const handleStartEvent = () => {
     updateEventStatus(event.id, 'active');
     navigate(`/event/${event.id}/play`);
   };
+
+  const handleAddExistingPlayer = async (playerId: string) => {
+    try {
+      await addPlayerToEvent(event.id, playerId);
+      toast.success('Player added to event');
+    } catch (error) {
+      toast.error('Failed to add player to event');
+    }
+  };
+
+  const handleAddNewPlayer = async (playerData: { name: string; majorLevel: MajorLevel; subLevel?: SubLevel }) => {
+    try {
+      const newPlayer = await addPlayer(playerData);
+      await addPlayerToEvent(event.id, newPlayer.id);
+      toast.success(`${newPlayer.name} created and added to event`);
+    } catch (error) {
+      toast.error('Failed to create and add player');
+    }
+  };
+
+  const handleUpdatePlayer = async (playerId: string, updates: { name?: string; majorLevel?: MajorLevel; subLevel?: SubLevel }) => {
+    try {
+      await updatePlayer(playerId, updates);
+      toast.success('Player updated successfully');
+    } catch (error) {
+      toast.error('Failed to update player');
+    }
+  };
+
+  const editingPlayerData = editingPlayer ? eventPlayers.find(p => p.id === editingPlayer) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,15 +177,27 @@ const EventDetails = () => {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
                   Registered Players ({eventPlayers.length})
-                </CardTitle>
+                </div>
+                {event.status === 'upcoming' && (
+                  <Button size="sm" onClick={() => setIsAddPlayerDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Player
+                  </Button>
+                )}
+              </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {eventPlayers.map((player) => (
-                    <div key={player.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div 
+                      key={player.id} 
+                      className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                      onClick={() => setEditingPlayer(player.id)}
+                    >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={player.photo} alt={player.name} />
                         <AvatarFallback>
@@ -154,13 +208,16 @@ const EventDetails = () => {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium">{player.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {getLevelDisplay(player.level)}
+                          {player.level.major}
                         </div>
                       </div>
 
-                      <div className="text-right text-sm">
-                        <div className="font-medium">{player.gamesPlayed}</div>
-                        <div className="text-muted-foreground">games</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right text-sm">
+                          <div className="font-medium">{player.gamesPlayed}</div>
+                          <div className="text-muted-foreground">games</div>
+                        </div>
+                        <Edit className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
                   ))}
@@ -176,6 +233,23 @@ const EventDetails = () => {
           </div>
         </div>
       </div>
+
+      <AddPlayerToEventDialog
+        open={isAddPlayerDialogOpen}
+        onOpenChange={setIsAddPlayerDialogOpen}
+        availablePlayers={availablePlayersForEvent}
+        onAddExistingPlayer={handleAddExistingPlayer}
+        onAddNewPlayer={handleAddNewPlayer}
+      />
+
+      {editingPlayerData && (
+        <PlayerEditDialog
+          player={editingPlayerData}
+          open={!!editingPlayer}
+          onOpenChange={(open) => !open && setEditingPlayer(null)}
+          onSave={handleUpdatePlayer}
+        />
+      )}
     </div>
   );
 };

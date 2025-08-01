@@ -26,7 +26,7 @@ const App = () => (
           <Route path="/players" element={<EnhancedPlayerManagement />} />
           <Route path="/player/:playerId" element={<PlayerProfile />} />
           <Route path="/create-event" element={<CreateEvent />} />
-          <Route path="/events" element={<ViewAllEvents />} />
+          <Route path="/view-events" element={<ViewAllEvents />} />
           <Route path="/event/:eventId" element={<EventDetails />} />
           <Route path="/event/:eventId/play" element={<Index />} />
           <Route path="*" element={<NotFound />} />

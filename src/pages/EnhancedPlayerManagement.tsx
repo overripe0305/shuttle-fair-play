@@ -67,14 +67,13 @@ const EnhancedPlayerManagement = () => {
   const handleBulkUpload = () => {
     const lines = bulkData.trim().split('\n');
     const playersData = lines.map(line => {
-      const [name, major, sub, birthday] = line.split(',').map(s => s.trim());
+      const name = line.trim();
       return {
         name,
-        majorLevel: major as MajorLevel,
-        subLevel: sub as SubLevel | undefined,
-        birthday: birthday ? new Date(birthday) : undefined
+        majorLevel: 'Newbie' as MajorLevel,
+        subLevel: undefined
       };
-    }).filter(p => p.name && p.majorLevel);
+    }).filter(p => p.name);
 
     bulkAddPlayers(playersData);
     setBulkData('');
@@ -118,15 +117,15 @@ const EnhancedPlayerManagement = () => {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label>Player Data (CSV format)</Label>
+                      <Label>Player Data (One name per line)</Label>
                       <Textarea
-                        placeholder="Name, Major Level, Sub Level, Birthday (YYYY-MM-DD)&#10;John Doe, Beginner, Mid, 1990-01-01&#10;Jane Smith, Intermediate, High, 1985-05-15"
+                        placeholder="John Doe&#10;Jane Smith&#10;Alex Johnson"
                         value={bulkData}
                         onChange={(e) => setBulkData(e.target.value)}
                         rows={6}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Format: Name, Major Level, Sub Level, Birthday (optional)
+                        One player name per line
                       </p>
                     </div>
                     <Button onClick={handleBulkUpload} disabled={!bulkData.trim()}>

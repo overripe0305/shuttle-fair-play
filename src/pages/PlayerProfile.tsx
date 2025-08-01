@@ -36,19 +36,13 @@ const PlayerProfile = () => {
     );
   }
 
-  // Mock statistics - in a real app, these would come from match results
-  const mockStats = {
-    totalWins: Math.floor(player.gamesPlayed * 0.6), // 60% win rate
-    totalLosses: Math.ceil(player.gamesPlayed * 0.4), // 40% loss rate
-    winRate: player.gamesPlayed > 0 ? Math.round((Math.floor(player.gamesPlayed * 0.6) / player.gamesPlayed) * 100) : 0,
-    streak: Math.floor(Math.random() * 5) + 1, // Random streak 1-5
-    recentMatches: [
-      { id: '1', opponent: 'John & Jane', result: 'Win', date: new Date('2024-01-15'), score: '21-15, 21-18' },
-      { id: '2', opponent: 'Mike & Sarah', result: 'Loss', date: new Date('2024-01-12'), score: '18-21, 19-21' },
-      { id: '3', opponent: 'Alex & Emma', result: 'Win', date: new Date('2024-01-10'), score: '21-16, 21-14' },
-      { id: '4', opponent: 'Tom & Lisa', result: 'Win', date: new Date('2024-01-08'), score: '21-19, 18-21, 21-17' },
-      { id: '5', opponent: 'Chris & Anna', result: 'Loss', date: new Date('2024-01-05'), score: '15-21, 21-18, 19-21' },
-    ]
+  // Real statistics based on actual player data
+  const stats = {
+    totalWins: 0, // TODO: Calculate from actual match results
+    totalLosses: 0, // TODO: Calculate from actual match results
+    winRate: 0,
+    streak: 0,
+    recentMatches: [] // TODO: Get from actual match history
   };
 
   return (
@@ -134,21 +128,21 @@ const PlayerProfile = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{mockStats.totalWins}</div>
+                  <div className="text-2xl font-bold text-green-600">{stats.totalWins}</div>
                   <div className="text-sm text-muted-foreground">Total Wins</div>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{mockStats.totalLosses}</div>
+                  <div className="text-2xl font-bold text-red-600">{stats.totalLosses}</div>
                   <div className="text-sm text-muted-foreground">Total Losses</div>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold">{mockStats.winRate}%</div>
+                  <div className="text-2xl font-bold">{stats.winRate}%</div>
                   <div className="text-sm text-muted-foreground">Win Rate</div>
                 </CardContent>
               </Card>
@@ -171,13 +165,13 @@ const PlayerProfile = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-2">Current Streak</div>
-                    <div className="flex items-center gap-2">
-                      <Award className="h-5 w-5 text-yellow-500" />
-                      <span className="text-lg font-semibold">{mockStats.streak} games</span>
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-2">Current Streak</div>
+                      <div className="flex items-center gap-2">
+                        <Award className="h-5 w-5 text-yellow-500" />
+                        <span className="text-lg font-semibold">{stats.streak} games</span>
+                      </div>
                     </div>
-                  </div>
                   
                   <div>
                     <div className="text-sm text-muted-foreground mb-2">Penalty/Bonus</div>
@@ -198,33 +192,10 @@ const PlayerProfile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {mockStats.recentMatches.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No match history available</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {mockStats.recentMatches.map((match) => (
-                      <div key={match.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Badge 
-                            variant={match.result === 'Win' ? 'default' : 'secondary'}
-                            className={match.result === 'Win' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
-                          >
-                            {match.result}
-                          </Badge>
-                          <div>
-                            <div className="font-medium">vs {match.opponent}</div>
-                            <div className="text-sm text-muted-foreground">{match.score}</div>
-                          </div>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(match.date, 'MMM dd')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No match history available</p>
+                  <p className="text-sm mt-2">Match history will appear here after playing games</p>
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -58,7 +58,9 @@ const CreateEvent = () => {
       });
 
       // Auto-select the newly added player
-      setSelectedPlayerIds(prev => [...prev, player.id]);
+      if (!selectedPlayerIds.includes(player.id)) {
+        setSelectedPlayerIds(prev => [...prev, player.id]);
+      }
 
       setNewPlayer({
         name: '',

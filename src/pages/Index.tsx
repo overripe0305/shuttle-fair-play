@@ -75,11 +75,21 @@ const Index = () => {
               </div>
               
               <div className="flex gap-2">
+                <Link to="/view-events">
+                  <Button variant="outline">
+                    View Events
+                  </Button>
+                </Link>
+                <Link to="/create-event">
+                  <Button variant="outline">
+                    Create Event
+                  </Button>
+                </Link>
                 <Link to="/players">
-  <Button variant="default">
-    Manage Players
-  </Button>
-</Link>
+                  <Button variant="default">
+                    Manage Players
+                  </Button>
+                </Link>
 
                 <AddPlayerDialog onAddPlayer={addPlayer} />
                 <Button variant="outline" onClick={resetAllPlayers}>
