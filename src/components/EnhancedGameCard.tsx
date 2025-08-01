@@ -31,25 +31,27 @@ export function EnhancedGameCard({
   
   const [gameDuration, setGameDuration] = useState('00:00');
 
-  // Update game duration every minute
+  // Update game duration every second for real-time display
   useEffect(() => {
     const updateDuration = () => {
       const now = new Date();
       const start = new Date(game.startTime);
       const diff = now.getTime() - start.getTime();
-      const minutes = Math.floor(diff / (1000 * 60));
+      const totalSeconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
       const hours = Math.floor(minutes / 60);
       const mins = minutes % 60;
       
       if (hours > 0) {
-        setGameDuration(`${hours}:${mins.toString().padStart(2, '0')}`);
+        setGameDuration(`${hours}:${mins.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
       } else {
-        setGameDuration(`${mins}:00`);
+        setGameDuration(`${mins}:${seconds.toString().padStart(2, '0')}`);
       }
     };
 
     updateDuration();
-    const interval = setInterval(updateDuration, 60000); // Update every minute
+    const interval = setInterval(updateDuration, 1000); // Update every second
 
     return () => clearInterval(interval);
   }, [game.startTime]);
