@@ -83,14 +83,21 @@ export function EnhancedGameCard({
     <Card className="w-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-lg">
-          <span className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Court {game.courtId}
-          </span>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-status-in-progress text-white">
-              {gameDuration}
-            </Badge>
+            <span className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Court {game.courtId}
+            </span>
+            <div className="flex items-center gap-2">
+              <Badge 
+                variant="secondary" 
+                className={`text-white ${
+                  (new Date().getTime() - new Date(game.startTime).getTime()) >= 15 * 60 * 1000 
+                    ? 'bg-red-600' 
+                    : 'bg-status-in-progress'
+                }`}
+              >
+                {gameDuration}
+              </Badge>
             {onUpdateCourt && (
               <Select value={game.courtId.toString()} onValueChange={handleCourtChange}>
                 <SelectTrigger className="w-20 h-8">

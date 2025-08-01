@@ -87,6 +87,13 @@ export function useGameManager(eventId?: string) {
         });
       }
 
+      // Sort games by duration (longest first)
+      games.sort((a, b) => {
+        const aDuration = new Date().getTime() - new Date(a.startTime).getTime();
+        const bDuration = new Date().getTime() - new Date(b.startTime).getTime();
+        return bDuration - aDuration;
+      });
+
       setActiveGames(games);
     } catch (error) {
       console.error('Error loading active games:', error);

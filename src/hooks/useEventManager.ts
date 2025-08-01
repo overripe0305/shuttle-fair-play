@@ -41,7 +41,8 @@ export const useEventManager = () => {
         date: new Date(event.date),
         selectedPlayerIds: event.event_players?.map(ep => ep.player_id) || [],
         createdAt: new Date(event.created_at),
-        status: event.status as 'upcoming' | 'active' | 'completed'
+        status: event.status as 'upcoming' | 'active' | 'completed',
+        courtCount: event.court_count || 4
       })) || [];
 
       setEvents(badmintonEvents);
