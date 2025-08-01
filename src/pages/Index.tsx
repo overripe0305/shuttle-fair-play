@@ -49,7 +49,7 @@ const Index = () => {
     replacePlayerInGame
   } = usePlayerManager();
 
-  const { events, addPlayerToEvent, updateEventCourtCount } = useEventManager();
+  const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
 
@@ -229,9 +229,13 @@ const Index = () => {
                     <Button 
                       size="sm" 
                       variant="destructive"
-                      onClick={() => {
-                        // TODO: Add end event functionality
-                        toast.success('Event ended successfully');
+                      onClick={async () => {
+                        try {
+                          await updateEventStatus(currentEvent.id, 'ended' as any);
+                          toast.success('Event ended successfully');
+                        } catch (error) {
+                          toast.error('Failed to end event');
+                        }
                       }}
                     >
                       End Event

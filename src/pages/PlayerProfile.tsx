@@ -59,7 +59,13 @@ const PlayerProfile = () => {
     try {
       const { data, error } = await supabase
         .from('games')
-        .select('*')
+        .select(`
+          *,
+          player1:players!player1_id(name),
+          player2:players!player2_id(name),
+          player3:players!player3_id(name),
+          player4:players!player4_id(name)
+        `)
         .or(`player1_id.eq.${playerId},player2_id.eq.${playerId},player3_id.eq.${playerId},player4_id.eq.${playerId}`)
         .eq('completed', true)
         .order('created_at', { ascending: false })
@@ -332,7 +338,10 @@ const PlayerProfile = () => {
                             Court {game.court_id} - {format(new Date(game.created_at), 'MMM dd, HH:mm')}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {game.winner ? `Team ${game.winner} won` : 'No winner recorded'}
+                            Players: {game.player1?.name}, {game.player2?.name}, {game.player3?.name}, {game.player4?.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {game.winner ? `Winner: ${game.winner === 'team1' ? `${game.player1?.name} & ${game.player2?.name}` : `${game.player3?.name} & ${game.player4?.name}`}` : 'No winner recorded'}
                           </div>
                         </div>
                         <Badge 
