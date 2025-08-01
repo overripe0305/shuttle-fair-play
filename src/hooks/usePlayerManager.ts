@@ -53,15 +53,20 @@ export function usePlayerManager() {
     // Use provided players or fall back to local players state
     const playersToUse = eventPlayers || players;
     
+    console.log('selectFairMatch - Total players:', playersToUse.length);
+    console.log('Players:', playersToUse.map(p => ({ name: p.name, status: p.status, eligible: p.eligible })));
+    
     // Filter eligible and available players
     const availablePlayers = playersToUse.filter(
       p => p.eligible && p.status === 'Available'
     );
 
+    console.log('Available players:', availablePlayers.length);
+
     if (availablePlayers.length < 4) {
       toast({
         title: "Not enough players",
-        description: "Need at least 4 available players to form a match.",
+        description: `Need at least 4 available players to form a match. Found ${availablePlayers.length}.`,
         variant: "destructive"
       });
       return null;
