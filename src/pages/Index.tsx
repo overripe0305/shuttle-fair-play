@@ -11,6 +11,7 @@ import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
 import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
+import { EventReportsDialog } from '@/components/EventReportsDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +26,8 @@ import {
   Filter,
   ArrowLeft,
   Plus,
-  Edit2
+  Edit2,
+  FileText
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
 import { MajorLevel, SubLevel } from '@/types/player';
@@ -53,6 +55,7 @@ const Index = () => {
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
+  const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
 
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -196,6 +199,16 @@ const Index = () => {
               )}
               
               <div className="flex gap-2">
+                {currentEvent && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => setIsReportsDialogOpen(true)}
+                    variant="outline"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Event Reports
+                  </Button>
+                )}
                 <Button 
                   size="sm" 
                   onClick={() => setIsAddPlayerDialogOpen(true)}
@@ -300,6 +313,8 @@ const Index = () => {
               onReplacePlayer={replacePlayerInTeam}
               availablePlayers={availablePlayers}
               maxCourts={currentEvent?.courtCount || 4}
+              eventId={eventId}
+              activeGamesCount={currentActiveGames.length}
             />
           </div>
 
@@ -347,7 +362,7 @@ const Index = () => {
           
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{games.length}</div>
+              <div className="text-2xl font-bold">{eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0)}</div>
               <div className="text-sm text-muted-foreground">Total Games</div>
             </CardContent>
           </Card>
@@ -382,6 +397,15 @@ const Index = () => {
           open={!!editingPlayer}
           onOpenChange={(open) => !open && setEditingPlayer(null)}
           onSave={handleUpdatePlayer}
+        />
+      )}
+
+      {currentEvent && (
+        <EventReportsDialog
+          open={isReportsDialogOpen}
+          onOpenChange={setIsReportsDialogOpen}
+          eventId={currentEvent.id}
+          eventTitle={currentEvent.title}
         />
       )}
     </div>

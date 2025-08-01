@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, Zap, UserX, Play } from 'lucide-react';
+import { Users, Zap, UserX, Play, Clock } from 'lucide-react';
+import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
 
 interface TeamSelectionProps {
   onSelectMatch: () => GameMatch | null;
@@ -14,6 +15,8 @@ interface TeamSelectionProps {
   onReplacePlayer?: (oldPlayerId: string, newPlayerId: string) => void;
   availablePlayers: any[];
   maxCourts?: number;
+  eventId?: string;
+  activeGamesCount?: number;
 }
 
 const levelColors = {
@@ -23,13 +26,15 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, availablePlayers, maxCourts = 4 }: TeamSelectionProps) {
+export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, availablePlayers, maxCourts = 4, eventId, activeGamesCount = 0 }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
   const [selectedCourt, setSelectedCourt] = useState(1);
   const [substitutionDialog, setSubstitutionDialog] = useState<{
     open: boolean;
     playerToReplace?: any;
   }>({ open: false });
+  
+  const { waitingMatches, addWaitingMatch, startWaitingMatch } = useWaitingMatchManager(eventId);
 
   const handleSelectMatch = () => {
     const match = onSelectMatch();
@@ -38,8 +43,15 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
 
   const handleStartGame = () => {
     if (selectedMatch) {
-      onStartGame(selectedMatch);
-      setSelectedMatch(null);
+      const availableCourts = maxCourts - activeGamesCount;
+      if (availableCourts > 0) {
+        onStartGame(selectedMatch);
+        setSelectedMatch(null);
+      } else {
+        // Add to waiting queue
+        addWaitingMatch(selectedMatch);
+        setSelectedMatch(null);
+      }
     }
   };
 
@@ -187,12 +199,48 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
                 variant="default"
               >
                 <Play className="h-4 w-4 mr-2" />
-                Start Game on Court {selectedCourt}
+                {maxCourts - activeGamesCount > 0 ? `Start Game on Court ${selectedCourt}` : 'Add to Queue'}
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Waiting Matches Queue */}
+      {waitingMatches.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Waiting Queue ({waitingMatches.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {waitingMatches.map((waitingMatch) => (
+              <div key={waitingMatch.id} className="border rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium">
+                      {waitingMatch.matchData.pair1.players.map(p => p.name).join(' & ')} vs{' '}
+                      {waitingMatch.matchData.pair2.players.map(p => p.name).join(' & ')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Waiting for {Math.floor((new Date().getTime() - waitingMatch.createdAt.getTime()) / 60000)} minutes
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm"
+                    onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame)}
+                    disabled={maxCourts - activeGamesCount <= 0}
+                  >
+                    Start Now
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Player Substitution Dialog */}
       <Dialog 

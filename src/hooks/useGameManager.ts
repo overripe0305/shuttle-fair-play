@@ -165,24 +165,37 @@ export function useGameManager(eventId?: string) {
 
       if (gameError) throw gameError;
 
+      // Calculate game duration in minutes
+      const gameDurationMinutes = Math.floor((new Date().getTime() - new Date(game.startTime).getTime()) / 60000);
+      
       // Update player statuses and increment games played
       const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];
       
       // Get current games_played for each player and increment
       const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('id, games_played')
+        .select('id, games_played, total_minutes_played, wins, losses')
         .in('id', playerIds);
 
       if (playersError) throw playersError;
 
-      // Update each player individually to increment games_played and set status
+      // Determine winners and losers
+      const team1PlayerIds = [game.player1Id, game.player2Id];
+      const team2PlayerIds = [game.player3Id, game.player4Id];
+      
+      // Update each player individually to increment games_played, minutes, wins/losses, and set status
       for (const player of players) {
+        const isWinner = winner === 'team1' ? team1PlayerIds.includes(player.id) : 
+                        winner === 'team2' ? team2PlayerIds.includes(player.id) : null;
+        
         await supabase
           .from('players')
           .update({
             status: 'available',
-            games_played: player.games_played + 1
+            games_played: player.games_played + 1,
+            total_minutes_played: (player.total_minutes_played || 0) + gameDurationMinutes,
+            wins: isWinner === true ? (player.wins || 0) + 1 : (player.wins || 0),
+            losses: isWinner === false ? (player.losses || 0) + 1 : (player.losses || 0)
           })
           .eq('id', player.id);
       }

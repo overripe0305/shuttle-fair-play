@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_payments: {
+        Row: {
+          amount: number | null
+          created_at: string
+          event_id: string
+          id: string
+          payment_date: string
+          payment_method: string
+          player_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          event_id: string
+          id?: string
+          payment_date?: string
+          payment_method: string
+          player_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          payment_date?: string
+          payment_method?: string
+          player_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_players: {
         Row: {
           created_at: string
@@ -139,39 +172,90 @@ export type Database = {
           created_at: string
           games_played: number
           id: string
+          losses: number | null
           major_level: string
           name: string
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
           penalty_bonus: number
           photo: string | null
           status: string
           sub_level: string | null
+          total_minutes_played: number | null
           updated_at: string
+          wins: number | null
         }
         Insert: {
           birthday?: string | null
           created_at?: string
           games_played?: number
           id?: string
+          losses?: number | null
           major_level: string
           name: string
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           penalty_bonus?: number
           photo?: string | null
           status?: string
           sub_level?: string | null
+          total_minutes_played?: number | null
           updated_at?: string
+          wins?: number | null
         }
         Update: {
           birthday?: string | null
           created_at?: string
           games_played?: number
           id?: string
+          losses?: number | null
           major_level?: string
           name?: string
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           penalty_bonus?: number
           photo?: string | null
           status?: string
           sub_level?: string | null
+          total_minutes_played?: number | null
           updated_at?: string
+          wins?: number | null
+        }
+        Relationships: []
+      }
+      waiting_matches: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          match_data: Json | null
+          player1_id: string
+          player2_id: string
+          player3_id: string
+          player4_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          match_data?: Json | null
+          player1_id: string
+          player2_id: string
+          player3_id: string
+          player4_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          match_data?: Json | null
+          player1_id?: string
+          player2_id?: string
+          player3_id?: string
+          player4_id?: string
         }
         Relationships: []
       }

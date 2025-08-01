@@ -88,6 +88,13 @@ const Home = () => {
                     View All Events
                   </Button>
                 </Link>
+                
+                <Link to="/billing" className="block">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Billing Management
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
