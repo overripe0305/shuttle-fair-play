@@ -45,9 +45,7 @@ export const useEnhancedPlayerManager = () => {
         eligible: true, // Default since column doesn't exist yet
         gamesPlayed: player.games_played,
         gamePenaltyBonus: player.penalty_bonus,
-        status: (player.status === 'available' ? 'Available' : 
-                player.status === 'in_progress' ? 'In progress' : 
-                player.status) as PlayerStatus,
+        status: player.status as PlayerStatus,
         matchHistory: [],
         createdAt: new Date(player.created_at)
       })) || [];
@@ -104,9 +102,7 @@ export const useEnhancedPlayerManager = () => {
         eligible: true, // Default since column doesn't exist yet
         gamesPlayed: data.games_played,
         gamePenaltyBonus: data.penalty_bonus,
-        status: (data.status === 'available' ? 'Available' : 
-                data.status === 'in_progress' ? 'In progress' : 
-                data.status) as PlayerStatus,
+        status: data.status as PlayerStatus,
         matchHistory: [],
         createdAt: new Date(data.created_at)
       };
@@ -200,9 +196,7 @@ export const useEnhancedPlayerManager = () => {
         eligible: true,
         gamesPlayed: player.games_played,
         gamePenaltyBonus: player.penalty_bonus,
-        status: (player.status === 'available' ? 'Available' : 
-                player.status === 'in_progress' ? 'In progress' : 
-                player.status) as PlayerStatus,
+        status: player.status as PlayerStatus,
         matchHistory: [],
         createdAt: new Date(player.created_at)
       }));
