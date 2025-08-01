@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,6 +43,7 @@ interface EventReportsDialogProps {
 }
 
 export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: EventReportsDialogProps) {
+  const { getPlayerStats } = useEventPlayerStats(eventId);
   const [playerReports, setPlayerReports] = useState<PlayerReport[]>([]);
   const [sortedReports, setSortedReports] = useState<PlayerReport[]>([]);
   const [sortField, setSortField] = useState<SortField>('name');
@@ -102,17 +104,20 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
       if (eventError) throw eventError;
 
-      const reports: PlayerReport[] = eventPlayers?.map(ep => ({
-        id: ep.players.id,
-        name: ep.players.name,
-        gamesPlayed: ep.players.games_played || 0,
-        totalMinutes: ep.players.total_minutes_played || 0,
-        wins: ep.players.wins || 0,
-        losses: ep.players.losses || 0,
-        paymentStatus: (ep.players.payment_status || 'unpaid') as 'paid' | 'unpaid',
-        paymentMethod: ep.players.payment_method as 'cash' | 'online' | undefined,
-        paymentDate: ep.players.payment_date,
-      })) || [];
+      const reports: PlayerReport[] = eventPlayers?.map(ep => {
+        const eventStats = getPlayerStats(ep.players.id);
+        return {
+          id: ep.players.id,
+          name: ep.players.name,
+          gamesPlayed: eventStats.gamesPlayed,
+          totalMinutes: ep.players.total_minutes_played || 0,
+          wins: eventStats.wins,
+          losses: eventStats.losses,
+          paymentStatus: (ep.players.payment_status || 'unpaid') as 'paid' | 'unpaid',
+          paymentMethod: ep.players.payment_method as 'cash' | 'online' | undefined,
+          paymentDate: ep.players.payment_date,
+        };
+      }) || [];
 
       setPlayerReports(reports);
     } catch (error) {

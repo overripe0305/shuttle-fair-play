@@ -174,28 +174,18 @@ export function useGameManager(eventId?: string) {
       // Get current games_played for each player and increment
       const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('id, games_played, total_minutes_played, wins, losses')
+        .select('id, total_minutes_played')
         .in('id', playerIds);
 
       if (playersError) throw playersError;
 
-      // Determine winners and losers
-      const team1PlayerIds = [game.player1Id, game.player2Id];
-      const team2PlayerIds = [game.player3Id, game.player4Id];
-      
-      // Update each player individually to increment games_played, minutes, wins/losses, and set status
+      // Update each player individually to increment minutes and set status (but not cumulative stats)
       for (const player of players) {
-        const isWinner = winner === 'team1' ? team1PlayerIds.includes(player.id) : 
-                        winner === 'team2' ? team2PlayerIds.includes(player.id) : null;
-        
         await supabase
           .from('players')
           .update({
             status: 'available',
-            games_played: player.games_played + 1,
             total_minutes_played: (player.total_minutes_played || 0) + gameDurationMinutes,
-            wins: isWinner === true ? (player.wins || 0) + 1 : (player.wins || 0),
-            losses: isWinner === false ? (player.losses || 0) + 1 : (player.losses || 0)
           })
           .eq('id', player.id);
       }

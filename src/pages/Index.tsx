@@ -4,6 +4,7 @@ import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { useGameManager } from '@/hooks/useGameManager';
+import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
@@ -52,6 +53,7 @@ const Index = () => {
   const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
+  const { getPlayerStats } = useEventPlayerStats(eventId);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
@@ -65,7 +67,17 @@ const Index = () => {
   
   // Get players for current event or all players
   const eventPlayers = currentEvent 
-    ? allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id))
+    ? allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id)).map(player => {
+        // For event context, use event-specific stats
+        if (eventId) {
+          const eventStats = getPlayerStats(player.id);
+          return {
+            ...player,
+            gamesPlayed: eventStats.gamesPlayed
+          };
+        }
+        return player;
+      })
     : allPlayers;
 
   const filteredPlayers = eventPlayers.filter(player => {
@@ -399,7 +411,7 @@ const Index = () => {
           
             <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4)}</div>
+              <div className="text-2xl font-bold">{eventId ? Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4) : Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4)}</div>
               <div className="text-sm text-muted-foreground">Total Games</div>
             </CardContent>
           </Card>
