@@ -146,35 +146,55 @@ export const useEnhancedPlayerManager = () => {
     }
   };
 
-  const bulkAddPlayers = (playersData: Array<{
+  const bulkAddPlayers = async (playersData: Array<{
     name: string;
     majorLevel: MajorLevel;
     subLevel?: SubLevel;
     birthday?: Date;
   }>) => {
-    const newPlayers = playersData.map(playerData => {
-      const level: PlayerLevel = {
-        major: playerData.majorLevel,
-        sub: playerData.subLevel,
-        bracket: getBracketFromMajorSub(playerData.majorLevel, playerData.subLevel)
-      };
-
-      return {
-        id: crypto.randomUUID(),
+    try {
+      const insertData = playersData.map(playerData => ({
         name: playerData.name,
-        level,
-        birthday: playerData.birthday,
-        eligible: true,
-        gamesPlayed: 0,
-        gamePenaltyBonus: 0,
-        status: 'Available' as const,
-        matchHistory: [],
-        createdAt: new Date()
-      };
-    });
+        major_level: playerData.majorLevel,
+        sub_level: playerData.subLevel,
+        birthday: playerData.birthday?.toISOString().split('T')[0],
+        games_played: 0,
+        penalty_bonus: 0,
+        status: 'available'
+      }));
 
-    setPlayers(prev => [...prev, ...newPlayers]);
-    return newPlayers;
+      const { data, error } = await supabase
+        .from('players')
+        .insert(insertData)
+        .select();
+
+      if (error) throw error;
+
+      // Convert to EnhancedPlayer format
+      const newPlayers = data.map(player => ({
+        id: player.id,
+        name: player.name,
+        level: {
+          major: player.major_level as MajorLevel,
+          sub: player.sub_level as SubLevel,
+          bracket: getBracketFromMajorSub(player.major_level as MajorLevel, player.sub_level as SubLevel)
+        },
+        birthday: player.birthday ? new Date(player.birthday) : undefined,
+        photo: player.photo,
+        eligible: true,
+        gamesPlayed: player.games_played,
+        gamePenaltyBonus: player.penalty_bonus,
+        status: player.status as any,
+        matchHistory: [],
+        createdAt: new Date(player.created_at)
+      }));
+
+      setPlayers(prev => [...prev, ...newPlayers]);
+      return newPlayers;
+    } catch (error) {
+      console.error('Error bulk adding players:', error);
+      throw error;
+    }
   };
 
   return {

@@ -64,7 +64,7 @@ const EnhancedPlayerManagement = () => {
     setIsAddDialogOpen(false);
   };
 
-  const handleBulkUpload = () => {
+  const handleBulkUpload = async () => {
     const lines = bulkData.trim().split('\n');
     const playersData = lines.map(line => {
       const name = line.trim();
@@ -75,9 +75,13 @@ const EnhancedPlayerManagement = () => {
       };
     }).filter(p => p.name);
 
-    bulkAddPlayers(playersData);
-    setBulkData('');
-    setIsBulkDialogOpen(false);
+    try {
+      await bulkAddPlayers(playersData);
+      setBulkData('');
+      setIsBulkDialogOpen(false);
+    } catch (error) {
+      console.error('Bulk upload failed:', error);
+    }
   };
 
   const needsSubLevel = (major: MajorLevel) => {

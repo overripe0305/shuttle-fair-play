@@ -56,7 +56,7 @@ const Index = () => {
   // Get players for current event or all players
   const eventPlayers = currentEvent 
     ? allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id))
-    : players;
+    : allPlayers;
 
   const filteredPlayers = eventPlayers.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
