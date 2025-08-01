@@ -3,12 +3,15 @@ import { GameMatch, getLevelDisplay } from '@/types/player';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Zap } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Zap, UserX } from 'lucide-react';
 
 interface TeamSelectionProps {
   onSelectMatch: () => GameMatch | null;
   onStartGame: (match: GameMatch) => void;
   onReplacePlayer?: (oldPlayerId: string, newPlayerId: string) => void;
+  availablePlayers: any[];
 }
 
 const levelColors = {
@@ -18,8 +21,12 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer }: TeamSelectionProps) {
+export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, availablePlayers }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
+  const [substitutionDialog, setSubstitutionDialog] = useState<{
+    open: boolean;
+    playerToReplace?: any;
+  }>({ open: false });
 
   const handleSelectMatch = () => {
     const match = onSelectMatch();
@@ -30,6 +37,35 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer }: T
     if (selectedMatch) {
       onStartGame(selectedMatch);
       setSelectedMatch(null);
+    }
+  };
+
+  const handlePlayerSubstitution = (newPlayerId: string) => {
+    if (!substitutionDialog.playerToReplace || !onReplacePlayer) return;
+    
+    onReplacePlayer(substitutionDialog.playerToReplace.id, newPlayerId);
+    setSubstitutionDialog({ open: false });
+    
+    // Update the selected match with the new player
+    if (selectedMatch) {
+      const newPlayer = availablePlayers.find(p => p.id === newPlayerId);
+      if (!newPlayer) return;
+      
+      const updatedMatch = { ...selectedMatch };
+      
+      // Find and replace in pair1
+      const pair1Index = updatedMatch.pair1.players.findIndex(p => p.id === substitutionDialog.playerToReplace.id);
+      if (pair1Index !== -1) {
+        updatedMatch.pair1.players[pair1Index] = newPlayer;
+      } else {
+        // Find and replace in pair2
+        const pair2Index = updatedMatch.pair2.players.findIndex(p => p.id === substitutionDialog.playerToReplace.id);
+        if (pair2Index !== -1) {
+          updatedMatch.pair2.players[pair2Index] = newPlayer;
+        }
+      }
+      
+      setSelectedMatch(updatedMatch);
     }
   };
 
@@ -71,9 +107,21 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer }: T
                         <span className="font-medium truncate">{player.name}</span>
                         <span className="text-xs text-muted-foreground">{player.level.major}</span>
                       </div>
-                      <Badge className={levelColors[player.level.major]} variant="secondary">
-                        Level {player.level.bracket}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={levelColors[player.level.major]} variant="secondary">
+                          Level {player.level.bracket}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSubstitutionDialog({
+                            open: true,
+                            playerToReplace: player
+                          })}
+                        >
+                          <UserX className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -94,9 +142,21 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer }: T
                         <span className="font-medium truncate">{player.name}</span>
                         <span className="text-xs text-muted-foreground">{player.level.major}</span>
                       </div>
-                      <Badge className={levelColors[player.level.major]} variant="secondary">
-                        Level {player.level.bracket}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={levelColors[player.level.major]} variant="secondary">
+                          Level {player.level.bracket}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSubstitutionDialog({
+                            open: true,
+                            playerToReplace: player
+                          })}
+                        >
+                          <UserX className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -113,6 +173,37 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer }: T
           )}
         </CardContent>
       </Card>
+
+      {/* Player Substitution Dialog */}
+      <Dialog 
+        open={substitutionDialog.open} 
+        onOpenChange={(open) => setSubstitutionDialog({ open })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace Player</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>
+              Replace <strong>{substitutionDialog.playerToReplace?.name}</strong> with:
+            </p>
+            <Select onValueChange={handlePlayerSubstitution}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select replacement player" />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePlayers
+                  .filter(p => p.status === 'Available' && p.eligible)
+                  .map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {player.name} - {player.level.major} Level {player.level.bracket}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

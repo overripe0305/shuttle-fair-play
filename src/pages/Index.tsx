@@ -263,6 +263,7 @@ const Index = () => {
               onSelectMatch={() => selectFairMatch(eventPlayers)}
               onStartGame={startGame}
               onReplacePlayer={replacePlayerInTeam}
+              availablePlayers={availablePlayers}
             />
           </div>
 
@@ -283,6 +284,7 @@ const Index = () => {
                     game={game} 
                     onMarkDone={markGameDone}
                     onReplacePlayer={replacePlayerInGame}
+                    availablePlayers={availablePlayers}
                   />
                 ))}
                 

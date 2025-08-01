@@ -154,33 +154,56 @@ export function usePlayerManager() {
     });
   }, [gameCounter]);
 
-  const markGameDone = useCallback((gameId: string, winner?: 'team1' | 'team2') => {
+  const markGameDone = useCallback(async (gameId: string, winner?: 'team1' | 'team2') => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
     const allPlayers = [...game.match.pair1.players, ...game.match.pair2.players];
 
-    // Update game status
-    setGames(prev => prev.map(g => 
-      g.id === gameId ? { ...g, completed: true } : g
-    ));
-
-    // Update players: increment games played and set to Available
-    setPlayers(prev => prev.map(player => {
-      if (allPlayers.some(gp => gp.id === player.id)) {
-        return {
-          ...player,
-          status: 'Available' as const,
-          gamesPlayed: player.gamesPlayed + 1
-        };
+    try {
+      // Import supabase here to update the database
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Update each player's games_played and status in the database
+      for (const player of allPlayers) {
+        await supabase
+          .from('players')
+          .update({
+            games_played: player.gamesPlayed + 1,
+            status: 'available'
+          })
+          .eq('id', player.id);
       }
-      return player;
-    }));
 
-    toast({
-      title: "Game completed!",
-      description: `Game #${game.gameNumber} marked as done.`,
-    });
+      // Update game status
+      setGames(prev => prev.map(g => 
+        g.id === gameId ? { ...g, completed: true } : g
+      ));
+
+      // Update players: increment games played and set to Available
+      setPlayers(prev => prev.map(player => {
+        if (allPlayers.some(gp => gp.id === player.id)) {
+          return {
+            ...player,
+            status: 'Available' as const,
+            gamesPlayed: player.gamesPlayed + 1
+          };
+        }
+        return player;
+      }));
+
+      toast({
+        title: "Game completed!",
+        description: `Game #${game.gameNumber} marked as done.`,
+      });
+    } catch (error) {
+      console.error('Error updating game completion:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update game completion in database.",
+        variant: "destructive"
+      });
+    }
   }, [games]);
 
   const resetAllPlayers = useCallback(() => {
@@ -233,14 +256,75 @@ export function usePlayerManager() {
   }, []);
 
   const replacePlayerInTeam = useCallback((oldPlayerId: string, newPlayerId: string) => {
-    // Implementation for replacing player in team selection
-    // This would need to be coordinated with team selection logic
+    // This is handled in the TeamSelection component directly
+    // The match state is updated there
   }, []);
 
-  const replacePlayerInGame = useCallback((gameId: string, oldPlayerId: string, newPlayerId: string) => {
-    // Implementation for replacing player in active game
-    // This would need to be coordinated with game logic
-  }, []);
+  const replacePlayerInGame = useCallback(async (gameId: string, oldPlayerId: string, newPlayerId: string) => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Find the new player
+      const newPlayer = players.find(p => p.id === newPlayerId);
+      if (!newPlayer) return;
+
+      // Update the game with the new player
+      setGames(prev => prev.map(game => {
+        if (game.id === gameId) {
+          const updatedGame = { ...game };
+          
+          // Replace in pair1
+          const pair1Index = updatedGame.match.pair1.players.findIndex(p => p.id === oldPlayerId);
+          if (pair1Index !== -1) {
+            updatedGame.match.pair1.players[pair1Index] = newPlayer;
+          } else {
+            // Replace in pair2
+            const pair2Index = updatedGame.match.pair2.players.findIndex(p => p.id === oldPlayerId);
+            if (pair2Index !== -1) {
+              updatedGame.match.pair2.players[pair2Index] = newPlayer;
+            }
+          }
+          
+          return updatedGame;
+        }
+        return game;
+      }));
+
+      // Update player statuses
+      setPlayers(prev => prev.map(player => {
+        if (player.id === oldPlayerId) {
+          return { ...player, status: 'Available' as const };
+        }
+        if (player.id === newPlayerId) {
+          return { ...player, status: 'In progress' as const };
+        }
+        return player;
+      }));
+
+      // Update in database
+      await supabase
+        .from('players')
+        .update({ status: 'available' })
+        .eq('id', oldPlayerId);
+        
+      await supabase
+        .from('players')
+        .update({ status: 'in_progress' })
+        .eq('id', newPlayerId);
+
+      toast({
+        title: "Player substituted",
+        description: `${newPlayer.name} has replaced the previous player in the game.`,
+      });
+    } catch (error) {
+      console.error('Error replacing player:', error);
+      toast({
+        title: "Error",
+        description: "Failed to replace player.",
+        variant: "destructive"
+      });
+    }
+  }, [players]);
 
   return {
     players,

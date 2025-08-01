@@ -1,13 +1,17 @@
+import { useState } from 'react';
 import { Game, getLevelDisplay } from '@/types/player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Clock, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CheckCircle, Clock, Users, UserX } from 'lucide-react';
 
 interface GameCardProps {
   game: Game;
   onMarkDone: (gameId: string, winner?: 'team1' | 'team2') => void;
   onReplacePlayer?: (gameId: string, oldPlayerId: string, newPlayerId: string) => void;
+  availablePlayers?: any[];
 }
 
 const levelColors = {
@@ -17,7 +21,18 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function GameCard({ game, onMarkDone, onReplacePlayer }: GameCardProps) {
+export function GameCard({ game, onMarkDone, onReplacePlayer, availablePlayers = [] }: GameCardProps) {
+  const [substitutionDialog, setSubstitutionDialog] = useState<{
+    open: boolean;
+    playerToReplace?: any;
+  }>({ open: false });
+
+  const handlePlayerSubstitution = (newPlayerId: string) => {
+    if (!substitutionDialog.playerToReplace || !onReplacePlayer) return;
+    
+    onReplacePlayer(game.id, substitutionDialog.playerToReplace.id, newPlayerId);
+    setSubstitutionDialog({ open: false });
+  };
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -41,15 +56,29 @@ export function GameCard({ game, onMarkDone, onReplacePlayer }: GameCardProps) {
               Team 1 ({game.match.pair1.pairType})
             </div>
             <div className="grid grid-cols-1 gap-1 pl-5">
-              {game.match.pair1.players.map((player) => (
+               {game.match.pair1.players.map((player) => (
                 <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                   <div className="flex flex-col">
                     <span className="font-medium truncate">{player.name}</span>
                     <span className="text-xs text-muted-foreground">{player.level.major}</span>
                   </div>
-                  <Badge className={levelColors[player.level.major]} variant="secondary">
-                    Level {player.level.bracket}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={levelColors[player.level.major]} variant="secondary">
+                      Level {player.level.bracket}
+                    </Badge>
+                    {!game.completed && availablePlayers.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSubstitutionDialog({
+                          open: true,
+                          playerToReplace: player
+                        })}
+                      >
+                        <UserX className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -68,9 +97,23 @@ export function GameCard({ game, onMarkDone, onReplacePlayer }: GameCardProps) {
                     <span className="font-medium truncate">{player.name}</span>
                     <span className="text-xs text-muted-foreground">{player.level.major}</span>
                   </div>
-                  <Badge className={levelColors[player.level.major]} variant="secondary">
-                    Level {player.level.bracket}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={levelColors[player.level.major]} variant="secondary">
+                      Level {player.level.bracket}
+                    </Badge>
+                    {!game.completed && availablePlayers.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSubstitutionDialog({
+                          open: true,
+                          playerToReplace: player
+                        })}
+                      >
+                        <UserX className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -96,6 +139,37 @@ export function GameCard({ game, onMarkDone, onReplacePlayer }: GameCardProps) {
           </div>
         )}
       </CardContent>
+      
+      {/* Player Substitution Dialog */}
+      <Dialog 
+        open={substitutionDialog.open} 
+        onOpenChange={(open) => setSubstitutionDialog({ open })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace Player in Game</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>
+              Replace <strong>{substitutionDialog.playerToReplace?.name}</strong> with:
+            </p>
+            <Select onValueChange={handlePlayerSubstitution}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select replacement player" />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePlayers
+                  .filter(p => p.status === 'Available' && p.eligible)
+                  .map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {player.name} - {player.level.major} Level {player.level.bracket}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
