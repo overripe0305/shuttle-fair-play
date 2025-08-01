@@ -56,7 +56,7 @@ export function usePlayerManager() {
     console.log('selectFairMatch - Total players:', playersToUse.length);
     console.log('Players:', playersToUse.map(p => ({ name: p.name, status: p.status, eligible: p.eligible })));
     
-    // Filter eligible and available players
+    // Filter eligible and available players (not in queue or in progress)
     const availablePlayers = playersToUse.filter(
       p => p.eligible && p.status === 'Available'
     );

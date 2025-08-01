@@ -68,6 +68,21 @@ export function useWaitingMatchManager(eventId?: string) {
     if (!eventId) return;
 
     try {
+      const playerIds = [
+        match.pair1.players[0].id,
+        match.pair1.players[1].id,
+        match.pair2.players[0].id,
+        match.pair2.players[1].id
+      ];
+
+      // Update player statuses to 'Queued'
+      for (const playerId of playerIds) {
+        await supabase
+          .from('players')
+          .update({ status: 'queued' })
+          .eq('id', playerId);
+      }
+
       const { error } = await supabase
         .from('waiting_matches')
         .insert({
@@ -99,6 +114,25 @@ export function useWaitingMatchManager(eventId?: string) {
 
   const removeWaitingMatch = useCallback(async (matchId: string) => {
     try {
+      // Find the match to get player IDs
+      const match = waitingMatches.find(m => m.id === matchId);
+      if (match) {
+        const playerIds = [
+          match.player1Id,
+          match.player2Id,
+          match.player3Id,
+          match.player4Id
+        ];
+
+        // Update player statuses back to 'Available'
+        for (const playerId of playerIds) {
+          await supabase
+            .from('players')
+            .update({ status: 'available' })
+            .eq('id', playerId);
+        }
+      }
+
       const { error } = await supabase
         .from('waiting_matches')
         .delete()
@@ -110,19 +144,40 @@ export function useWaitingMatchManager(eventId?: string) {
     } catch (error) {
       console.error('Error removing waiting match:', error);
     }
-  }, []);
+  }, [waitingMatches]);
 
   const startWaitingMatch = useCallback(async (matchId: string, courtId: number, onStartGame: (match: GameMatch) => void) => {
     try {
       const match = waitingMatches.find(m => m.id === matchId);
       if (!match) return;
 
-      await removeWaitingMatch(matchId);
+      const playerIds = [
+        match.player1Id,
+        match.player2Id,
+        match.player3Id,
+        match.player4Id
+      ];
+
+      // Update player statuses to 'In progress'
+      for (const playerId of playerIds) {
+        await supabase
+          .from('players')
+          .update({ status: 'in_progress' })
+          .eq('id', playerId);
+      }
+
+      // Remove from waiting matches
+      await supabase
+        .from('waiting_matches')
+        .delete()
+        .eq('id', matchId);
+
       onStartGame(match.matchData);
+      loadWaitingMatches();
     } catch (error) {
       console.error('Error starting waiting match:', error);
     }
-  }, [waitingMatches, removeWaitingMatch]);
+  }, [waitingMatches, loadWaitingMatches]);
 
   return {
     waitingMatches,
