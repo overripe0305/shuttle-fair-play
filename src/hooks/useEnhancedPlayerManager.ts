@@ -62,7 +62,7 @@ export const useEnhancedPlayerManager = () => {
           photo: playerData.photo,
           games_played: 0,
           penalty_bonus: 0,
-          status: 'Available'
+          status: 'available'
         })
         .select()
         .single();
