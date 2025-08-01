@@ -74,8 +74,8 @@ const Index = () => {
     return matchesSearch && matchesLevel;
   });
 
-  const availablePlayers = eventPlayers.filter(p => p.eligible && p.status === 'Available');
-  const inProgressPlayers = eventPlayers.filter(p => p.status === 'In progress');
+  const availablePlayers = eventPlayers.filter(p => p.eligible && p.status === 'available');
+  const inProgressPlayers = eventPlayers.filter(p => p.status === 'in_progress');
   
   // Use database active games instead of local state
   const currentActiveGames = dbActiveGames || [];

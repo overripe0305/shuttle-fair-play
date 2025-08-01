@@ -19,11 +19,10 @@ const levelColors = {
 };
 
 const statusColors = {
-  Available: 'bg-status-available text-white',
-  'In progress': 'bg-status-in-progress text-white',
-  'Waiting': 'bg-orange-500 text-white',
-  'Queued': 'bg-yellow-500 text-white',
-  Done: 'bg-status-done text-white',
+  available: 'bg-status-available text-white',
+  in_progress: 'bg-status-in-progress text-white',
+  waiting: 'bg-orange-500 text-white',
+  done: 'bg-status-done text-white',
 };
 
 export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
@@ -32,7 +31,7 @@ export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
 
   // Calculate idle time for available players
   useEffect(() => {
-    if (player.status !== 'Available') {
+    if (player.status !== 'available') {
       setIdleTime('');
       return;
     }
@@ -61,19 +60,19 @@ export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
         "cursor-pointer transition-all duration-200 hover:shadow-md",
         selected && "ring-2 ring-primary",
         !player.eligible && "opacity-50",
-        player.status === 'In progress' && "opacity-75"
+        player.status === 'in_progress' && "opacity-75"
       )}
       onClick={onClick}
     >
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold truncate">{player.name}</h3>
-          <Badge className={statusColors[player.status]} variant="outline">
+          <Badge className={statusColors[player.status as keyof typeof statusColors]} variant="outline">
             {player.status}
           </Badge>
         </div>
         
-        {player.status === 'Available' && idleTime && (
+        {player.status === 'available' && idleTime && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
             <Clock className="h-3 w-3" />
             <span>Idle: {idleTime}</span>

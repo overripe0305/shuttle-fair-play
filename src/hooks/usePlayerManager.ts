@@ -58,7 +58,7 @@ export function usePlayerManager() {
     
     // Filter eligible and available players (not waiting, queued, or in progress)
     const availablePlayers = playersToUse.filter(
-      p => p.eligible && p.status === 'Available'
+      p => p.eligible && p.status === 'available'
     );
 
     console.log('Available players:', availablePlayers.length);
@@ -145,7 +145,7 @@ export function usePlayerManager() {
       if (allPlayers.some(sp => sp.id === player.id)) {
         return { 
           ...player, 
-          status: 'In progress' as const,
+          status: 'in_progress' as const,
           matchHistory: [...player.matchHistory, newGame.id]
         };
       }
@@ -194,7 +194,7 @@ export function usePlayerManager() {
         if (allPlayers.some(gp => gp.id === player.id)) {
           return {
             ...player,
-            status: 'Available' as const,
+            status: 'available' as const,
             gamesPlayed: player.gamesPlayed + 1
           };
         }
@@ -218,7 +218,7 @@ export function usePlayerManager() {
   const resetAllPlayers = useCallback(() => {
     setPlayers(prev => prev.map(player => ({
       ...player,
-      status: 'Available' as const
+      status: 'available' as const
     })));
     setGames([]);
     setGameCounter(1);
@@ -236,7 +236,7 @@ export function usePlayerManager() {
       eligible: true,
       gamesPlayed: 0,
       gamePenaltyBonus: 0,
-      status: 'Available',
+      status: 'available',
       matchHistory: [],
       level
     };
@@ -302,10 +302,10 @@ export function usePlayerManager() {
       // Update player statuses
       setPlayers(prev => prev.map(player => {
         if (player.id === oldPlayerId) {
-          return { ...player, status: 'Available' as const };
+          return { ...player, status: 'available' as const };
         }
         if (player.id === newPlayerId) {
-          return { ...player, status: 'In progress' as const };
+          return { ...player, status: 'in_progress' as const };
         }
         return player;
       }));
