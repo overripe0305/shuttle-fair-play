@@ -37,7 +37,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
   }>({ open: false });
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { waitingMatches, addWaitingMatch, startWaitingMatch } = useWaitingMatchManager(eventId);
+  const { waitingMatches, addWaitingMatch, startWaitingMatch, removeWaitingMatch } = useWaitingMatchManager(eventId);
 
   const handleSelectMatch = () => {
     const match = onSelectMatch();
@@ -288,13 +288,22 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
                       Waiting for {Math.floor((new Date().getTime() - waitingMatch.createdAt.getTime()) / 60000)} minutes
                     </div>
                   </div>
-                  <Button 
-                    size="sm"
-                    onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
-                    disabled={maxCourts - activeGamesCount <= 0}
-                  >
-                    Start Now
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm"
+                      onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
+                      disabled={maxCourts - activeGamesCount <= 0}
+                    >
+                      Start Now
+                    </Button>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeWaitingMatch(waitingMatch.id)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

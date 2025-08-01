@@ -102,7 +102,7 @@ export function useWaitingMatchManager(eventId?: string) {
         
         // Update local state immediately
         if (onPlayerStatusUpdate) {
-          onPlayerStatusUpdate(playerId, 'waiting');
+          onPlayerStatusUpdate(playerId, 'Waiting');
         }
       }
 
@@ -190,7 +190,7 @@ export function useWaitingMatchManager(eventId?: string) {
         
         // Update local state immediately
         if (onPlayerStatusUpdate) {
-          onPlayerStatusUpdate(playerId, 'in_progress');
+          onPlayerStatusUpdate(playerId, 'In progress');
         }
       }
 
