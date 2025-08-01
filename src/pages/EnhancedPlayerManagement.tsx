@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useGameManager } from '@/hooks/useGameManager';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,14 +20,23 @@ import {
   Search,
   ArrowLeft,
   Calendar,
-  Camera
+  Camera,
+  SortAsc,
+  SortDesc,
+  Filter
 } from 'lucide-react';
 import { MajorLevel, SubLevel, getLevelDisplay } from '@/types/player';
-import { format } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+
+type SortOption = 'alphabetical' | 'gamesPlayed' | 'wins' | 'losses';
+type SortOrder = 'asc' | 'desc';
 
 const EnhancedPlayerManagement = () => {
   const { players, addPlayer, updatePlayer, deletePlayer, bulkAddPlayers } = useEnhancedPlayerManager();
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('alphabetical');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [dateFilter, setDateFilter] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [bulkData, setBulkData] = useState('');
@@ -39,8 +50,54 @@ const EnhancedPlayerManagement = () => {
     photo: ''
   });
 
-  const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const sortPlayers = (players: any[]) => {
+    const sortedPlayers = [...players].sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case 'alphabetical':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'gamesPlayed':
+          aValue = a.gamesPlayed || 0;
+          bValue = b.gamesPlayed || 0;
+          break;
+        case 'wins':
+          aValue = 0; // TODO: Add wins field to player data
+          bValue = 0;
+          break;
+        case 'losses':
+          aValue = 0; // TODO: Add losses field to player data
+          bValue = 0;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (typeof aValue === 'string') {
+        return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      } else {
+        return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+    });
+    
+    return sortedPlayers;
+  };
+
+  const filteredPlayers = sortPlayers(
+    players.filter(player => {
+      const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (dateFilter) {
+        const filterDate = new Date(dateFilter);
+        const playerDate = player.createdAt;
+        const matchesDate = playerDate >= startOfDay(filterDate) && playerDate <= endOfDay(filterDate);
+        return matchesSearch && matchesDate;
+      }
+      
+      return matchesSearch;
+    })
   );
 
   const handleAddPlayer = () => {
@@ -228,16 +285,55 @@ const EnhancedPlayerManagement = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-6">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Search and Filters */}
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                  <SelectItem value="gamesPlayed">Games Played</SelectItem>
+                  <SelectItem value="wins">Wins</SelectItem>
+                  <SelectItem value="losses">Losses</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
             <Input
-              placeholder="Search players..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-auto"
+              placeholder="Filter by date"
             />
+            {dateFilter && (
+              <Button variant="outline" size="sm" onClick={() => setDateFilter('')}>
+                Clear Date
+              </Button>
+            )}
           </div>
         </div>
 

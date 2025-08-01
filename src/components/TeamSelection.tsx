@@ -37,8 +37,16 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
   const { waitingMatches, addWaitingMatch, startWaitingMatch } = useWaitingMatchManager(eventId);
 
   const handleSelectMatch = () => {
-    const match = onSelectMatch();
-    setSelectedMatch(match);
+    // Allow multiple matches up to court limit
+    const availableCourts = maxCourts - activeGamesCount - waitingMatches.length;
+    if (availableCourts > 0) {
+      const match = onSelectMatch();
+      setSelectedMatch(match);
+    } else {
+      // Still allow selection but will go to queue
+      const match = onSelectMatch();
+      setSelectedMatch(match);
+    }
   };
 
   const handleStartGame = () => {

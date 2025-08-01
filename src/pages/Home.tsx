@@ -5,11 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { useEventManager } from "@/hooks/useEventManager";
 import { useEnhancedPlayerManager } from "@/hooks/useEnhancedPlayerManager";
 import { 
-  Users, 
-  Calendar, 
-  Plus, 
+  Play,
+  Users,
+  Calendar,
   Trophy,
-  MapPin,
+  BarChart3,
+  Plus,
+  ArrowRight,
+  Target,
+  Award,
+  TrendingUp,
+  Receipt,
   Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -68,33 +74,26 @@ const Home = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Link to="/players" className="block">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Users className="h-4 w-4 mr-2" />
-                    Manage Players
-                  </Button>
+              <Button asChild>
+                <Link to="/players">
+                  <Users className="h-4 w-4 mr-2" />
+                  Player Management
                 </Link>
-                
-                <Link to="/create-event" className="block">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Create Event
-                  </Button>
+              </Button>
+              
+              <Button asChild variant="outline">
+                <Link to="/view-events">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View All Events
                 </Link>
-                
-                <Link to="/events" className="block">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Trophy className="h-4 w-4 mr-2" />
-                    View All Events
-                  </Button>
+              </Button>
+              
+              <Button asChild variant="outline">
+                <Link to="/billing">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Billing
                 </Link>
-                
-                <Link to="/billing" className="block">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Billing Management
-                  </Button>
-                </Link>
+              </Button>
               </CardContent>
             </Card>
           </div>

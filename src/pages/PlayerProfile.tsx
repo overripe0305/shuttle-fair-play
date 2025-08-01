@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +19,8 @@ import {
   TrendingUp,
   Award,
   Activity,
-  Edit2
+  Edit2,
+  History
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getLevelDisplay, MajorLevel, SubLevel } from '@/types/player';
@@ -29,6 +31,12 @@ const PlayerProfile = () => {
   const { players, updatePlayer } = useEnhancedPlayerManager();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [gameHistory, setGameHistory] = useState<any[]>([]);
+  const [playerStats, setPlayerStats] = useState({
+    totalWins: 0,
+    totalLosses: 0,
+    winRate: 0
+  });
   const [editForm, setEditForm] = useState({
     name: '',
     majorLevel: '' as MajorLevel,
@@ -38,6 +46,56 @@ const PlayerProfile = () => {
   });
 
   const player = players.find(p => p.id === playerId);
+
+  // Load player game history and stats
+  useEffect(() => {
+    if (playerId) {
+      loadPlayerGameHistory();
+      loadPlayerStats();
+    }
+  }, [playerId]);
+
+  const loadPlayerGameHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .or(`player1_id.eq.${playerId},player2_id.eq.${playerId},player3_id.eq.${playerId},player4_id.eq.${playerId}`)
+        .eq('completed', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setGameHistory(data || []);
+    } catch (error) {
+      console.error('Error loading game history:', error);
+    }
+  };
+
+  const loadPlayerStats = async () => {
+    try {
+      const { data: playerData, error } = await supabase
+        .from('players')
+        .select('wins, losses')
+        .eq('id', playerId)
+        .single();
+
+      if (error) throw error;
+
+      const wins = playerData?.wins || 0;
+      const losses = playerData?.losses || 0;
+      const totalGames = wins + losses;
+      const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+
+      setPlayerStats({
+        totalWins: wins,
+        totalLosses: losses,
+        winRate
+      });
+    } catch (error) {
+      console.error('Error loading player stats:', error);
+    }
+  };
 
   // Initialize edit form when player is loaded
   useEffect(() => {
@@ -89,13 +147,31 @@ const PlayerProfile = () => {
     }
   };
 
-  // Real statistics based on actual player data
-  const stats = {
-    totalWins: 0, // TODO: Calculate from actual match results
-    totalLosses: 0, // TODO: Calculate from actual match results
-    winRate: 0,
-    streak: 0,
-    recentMatches: [] // TODO: Get from actual match history
+  // Calculate current streak from recent games
+  const calculateStreak = () => {
+    if (gameHistory.length === 0) return 0;
+    
+    let streak = 0;
+    let lastResult = null;
+    
+    for (const game of gameHistory) {
+      const isWinner = game.winner === 'team1' 
+        ? [game.player1_id, game.player2_id].includes(playerId)
+        : game.winner === 'team2' 
+        ? [game.player3_id, game.player4_id].includes(playerId)
+        : null;
+      
+      if (lastResult === null) {
+        lastResult = isWinner;
+        streak = isWinner ? 1 : 1;
+      } else if (lastResult === isWinner) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
   };
 
   return (
@@ -190,21 +266,21 @@ const PlayerProfile = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{stats.totalWins}</div>
+                  <div className="text-2xl font-bold text-green-600">{playerStats.totalWins}</div>
                   <div className="text-sm text-muted-foreground">Total Wins</div>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{stats.totalLosses}</div>
+                  <div className="text-2xl font-bold text-red-600">{playerStats.totalLosses}</div>
                   <div className="text-sm text-muted-foreground">Total Losses</div>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold">{stats.winRate}%</div>
+                  <div className="text-2xl font-bold">{playerStats.winRate}%</div>
                   <div className="text-sm text-muted-foreground">Win Rate</div>
                 </CardContent>
               </Card>
@@ -231,16 +307,52 @@ const PlayerProfile = () => {
                       <div className="text-sm text-muted-foreground mb-2">Current Streak</div>
                       <div className="flex items-center gap-2">
                         <Award className="h-5 w-5 text-yellow-500" />
-                        <span className="text-lg font-semibold">{stats.streak} games</span>
+                        <span className="text-lg font-semibold">{calculateStreak()} games</span>
                       </div>
                     </div>
-                  
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-2">Penalty/Bonus</div>
-                    <div className="text-lg font-semibold">
-                      {player.gamePenaltyBonus > 0 ? '+' : ''}{player.gamePenaltyBonus}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Game History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Recent Games
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {gameHistory.length > 0 ? (
+                    gameHistory.map((game) => (
+                      <div key={game.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">
+                            Court {game.court_id} - {format(new Date(game.created_at), 'MMM dd, HH:mm')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {game.winner ? `Team ${game.winner} won` : 'No winner recorded'}
+                          </div>
+                        </div>
+                        <Badge 
+                          variant={
+                            game.winner === 'team1' && [game.player1_id, game.player2_id].includes(playerId) ||
+                            game.winner === 'team2' && [game.player3_id, game.player4_id].includes(playerId)
+                              ? 'default' : 'secondary'
+                          }
+                        >
+                          {game.winner === 'team1' && [game.player1_id, game.player2_id].includes(playerId) ||
+                           game.winner === 'team2' && [game.player3_id, game.player4_id].includes(playerId)
+                            ? 'Win' : 'Loss'}
+                        </Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No games played yet
                     </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -200,14 +200,26 @@ const Index = () => {
               
               <div className="flex gap-2">
                 {currentEvent && (
-                  <Button 
-                    size="sm" 
-                    onClick={() => setIsReportsDialogOpen(true)}
-                    variant="outline"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Event Reports
-                  </Button>
+                  <>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setIsReportsDialogOpen(true)}
+                      variant="outline"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Event Reports
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => {
+                        // TODO: Add end event functionality
+                        toast.success('Event ended successfully');
+                      }}
+                    >
+                      End Event
+                    </Button>
+                  </>
                 )}
                 <Button 
                   size="sm" 
@@ -360,9 +372,9 @@ const Index = () => {
             </CardContent>
           </Card>
           
-          <Card>
+            <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0)}</div>
+              <div className="text-2xl font-bold">{Math.floor(eventPlayers.reduce((total, player) => total + (player.gamesPlayed || 0), 0) / 4)}</div>
               <div className="text-sm text-muted-foreground">Total Games</div>
             </CardContent>
           </Card>
