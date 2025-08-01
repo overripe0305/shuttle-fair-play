@@ -37,15 +37,23 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
   const { waitingMatches, addWaitingMatch, startWaitingMatch } = useWaitingMatchManager(eventId);
 
   const handleSelectMatch = () => {
-    // Allow multiple matches up to court limit
-    const availableCourts = maxCourts - activeGamesCount - waitingMatches.length;
-    if (availableCourts > 0) {
-      const match = onSelectMatch();
+    const match = onSelectMatch();
+    if (match) {
       setSelectedMatch(match);
-    } else {
-      // Still allow selection but will go to queue
-      const match = onSelectMatch();
-      setSelectedMatch(match);
+    }
+  };
+
+  const handleQuickMatch = () => {
+    const match = onSelectMatch();
+    if (match) {
+      // If there are available courts, start immediately, otherwise add to queue
+      const availableCourts = maxCourts - activeGamesCount;
+      if (availableCourts > 0) {
+        onStartGame(match);
+      } else {
+        // Add to waiting queue directly
+        addWaitingMatch(match);
+      }
     }
   };
 
@@ -102,18 +110,37 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button 
-            onClick={handleSelectMatch}
-            size="lg"
-            className="w-full"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Pick Fair Match
-          </Button>
+          <div className="text-center space-y-3">
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleQuickMatch}
+                size="lg"
+                className="flex-1"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Quick Match
+              </Button>
+              
+              <Button 
+                onClick={handleSelectMatch}
+                size="lg"
+                variant="outline"
+                className="flex-1"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Review Match
+              </Button>
+            </div>
+            
+            <div className="text-xs text-muted-foreground">
+              Available courts: {Math.max(0, maxCourts - activeGamesCount)} | 
+              Queued matches: {waitingMatches.length}
+            </div>
+          </div>
           
           {selectedMatch && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Selected Match:</h3>
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="font-semibold">Review Selected Match:</h3>
               
               {/* Team 1 */}
               <div className="space-y-2">
@@ -201,14 +228,24 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
                 </Select>
               </div>
               
-              <Button 
-                onClick={handleStartGame}
-                className="w-full"
-                variant="default"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                {maxCourts - activeGamesCount > 0 ? `Start Game on Court ${selectedCourt}` : 'Add to Queue'}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleStartGame}
+                  className="flex-1"
+                  variant="default"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  {maxCourts - activeGamesCount > 0 ? `Start Game` : 'Add to Queue'}
+                </Button>
+                
+                <Button 
+                  onClick={() => setSelectedMatch(null)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
