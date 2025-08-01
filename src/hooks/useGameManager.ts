@@ -1,0 +1,281 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+export interface ActiveGame {
+  id: string;
+  eventId: string;
+  player1Id: string;
+  player2Id: string;
+  player3Id: string;
+  player4Id: string;
+  courtId: number;
+  startTime: Date;
+  completed: boolean;
+  winner?: 'team1' | 'team2';
+  player1Name?: string;
+  player2Name?: string;
+  player3Name?: string;
+  player4Name?: string;
+}
+
+export function useGameManager(eventId?: string) {
+  const [activeGames, setActiveGames] = useState<ActiveGame[]>([]);
+
+  useEffect(() => {
+    if (eventId) {
+      loadActiveGames();
+      
+      // Subscribe to real-time updates
+      const channel = supabase
+        .channel('games-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => {
+          loadActiveGames();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [eventId]);
+
+  const loadActiveGames = async () => {
+    if (!eventId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('completed', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const games: ActiveGame[] = data?.map(game => ({
+        id: game.id,
+        eventId: game.event_id,
+        player1Id: game.player1_id,
+        player2Id: game.player2_id,
+        player3Id: game.player3_id,
+        player4Id: game.player4_id,
+        courtId: game.court_id,
+        startTime: new Date(game.start_time),
+        completed: game.completed,
+        winner: game.winner as 'team1' | 'team2' | undefined,
+        player1Name: undefined,
+        player2Name: undefined,
+        player3Name: undefined,
+        player4Name: undefined,
+      })) || [];
+
+      // Fetch player names separately
+      if (games.length > 0) {
+        const playerIds = games.flatMap(game => [game.player1Id, game.player2Id, game.player3Id, game.player4Id]);
+        const { data: playersData } = await supabase
+          .from('players')
+          .select('id, name')
+          .in('id', playerIds);
+
+        // Map player names to games
+        games.forEach(game => {
+          game.player1Name = playersData?.find(p => p.id === game.player1Id)?.name || 'Unknown';
+          game.player2Name = playersData?.find(p => p.id === game.player2Id)?.name || 'Unknown';
+          game.player3Name = playersData?.find(p => p.id === game.player3Id)?.name || 'Unknown';
+          game.player4Name = playersData?.find(p => p.id === game.player4Id)?.name || 'Unknown';
+        });
+      }
+
+      setActiveGames(games);
+    } catch (error) {
+      console.error('Error loading active games:', error);
+    }
+  };
+
+  const createGame = useCallback(async (
+    player1Id: string,
+    player2Id: string,
+    player3Id: string,
+    player4Id: string,
+    courtId: number
+  ) => {
+    if (!eventId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .insert({
+          event_id: eventId,
+          player1_id: player1Id,
+          player2_id: player2Id,
+          player3_id: player3Id,
+          player4_id: player4Id,
+          court_id: courtId,
+          completed: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update player statuses to 'in_progress'
+      const playerIds = [player1Id, player2Id, player3Id, player4Id];
+      await supabase
+        .from('players')
+        .update({ status: 'in_progress' })
+        .in('id', playerIds);
+
+      toast({
+        title: "Game started!",
+        description: `New game created on Court ${courtId}`,
+      });
+
+      loadActiveGames();
+    } catch (error) {
+      console.error('Error creating game:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create game",
+        variant: "destructive"
+      });
+    }
+  }, [eventId]);
+
+  const completeGame = useCallback(async (gameId: string, winner?: 'team1' | 'team2') => {
+    try {
+      const game = activeGames.find(g => g.id === gameId);
+      if (!game) return;
+
+      // Update game status
+      const { error: gameError } = await supabase
+        .from('games')
+        .update({ 
+          completed: true,
+          winner: winner 
+        })
+        .eq('id', gameId);
+
+      if (gameError) throw gameError;
+
+      // Update player statuses and increment games played
+      const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];
+      
+      // Get current games_played for each player and increment
+      const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select('id, games_played')
+        .in('id', playerIds);
+
+      if (playersError) throw playersError;
+
+      // Update each player individually to increment games_played and set status
+      for (const player of players) {
+        await supabase
+          .from('players')
+          .update({
+            status: 'available',
+            games_played: player.games_played + 1
+          })
+          .eq('id', player.id);
+      }
+
+      toast({
+        title: "Game completed!",
+        description: `Game on Court ${game.courtId} has been marked as complete.`,
+      });
+
+      loadActiveGames();
+    } catch (error) {
+      console.error('Error completing game:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete game",
+        variant: "destructive"
+      });
+    }
+  }, [activeGames]);
+
+  const updateGameCourt = useCallback(async (gameId: string, courtId: number) => {
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update({ court_id: courtId })
+        .eq('id', gameId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Court updated",
+        description: `Game moved to Court ${courtId}`,
+      });
+
+      loadActiveGames();
+    } catch (error) {
+      console.error('Error updating game court:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update court",
+        variant: "destructive"
+      });
+    }
+  }, []);
+
+  const replacePlayerInGame = useCallback(async (gameId: string, oldPlayerId: string, newPlayerId: string) => {
+    try {
+      const game = activeGames.find(g => g.id === gameId);
+      if (!game) return;
+
+      // Determine which player position to update
+      let updateField = '';
+      if (game.player1Id === oldPlayerId) updateField = 'player1_id';
+      else if (game.player2Id === oldPlayerId) updateField = 'player2_id';
+      else if (game.player3Id === oldPlayerId) updateField = 'player3_id';
+      else if (game.player4Id === oldPlayerId) updateField = 'player4_id';
+
+      if (!updateField) return;
+
+      // Update the game
+      const { error: gameError } = await supabase
+        .from('games')
+        .update({ [updateField]: newPlayerId })
+        .eq('id', gameId);
+
+      if (gameError) throw gameError;
+
+      // Update player statuses
+      await supabase
+        .from('players')
+        .update({ status: 'available' })
+        .eq('id', oldPlayerId);
+
+      await supabase
+        .from('players')
+        .update({ status: 'in_progress' })
+        .eq('id', newPlayerId);
+
+      toast({
+        title: "Player substituted",
+        description: "Player has been replaced in the game.",
+      });
+
+      loadActiveGames();
+    } catch (error) {
+      console.error('Error replacing player:', error);
+      toast({
+        title: "Error",
+        description: "Failed to replace player",
+        variant: "destructive"
+      });
+    }
+  }, [activeGames]);
+
+  return {
+    activeGames,
+    createGame,
+    completeGame,
+    updateGameCourt,
+    replacePlayerInGame,
+    loadActiveGames
+  };
+}

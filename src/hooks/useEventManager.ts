@@ -9,6 +9,18 @@ export const useEventManager = () => {
   // Load events from Supabase on mount
   useEffect(() => {
     loadEvents();
+    
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('events-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        loadEvents();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadEvents = async () => {
@@ -103,6 +115,25 @@ export const useEventManager = () => {
     }
   };
 
+  const updateEventCourtCount = async (eventId: string, courtCount: number) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ court_count: courtCount })
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setEvents(prev => 
+        prev.map(event => 
+          event.id === eventId ? { ...event, courtCount } : event
+        )
+      );
+    } catch (error) {
+      console.error('Error updating event court count:', error);
+    }
+  };
+
   const deleteEvent = async (eventId: string) => {
     try {
       const { error } = await supabase
@@ -147,6 +178,7 @@ export const useEventManager = () => {
     events,
     createEvent,
     updateEventStatus,
+    updateEventCourtCount,
     deleteEvent,
     addPlayerToEvent
   };

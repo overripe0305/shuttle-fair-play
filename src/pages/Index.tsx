@@ -3,11 +3,14 @@ import { useParams } from 'react-router-dom';
 import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useGameManager } from '@/hooks/useGameManager';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
 import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
 import { PlayerEditDialog } from '@/components/PlayerEditDialog';
+import { CourtSelector } from '@/components/CourtSelector';
+import { EnhancedGameCard } from '@/components/EnhancedGameCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,8 +45,9 @@ const Index = () => {
     replacePlayerInGame
   } = usePlayerManager();
 
-  const { events, addPlayerToEvent } = useEventManager();
+  const { events, addPlayerToEvent, updateEventCourtCount } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
+  const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
@@ -66,6 +70,9 @@ const Index = () => {
 
   const availablePlayers = eventPlayers.filter(p => p.eligible && p.status === 'Available');
   const inProgressPlayers = eventPlayers.filter(p => p.status === 'In progress');
+  
+  // Use database active games instead of local state
+  const currentActiveGames = dbActiveGames || [];
 
   const availablePlayersForEvent = allPlayers.filter(player => 
     !currentEvent?.selectedPlayerIds.includes(player.id)
@@ -130,6 +137,17 @@ const Index = () => {
     }
   };
 
+  const handleCourtCountChange = async (courtCount: number) => {
+    if (currentEvent) {
+      try {
+        await updateEventCourtCount(currentEvent.id, courtCount);
+        toast.success('Court count updated');
+      } catch (error) {
+        toast.error('Failed to update court count');
+      }
+    }
+  };
+
   const editingPlayerData = editingPlayer ? allPlayers.find(p => p.id === editingPlayer) : null;
 
   return (
@@ -166,9 +184,16 @@ const Index = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4" />
-                  <span>{activeGames.length} Active Games</span>
+                  <span>{currentActiveGames.length} Active Games</span>
                 </div>
               </div>
+              
+              {currentEvent && (
+                <CourtSelector
+                  currentCourtCount={currentEvent.courtCount || 4}
+                  onCourtCountChange={handleCourtCountChange}
+                />
+              )}
               
               <div className="flex gap-2">
                 <Button 
@@ -261,9 +286,20 @@ const Index = () => {
           <div className="lg:col-span-1">
             <TeamSelection 
               onSelectMatch={() => selectFairMatch(eventPlayers)}
-              onStartGame={startGame}
+              onStartGame={(match) => {
+                if (currentEvent) {
+                  createGame(
+                    match.pair1.players[0].id,
+                    match.pair1.players[1].id,
+                    match.pair2.players[0].id,
+                    match.pair2.players[1].id,
+                    1 // Default to court 1, can be changed later
+                  );
+                }
+              }}
               onReplacePlayer={replacePlayerInTeam}
               availablePlayers={availablePlayers}
+              maxCourts={currentEvent?.courtCount || 4}
             />
           </div>
 
@@ -273,22 +309,24 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="h-5 w-5" />
-                  Active Games ({activeGames.length})
+                  Active Games ({currentActiveGames.length})
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
-                {activeGames.map((game) => (
-                  <GameCard 
+                {currentActiveGames.map((game) => (
+                  <EnhancedGameCard 
                     key={game.id} 
                     game={game} 
-                    onMarkDone={markGameDone}
-                    onReplacePlayer={replacePlayerInGame}
+                    onComplete={completeGame}
+                    onReplacePlayer={replaceInDbGame}
+                    onUpdateCourt={updateGameCourt}
                     availablePlayers={availablePlayers}
+                    maxCourts={currentEvent?.courtCount || 4}
                   />
                 ))}
                 
-                {activeGames.length === 0 && (
+                {currentActiveGames.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     No active games
                   </div>
@@ -323,7 +361,7 @@ const Index = () => {
           
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">{activeGames.length}</div>
+              <div className="text-2xl font-bold">{currentActiveGames.length}</div>
               <div className="text-sm text-muted-foreground">Games in Progress</div>
             </CardContent>
           </Card>

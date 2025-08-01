@@ -5,6 +5,7 @@ export interface BadmintonEvent {
   selectedPlayerIds: string[];
   createdAt: Date;
   status: 'upcoming' | 'active' | 'completed';
+  courtCount?: number;
 }
 
 export interface EventPlayer {

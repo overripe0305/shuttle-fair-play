@@ -9,6 +9,18 @@ export const useEnhancedPlayerManager = () => {
   // Load players from Supabase on mount
   useEffect(() => {
     loadPlayers();
+    
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('players-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        loadPlayers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadPlayers = async () => {

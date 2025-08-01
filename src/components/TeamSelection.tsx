@@ -5,13 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Zap, UserX } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Users, Zap, UserX, Play } from 'lucide-react';
 
 interface TeamSelectionProps {
   onSelectMatch: () => GameMatch | null;
   onStartGame: (match: GameMatch) => void;
   onReplacePlayer?: (oldPlayerId: string, newPlayerId: string) => void;
   availablePlayers: any[];
+  maxCourts?: number;
 }
 
 const levelColors = {
@@ -21,8 +23,9 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, availablePlayers }: TeamSelectionProps) {
+export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, availablePlayers, maxCourts = 4 }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
+  const [selectedCourt, setSelectedCourt] = useState(1);
   const [substitutionDialog, setSubstitutionDialog] = useState<{
     open: boolean;
     playerToReplace?: any;
@@ -162,12 +165,29 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
                 </div>
               </div>
               
+              <div className="space-y-2">
+                <Label htmlFor="court-select">Select Court</Label>
+                <Select value={selectedCourt.toString()} onValueChange={(value) => setSelectedCourt(parseInt(value))}>
+                  <SelectTrigger id="court-select">
+                    <SelectValue placeholder="Choose court" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: maxCourts }, (_, i) => i + 1).map((court) => (
+                      <SelectItem key={court} value={court.toString()}>
+                        Court {court}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <Button 
                 onClick={handleStartGame}
                 className="w-full"
                 variant="default"
               >
-                Start Game
+                <Play className="h-4 w-4 mr-2" />
+                Start Game on Court {selectedCourt}
               </Button>
             </div>
           )}

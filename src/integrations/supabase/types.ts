@@ -52,6 +52,7 @@ export type Database = {
       }
       events: {
         Row: {
+          court_count: number | null
           created_at: string
           date: string
           id: string
@@ -60,6 +61,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          court_count?: number | null
           created_at?: string
           date: string
           id?: string
@@ -68,6 +70,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          court_count?: number | null
           created_at?: string
           date?: string
           id?: string
@@ -76,6 +79,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      games: {
+        Row: {
+          completed: boolean | null
+          court_id: number | null
+          created_at: string
+          event_id: string | null
+          id: string
+          player1_id: string
+          player2_id: string
+          player3_id: string
+          player4_id: string
+          start_time: string | null
+          updated_at: string
+          winner: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          court_id?: number | null
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          player1_id: string
+          player2_id: string
+          player3_id: string
+          player4_id: string
+          start_time?: string | null
+          updated_at?: string
+          winner?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          court_id?: number | null
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          player1_id?: string
+          player2_id?: string
+          player3_id?: string
+          player4_id?: string
+          start_time?: string | null
+          updated_at?: string
+          winner?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "games_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       players: {
         Row: {
