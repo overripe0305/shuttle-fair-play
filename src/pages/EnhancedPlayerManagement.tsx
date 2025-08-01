@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useCumulativePlayerStats } from '@/hooks/useCumulativePlayerStats';
 import { useGameManager } from '@/hooks/useGameManager';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ type SortOrder = 'asc' | 'desc';
 
 const EnhancedPlayerManagement = () => {
   const { players, addPlayer, updatePlayer, deletePlayer, bulkAddPlayers } = useEnhancedPlayerManager();
+  const { getPlayerStats } = useCumulativePlayerStats();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('alphabetical');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -60,16 +62,22 @@ const EnhancedPlayerManagement = () => {
           bValue = b.name.toLowerCase();
           break;
         case 'gamesPlayed':
-          aValue = a.gamesPlayed || 0;
-          bValue = b.gamesPlayed || 0;
+          const aStats = getPlayerStats(a.id);
+          const bStats = getPlayerStats(b.id);
+          aValue = aStats.gamesPlayed || 0;
+          bValue = bStats.gamesPlayed || 0;
           break;
         case 'wins':
-          aValue = 0; // TODO: Add wins field to player data
-          bValue = 0;
+          const aWinStats = getPlayerStats(a.id);
+          const bWinStats = getPlayerStats(b.id);
+          aValue = aWinStats.wins || 0;
+          bValue = bWinStats.wins || 0;
           break;
         case 'losses':
-          aValue = 0; // TODO: Add losses field to player data
-          bValue = 0;
+          const aLossStats = getPlayerStats(a.id);
+          const bLossStats = getPlayerStats(b.id);
+          aValue = aLossStats.losses || 0;
+          bValue = bLossStats.losses || 0;
           break;
         default:
           return 0;
@@ -364,7 +372,9 @@ const EnhancedPlayerManagement = () => {
                       {format(player.birthday, 'MMM dd, yyyy')}
                     </div>
                   )}
-                  <div>Games Played: {player.gamesPlayed}</div>
+                  <div>Games Played: {getPlayerStats(player.id).gamesPlayed}</div>
+                  <div>Wins: {getPlayerStats(player.id).wins}</div>
+                  <div>Losses: {getPlayerStats(player.id).losses}</div>
                   <div>Status: {player.status}</div>
                 </div>
                 

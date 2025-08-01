@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useCumulativePlayerStats } from '@/hooks/useCumulativePlayerStats';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { useState, useEffect } from 'react';
 const PlayerProfile = () => {
   const { playerId } = useParams();
   const { players, updatePlayer } = useEnhancedPlayerManager();
+  const { getPlayerStats } = useCumulativePlayerStats();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [gameHistory, setGameHistory] = useState<any[]>([]);
@@ -80,22 +82,15 @@ const PlayerProfile = () => {
 
   const loadPlayerStats = async () => {
     try {
-      const { data: playerData, error } = await supabase
-        .from('players')
-        .select('wins, losses')
-        .eq('id', playerId)
-        .single();
-
-      if (error) throw error;
-
-      const wins = playerData?.wins || 0;
-      const losses = playerData?.losses || 0;
-      const totalGames = wins + losses;
-      const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+      // Use cumulative stats from the new hook
+      const cumulativeStats = getPlayerStats(playerId!);
+      
+      const totalGames = cumulativeStats.wins + cumulativeStats.losses;
+      const winRate = totalGames > 0 ? Math.round((cumulativeStats.wins / totalGames) * 100) : 0;
 
       setPlayerStats({
-        totalWins: wins,
-        totalLosses: losses,
+        totalWins: cumulativeStats.wins,
+        totalLosses: cumulativeStats.losses,
         winRate
       });
     } catch (error) {
@@ -293,7 +288,7 @@ const PlayerProfile = () => {
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold">{player.gamesPlayed}</div>
+                  <div className="text-2xl font-bold">{getPlayerStats(playerId!).gamesPlayed}</div>
                   <div className="text-sm text-muted-foreground">Games Played</div>
                 </CardContent>
               </Card>

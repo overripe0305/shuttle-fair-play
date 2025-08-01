@@ -1,56 +1,50 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface EventPlayerStats {
+interface CumulativePlayerStats {
   playerId: string;
   gamesPlayed: number;
   wins: number;
   losses: number;
 }
 
-export const useEventPlayerStats = (eventId?: string) => {
-  const [eventPlayerStats, setEventPlayerStats] = useState<EventPlayerStats[]>([]);
+export const useCumulativePlayerStats = () => {
+  const [playerStats, setPlayerStats] = useState<CumulativePlayerStats[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (eventId) {
-      loadEventPlayerStats();
-      
-      // Set up real-time subscription for games table
-      const channel = supabase
-        .channel('games-changes')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'games',
-          filter: `event_id=eq.${eventId}`
-        }, () => {
-          loadEventPlayerStats();
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [eventId]);
-
-  const loadEventPlayerStats = async () => {
-    if (!eventId) return;
+    loadCumulativeStats();
     
+    // Set up real-time subscription for games table
+    const channel = supabase
+      .channel('cumulative-games-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'games'
+      }, () => {
+        loadCumulativeStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadCumulativeStats = async () => {
     setLoading(true);
     try {
-      // Get all completed games for this event
+      // Get all completed games across all events
       const { data: games, error } = await supabase
         .from('games')
         .select('*')
-        .eq('event_id', eventId)
         .eq('completed', true);
 
       if (error) throw error;
 
-      // Calculate stats for each player
-      const playerStatsMap = new Map<string, EventPlayerStats>();
+      // Calculate cumulative stats for each player
+      const playerStatsMap = new Map<string, CumulativePlayerStats>();
 
       games?.forEach(game => {
         const playerIds = [game.player1_id, game.player2_id, game.player3_id, game.player4_id];
@@ -81,16 +75,16 @@ export const useEventPlayerStats = (eventId?: string) => {
         });
       });
 
-      setEventPlayerStats(Array.from(playerStatsMap.values()));
+      setPlayerStats(Array.from(playerStatsMap.values()));
     } catch (error) {
-      console.error('Error loading event player stats:', error);
+      console.error('Error loading cumulative player stats:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getPlayerStats = (playerId: string): EventPlayerStats => {
-    return eventPlayerStats.find(stats => stats.playerId === playerId) || {
+  const getPlayerStats = (playerId: string): CumulativePlayerStats => {
+    return playerStats.find(stats => stats.playerId === playerId) || {
       playerId,
       gamesPlayed: 0,
       wins: 0,
@@ -99,9 +93,9 @@ export const useEventPlayerStats = (eventId?: string) => {
   };
 
   return {
-    eventPlayerStats,
+    playerStats,
     getPlayerStats,
     loading,
-    refetch: loadEventPlayerStats
+    refetch: loadCumulativeStats
   };
 };
