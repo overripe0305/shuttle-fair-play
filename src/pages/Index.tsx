@@ -323,6 +323,10 @@ const Index = () => {
                 }
               }}
               onReplacePlayer={replacePlayerInTeam}
+              onPlayerStatusUpdate={async (playerId: string, status: string) => {
+                // Update player status immediately in local state
+                await updatePlayer(playerId, { status: status as any });
+              }}
               availablePlayers={availablePlayers}
               maxCourts={currentEvent?.courtCount || 4}
               eventId={eventId}

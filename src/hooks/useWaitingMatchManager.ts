@@ -64,7 +64,7 @@ export function useWaitingMatchManager(eventId?: string) {
     }
   };
 
-  const addWaitingMatch = useCallback(async (match: GameMatch) => {
+  const addWaitingMatch = useCallback(async (match: GameMatch, onPlayerStatusUpdate?: (playerId: string, status: string) => void) => {
     if (!eventId) return;
 
     try {
@@ -75,12 +75,35 @@ export function useWaitingMatchManager(eventId?: string) {
         match.pair2.players[1].id
       ];
 
+      // Check if any player is already queued or in progress
+      const { data: existingPlayers, error: checkError } = await supabase
+        .from('players')
+        .select('id, status')
+        .in('id', playerIds);
+
+      if (checkError) throw checkError;
+
+      const unavailablePlayers = existingPlayers?.filter(p => p.status !== 'available') || [];
+      if (unavailablePlayers.length > 0) {
+        toast({
+          title: "Players unavailable",
+          description: "Some players are already in queue or playing",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Update player statuses to 'Queued'
       for (const playerId of playerIds) {
         await supabase
           .from('players')
           .update({ status: 'queued' })
           .eq('id', playerId);
+        
+        // Update local state immediately
+        if (onPlayerStatusUpdate) {
+          onPlayerStatusUpdate(playerId, 'queued');
+        }
       }
 
       const { error } = await supabase
@@ -110,7 +133,7 @@ export function useWaitingMatchManager(eventId?: string) {
         variant: "destructive"
       });
     }
-  }, [eventId]);
+  }, [eventId, loadWaitingMatches]);
 
   const removeWaitingMatch = useCallback(async (matchId: string) => {
     try {
@@ -146,7 +169,7 @@ export function useWaitingMatchManager(eventId?: string) {
     }
   }, [waitingMatches]);
 
-  const startWaitingMatch = useCallback(async (matchId: string, courtId: number, onStartGame: (match: GameMatch) => void) => {
+  const startWaitingMatch = useCallback(async (matchId: string, courtId: number, onStartGame: (match: GameMatch) => void, onPlayerStatusUpdate?: (playerId: string, status: string) => void) => {
     try {
       const match = waitingMatches.find(m => m.id === matchId);
       if (!match) return;
@@ -164,6 +187,11 @@ export function useWaitingMatchManager(eventId?: string) {
           .from('players')
           .update({ status: 'in_progress' })
           .eq('id', playerId);
+        
+        // Update local state immediately
+        if (onPlayerStatusUpdate) {
+          onPlayerStatusUpdate(playerId, 'in_progress');
+        }
       }
 
       // Remove from waiting matches

@@ -13,6 +13,7 @@ interface TeamSelectionProps {
   onSelectMatch: () => GameMatch | null;
   onStartGame: (match: GameMatch) => void;
   onReplacePlayer?: (oldPlayerId: string, newPlayerId: string) => void;
+  onPlayerStatusUpdate?: (playerId: string, status: string) => void;
   availablePlayers: any[];
   maxCourts?: number;
   eventId?: string;
@@ -26,7 +27,7 @@ const levelColors = {
   'Advance': 'bg-level-advance text-white',
 };
 
-export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, availablePlayers, maxCourts = 4, eventId, activeGamesCount = 0 }: TeamSelectionProps) {
+export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onPlayerStatusUpdate, availablePlayers, maxCourts = 4, eventId, activeGamesCount = 0 }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
   const [selectedCourt, setSelectedCourt] = useState(1);
   const [substitutionDialog, setSubstitutionDialog] = useState<{
@@ -52,7 +53,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
         onStartGame(match);
       } else {
         // Add to waiting queue directly
-        addWaitingMatch(match);
+        addWaitingMatch(match, onPlayerStatusUpdate);
       }
     }
   };
@@ -65,7 +66,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
         setSelectedMatch(null);
       } else {
         // Add to waiting queue
-        addWaitingMatch(selectedMatch);
+        addWaitingMatch(selectedMatch, onPlayerStatusUpdate);
         setSelectedMatch(null);
       }
     }
@@ -275,7 +276,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, ava
                   </div>
                   <Button 
                     size="sm"
-                    onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame)}
+                    onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
                     disabled={maxCourts - activeGamesCount <= 0}
                   >
                     Start Now
