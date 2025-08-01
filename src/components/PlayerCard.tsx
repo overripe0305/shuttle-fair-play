@@ -1,14 +1,16 @@
 import { Player, getLevelDisplay } from '@/types/player';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock } from 'lucide-react';
+import { Clock, Pause, Play } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface PlayerCardProps {
   player: Player;
   onClick?: () => void;
   selected?: boolean;
+  onTogglePause?: (playerId: string) => void;
 }
 
 const levelColors = {
@@ -23,9 +25,10 @@ const statusColors = {
   in_progress: 'bg-status-in-progress text-white',
   waiting: 'bg-orange-500 text-white',
   done: 'bg-status-done text-white',
+  paused: 'bg-gray-500 text-white',
 };
 
-export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
+export function PlayerCard({ player, onClick, selected, onTogglePause }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
   const [idleStartTime] = useState(() => new Date().getTime());
 
@@ -67,9 +70,28 @@ export function PlayerCard({ player, onClick, selected }: PlayerCardProps) {
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold truncate">{player.name}</h3>
-          <Badge className={statusColors[player.status as keyof typeof statusColors]} variant="outline">
-            {player.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={statusColors[player.status as keyof typeof statusColors]} variant="outline">
+              {player.status}
+            </Badge>
+            {onTogglePause && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePause(player.id);
+                }}
+              >
+                {player.status === 'paused' ? (
+                  <Play className="h-3 w-3" />
+                ) : (
+                  <Pause className="h-3 w-3" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
         
         {player.status === 'available' && idleTime && (

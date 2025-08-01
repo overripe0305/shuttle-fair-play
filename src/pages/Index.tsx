@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { usePlayerManager } from '@/hooks/usePlayerManager';
@@ -34,7 +34,7 @@ import {
   Settings
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
-import { MajorLevel, SubLevel } from '@/types/player';
+import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
 import { toast } from 'sonner';
 
 const Index = () => {
@@ -62,6 +62,7 @@ const Index = () => {
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle'>('games');
 
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -87,16 +88,49 @@ const Index = () => {
   }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats]);
 
   const filteredPlayers = React.useMemo(() => {
-    return eventPlayers.filter(player => {
+    let filtered = eventPlayers.filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
       return matchesSearch && matchesLevel;
     });
-  }, [eventPlayers, searchTerm, levelFilter]);
+
+    // Sort players based on selected criteria
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'level':
+          return a.level.bracket - b.level.bracket;
+        case 'games':
+          return a.gamesPlayed - b.gamesPlayed;
+        case 'idle':
+          // For idle time, available players come first, then by status
+          if (a.status === 'available' && b.status !== 'available') return -1;
+          if (a.status !== 'available' && b.status === 'available') return 1;
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [eventPlayers, searchTerm, levelFilter, sortBy]);
 
   const availablePlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.eligible && p.status === 'available');
   }, [eventPlayers]);
+
+  const handleTogglePause = useCallback(async (playerId: string) => {
+    const player = eventPlayers.find(p => p.id === playerId);
+    if (!player) return;
+
+    const newStatus: PlayerStatus = player.status === 'paused' ? 'available' : 'paused';
+    
+    try {
+      await updatePlayer(playerId, { status: newStatus });
+      toast.success(`Player ${newStatus === 'paused' ? 'paused' : 'unpaused'}: ${player.name} is now ${newStatus}.`);
+    } catch (error) {
+      toast.error("Failed to update player status.");
+    }
+  }, [eventPlayers, updatePlayer]);
 
   const inProgressPlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.status === 'in_progress');
@@ -313,7 +347,7 @@ const Index = () => {
                       className="pl-9"
                     />
                   </div>
-                  
+                   
                   <div className="flex gap-2 flex-wrap">
                     <Button
                       variant={levelFilter === 'All' ? 'default' : 'outline'}
@@ -334,6 +368,31 @@ const Index = () => {
                       </Button>
                     ))}
                   </div>
+
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+                    <Button
+                      variant={sortBy === 'games' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSortBy('games')}
+                    >
+                      Games
+                    </Button>
+                    <Button
+                      variant={sortBy === 'level' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSortBy('level')}
+                    >
+                      Level
+                    </Button>
+                    <Button
+                      variant={sortBy === 'idle' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSortBy('idle')}
+                    >
+                      Idle Time
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               
@@ -344,7 +403,10 @@ const Index = () => {
                     className="cursor-pointer"
                     onClick={() => setEditingPlayer(player.id)}
                   >
-                    <PlayerCard player={player} />
+                    <PlayerCard 
+                      player={player} 
+                      onTogglePause={handleTogglePause}
+                    />
                   </div>
                 ))}
                 
