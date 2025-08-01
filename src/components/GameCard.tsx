@@ -6,7 +6,7 @@ import { CheckCircle, Clock, Users } from 'lucide-react';
 
 interface GameCardProps {
   game: Game;
-  onMarkDone: (gameId: string) => void;
+  onMarkDone: (gameId: string, winner?: 'team1' | 'team2') => void;
 }
 
 const levelColors = {
@@ -77,14 +77,22 @@ export function GameCard({ game, onMarkDone }: GameCardProps) {
         </div>
         
         {!game.completed && (
-          <Button 
-            onClick={() => onMarkDone(game.id)}
-            className="w-full"
-            variant="outline"
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Mark Done
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => onMarkDone(game.id, 'team1')}
+              className="flex-1"
+              variant="outline"
+            >
+              Team 1 Wins
+            </Button>
+            <Button 
+              onClick={() => onMarkDone(game.id, 'team2')}
+              className="flex-1"
+              variant="outline"
+            >
+              Team 2 Wins
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

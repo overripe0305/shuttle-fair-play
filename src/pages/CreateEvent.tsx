@@ -73,8 +73,8 @@ const CreateEvent = () => {
   };
 
   const handleCreateEvent = async () => {
-    if (!eventTitle || !eventDate || selectedPlayerIds.length === 0) {
-      toast.error('Please fill in all required fields and select at least one player');
+    if (!eventTitle || !eventDate) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -178,7 +178,7 @@ const CreateEvent = () => {
               <Button 
                 onClick={handleCreateEvent} 
                 className="w-full mt-6"
-                disabled={!eventTitle || !eventDate || selectedPlayerIds.length === 0}
+                disabled={!eventTitle || !eventDate}
               >
                 Create Event
               </Button>

@@ -10,22 +10,9 @@ import {
 } from '@/types/player';
 import { toast } from '@/hooks/use-toast';
 
-// Sample players for demo
-const samplePlayers: Player[] = [
-  { id: '1', name: 'Alice Chen', eligible: true, gamesPlayed: 2, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 2, major: 'Beginner', sub: 'Mid' } },
-  { id: '2', name: 'Bob Smith', eligible: true, gamesPlayed: 1, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 4, major: 'Intermediate', sub: 'Low' } },
-  { id: '3', name: 'Charlie Wong', eligible: true, gamesPlayed: 3, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 5, major: 'Intermediate', sub: 'Mid' } },
-  { id: '4', name: 'Diana Lee', eligible: true, gamesPlayed: 0, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 1, major: 'Beginner', sub: 'Low' } },
-  { id: '5', name: 'Eva Martinez', eligible: true, gamesPlayed: 2, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 7, major: 'Advance', sub: 'Low' } },
-  { id: '6', name: 'Frank Johnson', eligible: true, gamesPlayed: 1, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 3, major: 'Beginner', sub: 'High' } },
-  { id: '7', name: 'Grace Liu', eligible: true, gamesPlayed: 0, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 6, major: 'Intermediate', sub: 'High' } },
-  { id: '8', name: 'Henry Davis', eligible: true, gamesPlayed: 4, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 8, major: 'Advance', sub: 'Mid' } },
-  { id: '9', name: 'Iris Kim', eligible: true, gamesPlayed: 1, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 0, major: 'Newbie' } },
-  { id: '10', name: 'Jack Thompson', eligible: true, gamesPlayed: 2, gamePenaltyBonus: 0, status: 'Available', matchHistory: [], level: { bracket: 9, major: 'Advance', sub: 'High' } },
-];
 
 export function usePlayerManager() {
-  const [players, setPlayers] = useState<Player[]>(samplePlayers);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [gameCounter, setGameCounter] = useState(1);
 
@@ -159,7 +146,7 @@ export function usePlayerManager() {
     });
   }, [gameCounter]);
 
-  const markGameDone = useCallback((gameId: string) => {
+  const markGameDone = useCallback((gameId: string, winner?: 'team1' | 'team2') => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
@@ -193,10 +180,12 @@ export function usePlayerManager() {
       ...player,
       status: 'Available' as const
     })));
+    setGames([]);
+    setGameCounter(1);
     
     toast({
-      title: "Players reset",
-      description: "All players are now available.",
+      title: "All reset",
+      description: "All players and games have been reset.",
     });
   }, []);
 

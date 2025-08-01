@@ -270,10 +270,12 @@ const EnhancedPlayerManagement = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
+                  <Link to={`/player/${player.id}`} className="flex-1">
+                    <Button size="sm" variant="outline" className="w-full">
+                      <Edit className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                  </Link>
                   <Button 
                     size="sm" 
                     variant="outline" 

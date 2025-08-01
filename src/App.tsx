@@ -9,6 +9,8 @@ import NotFound from "./pages/NotFound";
 import EnhancedPlayerManagement from "./pages/EnhancedPlayerManagement";
 import CreateEvent from "./pages/CreateEvent";
 import EventDetails from "./pages/EventDetails";
+import ViewAllEvents from "./pages/ViewAllEvents";
+import PlayerProfile from "./pages/PlayerProfile";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +24,9 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/app" element={<Index />} />
           <Route path="/players" element={<EnhancedPlayerManagement />} />
+          <Route path="/player/:playerId" element={<PlayerProfile />} />
           <Route path="/create-event" element={<CreateEvent />} />
+          <Route path="/events" element={<ViewAllEvents />} />
           <Route path="/event/:eventId" element={<EventDetails />} />
           <Route path="/event/:eventId/play" element={<Index />} />
           <Route path="*" element={<NotFound />} />
