@@ -85,8 +85,9 @@ const Index = () => {
       }
       return player;
     });
-  }, [currentEvent, allPlayers, eventPlayerStats, eventId, updateCounter]);
+  }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats, updateCounter]);
 
+  // Force refresh when updateCounter changes to ensure UI syncs with database
   // Force refresh of event stats when current event players change significantly
   const eventPlayerIds = currentEvent?.selectedPlayerIds;
   React.useEffect(() => {

@@ -71,7 +71,7 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
 
   useEffect(() => {
     if (eventId) {
-      // Clear old stats and reload when player list changes
+      // Clear old stats and reload when event changes
       setEventPlayerStats([]);
       loadEventPlayerStats();
       
@@ -86,10 +86,7 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
         }, (payload) => {
           console.log('Event game change detected:', payload);
           // Force immediate reload of stats when games change
-          // Add a small delay to ensure database consistency
-          setTimeout(() => {
-            loadEventPlayerStats();
-          }, 50);
+          loadEventPlayerStats();
         })
         .subscribe((status) => {
           console.log('Event stats subscription status:', status);
@@ -100,7 +97,15 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
         supabase.removeChannel(channel);
       };
     }
-  }, [eventId, loadEventPlayerStats, JSON.stringify(playerIds?.sort())]);
+  }, [eventId, loadEventPlayerStats]);
+
+  // Separate effect to handle player list changes without restarting subscription
+  useEffect(() => {
+    if (eventId && playerIds) {
+      console.log('Player list changed, refreshing stats for:', playerIds.length, 'players');
+      loadEventPlayerStats();
+    }
+  }, [eventId, JSON.stringify(playerIds?.sort()), loadEventPlayerStats]);
 
   const getPlayerStats = useCallback((playerId: string): EventPlayerStats => {
     return eventPlayerStats.find(stats => stats.playerId === playerId) || {
