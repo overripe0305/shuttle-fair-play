@@ -422,7 +422,16 @@ const Index = () => {
           {/* Center Panel - Team Selection */}
           <div className="lg:col-span-1">
             <TeamSelection 
-              onSelectMatch={() => selectFairMatch(eventPlayers)}
+              onSelectMatch={() => {
+                console.log('🎯 Team selection triggered!');
+                console.log('Event players passed to selectFairMatch:', eventPlayers.map(p => ({ 
+                  name: p.name, 
+                  games: p.gamesPlayed,
+                  status: p.status,
+                  eligible: p.eligible
+                })));
+                return selectFairMatch(eventPlayers);
+              }}
               onStartGame={(match) => {
                 if (currentEvent) {
                   createGame(
