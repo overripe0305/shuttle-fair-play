@@ -94,14 +94,14 @@ export const useEventPlayerStats = (eventId?: string) => {
     }
   }, [eventId, loadEventPlayerStats]);
 
-  const getPlayerStats = (playerId: string): EventPlayerStats => {
+  const getPlayerStats = useCallback((playerId: string): EventPlayerStats => {
     return eventPlayerStats.find(stats => stats.playerId === playerId) || {
       playerId,
       gamesPlayed: 0,
       wins: 0,
       losses: 0
     };
-  };
+  }, [eventPlayerStats]);
 
   return {
     eventPlayerStats,
