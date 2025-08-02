@@ -35,6 +35,61 @@ const EventDetails = () => {
 
   const event = events.find(e => e.id === eventId);
   
+  const eventPlayers = event ? players.filter(player => 
+    event.selectedPlayerIds.includes(player.id)
+  ) : [];
+
+  const availablePlayersForEvent = players.filter(player => 
+    !event?.selectedPlayerIds.includes(player.id)
+  );
+  
+  // Update games played for each player when they change
+  useEffect(() => {
+    if (!event || !eventPlayers.length) return;
+    
+    const newGamesPlayed: {[key: string]: number} = {};
+    eventPlayers.forEach(player => {
+      const stats = getPlayerStats(player.id);
+      newGamesPlayed[player.id] = stats.gamesPlayed;
+    });
+    setGamesPlayed(newGamesPlayed);
+  }, [event, eventPlayers, getPlayerStats]);
+
+  // Set up real-time sync for games
+  useEffect(() => {
+    if (!eventId || !event) return;
+
+    const channel = supabase
+      .channel('event-details-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games',
+          filter: `event_id=eq.${eventId}`
+        },
+        () => {
+          // Update games played when games change
+          if (eventPlayers.length > 0) {
+            const newGamesPlayed: {[key: string]: number} = {};
+            eventPlayers.forEach(player => {
+              const stats = getPlayerStats(player.id);
+              newGamesPlayed[player.id] = stats.gamesPlayed;
+            });
+            setGamesPlayed(newGamesPlayed);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId, event?.id]); // Only depend on eventId and event.id, not the full eventPlayers array
+
+  const editingPlayerData = editingPlayer ? eventPlayers.find(p => p.id === editingPlayer) : null;
+
   if (!event) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -47,14 +102,6 @@ const EventDetails = () => {
       </div>
     );
   }
-
-  const eventPlayers = players.filter(player => 
-    event.selectedPlayerIds.includes(player.id)
-  );
-
-  const availablePlayersForEvent = players.filter(player => 
-    !event.selectedPlayerIds.includes(player.id)
-  );
 
   const handleStartEvent = () => {
     updateEventStatus(event.id, 'active');
@@ -88,49 +135,6 @@ const EventDetails = () => {
       toast.error('Failed to update player');
     }
   };
-
-  // Update games played for each player when they change
-  useEffect(() => {
-    const newGamesPlayed: {[key: string]: number} = {};
-    eventPlayers.forEach(player => {
-      const stats = getPlayerStats(player.id);
-      newGamesPlayed[player.id] = stats.gamesPlayed;
-    });
-    setGamesPlayed(newGamesPlayed);
-  }, [eventPlayers, getPlayerStats]);
-
-  // Set up real-time sync for games
-  useEffect(() => {
-    if (!eventId) return;
-
-    const channel = supabase
-      .channel('event-details-sync')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'games',
-          filter: `event_id=eq.${eventId}`
-        },
-        () => {
-          // Update games played when games change
-          const newGamesPlayed: {[key: string]: number} = {};
-          eventPlayers.forEach(player => {
-            const stats = getPlayerStats(player.id);
-            newGamesPlayed[player.id] = stats.gamesPlayed;
-          });
-          setGamesPlayed(newGamesPlayed);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [eventId, eventPlayers, getPlayerStats]);
-
-  const editingPlayerData = editingPlayer ? eventPlayers.find(p => p.id === editingPlayer) : null;
 
   return (
     <div className="min-h-screen bg-background">
