@@ -99,7 +99,34 @@ export function usePlayerManager() {
     })));
     console.log('=== END DEBUG ===');
 
-    // Collect all valid matches instead of returning the first one
+    // CRITICAL: Always select the 4 players with lowest games first
+    const selectedPlayers = sortedPlayers.slice(0, 4);
+    console.log('🎯 Selected 4 players with lowest games:', selectedPlayers.map(p => ({ name: p.name, games: p.gamesPlayed })));
+
+    // Create pairs - try different combinations to find valid matches
+    const [p1, p2, p3, p4] = selectedPlayers;
+    
+    // Try all possible pair combinations and select the most balanced one
+    const possiblePairings = [
+      { pair1: createPair(p1, p2), pair2: createPair(p3, p4) },
+      { pair1: createPair(p1, p3), pair2: createPair(p2, p4) },
+      { pair1: createPair(p1, p4), pair2: createPair(p2, p3) }
+    ];
+    
+    // Find the first valid pairing
+    for (const pairing of possiblePairings) {
+      if (canPairMatch(pairing.pair1, pairing.pair2)) {
+        console.log('✅ Found valid pairing:', {
+          team1: pairing.pair1.players.map(p => p.name),
+          team2: pairing.pair2.players.map(p => p.name)
+        });
+        return { pair1: pairing.pair1, pair2: pairing.pair2 };
+      }
+    }
+
+    // If no valid pairing found with the 4 lowest, fall back to original algorithm
+    console.log('⚠️ No valid pairing with 4 lowest players, trying all combinations...');
+    
     const validMatches: GameMatch[] = [];
 
     // Try to find valid pairs and matches
