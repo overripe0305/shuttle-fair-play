@@ -54,7 +54,13 @@ export function usePlayerManager() {
     const playersToUse = eventPlayers || players;
     
     console.log('selectFairMatch - Total players:', playersToUse.length);
-    console.log('Players:', playersToUse.map(p => ({ name: p.name, status: p.status, eligible: p.eligible })));
+    console.log('Players with games:', playersToUse.map(p => ({ 
+      name: p.name, 
+      status: p.status, 
+      eligible: p.eligible,
+      eventGames: p.eventGamesPlayed || 0,
+      globalGames: p.gamesPlayed || 0
+    })));
     
     // Filter eligible and available players (not paused, waiting, queued, or in progress)
     const availablePlayers = playersToUse.filter(
@@ -72,16 +78,24 @@ export function usePlayerManager() {
       return null;
     }
 
-    // Sort by event-specific games played (if available) or adjusted games played, then by name
+    // Sort by event-specific games played first, then by name
     const sortedPlayers = [...availablePlayers].sort((a, b) => {
-      // Use event-specific games if available, otherwise fall back to global games + penalty/bonus
-      const aEventGames = (a as any).eventGamesPlayed ?? (a.gamesPlayed + a.gamePenaltyBonus);
-      const bEventGames = (b as any).eventGamesPlayed ?? (b.gamesPlayed + b.gamePenaltyBonus);
+      // Prioritize event-specific games if available
+      const aEventGames = a.eventGamesPlayed ?? 0;
+      const bEventGames = b.eventGamesPlayed ?? 0;
+      
+      console.log(`Comparing ${a.name} (${aEventGames} event games) vs ${b.name} (${bEventGames} event games)`);
+      
       if (aEventGames !== bEventGames) {
         return aEventGames - bEventGames;
       }
       return a.name.localeCompare(b.name);
     });
+
+    console.log('Sorted players by event games:', sortedPlayers.map(p => ({ 
+      name: p.name, 
+      eventGames: p.eventGamesPlayed ?? 0 
+    })));
 
     // Collect all valid matches instead of returning the first one
     const validMatches: GameMatch[] = [];
