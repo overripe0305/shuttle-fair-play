@@ -420,7 +420,6 @@ const Index = () => {
                     <PlayerCard 
                       player={player} 
                       onTogglePause={handleTogglePause}
-                      onDeletePlayer={deletePlayer}
                       onRemoveFromEvent={(playerId) => removePlayerFromEvent(currentEvent.id, playerId)}
                       isInEvent={true}
                     />

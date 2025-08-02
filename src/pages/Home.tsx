@@ -86,6 +86,13 @@ const Home = () => {
               </CardHeader>
               <CardContent className="space-y-4">
               <Button asChild>
+                <Link to="/create-event">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Event
+                </Link>
+              </Button>
+              
+              <Button asChild variant="outline">
                 <Link to="/players">
                   <Users className="h-4 w-4 mr-2" />
                   Player Management

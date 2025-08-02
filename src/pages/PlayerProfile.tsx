@@ -30,7 +30,7 @@ import { useState, useEffect } from 'react';
 const PlayerProfile = () => {
   const { playerId } = useParams();
   const { players, updatePlayer } = useEnhancedPlayerManager();
-  const { getPlayerStats } = useCumulativePlayerStats();
+  const { getPlayerStats, playerStats: allPlayerStats } = useCumulativePlayerStats();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [gameHistory, setGameHistory] = useState<any[]>([]);
@@ -55,7 +55,7 @@ const PlayerProfile = () => {
       loadPlayerGameHistory();
       loadPlayerStats();
     }
-  }, [playerId]);
+  }, [playerId, allPlayerStats]); // Add allPlayerStats dependency to refresh when stats change
 
   // Set up real-time sync for game updates
   useEffect(() => {
