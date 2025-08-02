@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EnhancedPlayer } from '@/types/enhancedPlayer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Users, TrendingUp, Trophy, Search, Camera } from 'lucide-react';
 import { getLevelDisplay } from '@/types/player';
+import { useCumulativePlayerStats } from '@/hooks/useCumulativePlayerStats';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PlayerComparisonProps {
   currentPlayer: EnhancedPlayer;
@@ -18,30 +20,84 @@ interface PlayerComparisonProps {
 export function PlayerComparison({ currentPlayer, allPlayers }: PlayerComparisonProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<EnhancedPlayer | null>(null);
+  const [headToHeadData, setHeadToHeadData] = useState<any>(null);
+  const { getPlayerStats } = useCumulativePlayerStats();
 
   const availablePlayers = allPlayers.filter(p => 
     p.id !== currentPlayer.id && 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Placeholder stats - these would come from actual match data
-  const getPlayerStats = (player: EnhancedPlayer) => ({
-    wins: 0, // TODO: Calculate from actual match results
-    losses: 0, // TODO: Calculate from actual match results
-    winRate: 0,
-    gamesPlayed: player.gamesPlayed
-  });
+  // Get actual player stats from the cumulative stats hook
+  const currentStats = getPlayerStats(currentPlayer.id);
+  const selectedStats = selectedPlayer ? getPlayerStats(selectedPlayer.id) : null;
 
-  const getHeadToHeadStats = (player1: EnhancedPlayer, player2: EnhancedPlayer) => ({
-    winsAgainst: 0, // TODO: Calculate from actual match results
-    winsTogether: 0, // TODO: Calculate from actual match results
-    totalGamesAgainst: 0,
-    totalGamesTogether: 0
-  });
+  // Calculate head-to-head statistics when a player is selected
+  useEffect(() => {
+    if (selectedPlayer) {
+      calculateHeadToHeadStats(currentPlayer.id, selectedPlayer.id);
+    }
+  }, [selectedPlayer, currentPlayer.id]);
 
-  const currentStats = getPlayerStats(currentPlayer);
-  const selectedStats = selectedPlayer ? getPlayerStats(selectedPlayer) : null;
-  const headToHead = selectedPlayer ? getHeadToHeadStats(currentPlayer, selectedPlayer) : null;
+  const calculateHeadToHeadStats = async (player1Id: string, player2Id: string) => {
+    try {
+      // Get all completed games where both players participated
+      const { data: games, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('completed', true);
+
+      if (error) throw error;
+
+      let winsAgainst = 0;
+      let winsTogether = 0;
+      let totalGamesAgainst = 0;
+      let totalGamesTogether = 0;
+
+      // Filter games where both players participated
+      const relevantGames = games?.filter(game => {
+        const allPlayers = [game.player1_id, game.player2_id, game.player3_id, game.player4_id];
+        return allPlayers.includes(player1Id) && allPlayers.includes(player2Id);
+      }) || [];
+
+      relevantGames.forEach(game => {
+        const team1 = [game.player1_id, game.player2_id];
+        const team2 = [game.player3_id, game.player4_id];
+        
+        const player1InTeam1 = team1.includes(player1Id);
+        const player2InTeam1 = team1.includes(player2Id);
+        
+        if (player1InTeam1 === player2InTeam1) {
+          // Same team (teammates)
+          totalGamesTogether++;
+          if ((player1InTeam1 && game.winner === 'team1') || (!player1InTeam1 && game.winner === 'team2')) {
+            winsTogether++;
+          }
+        } else {
+          // Opposite teams (opponents)
+          totalGamesAgainst++;
+          if ((player1InTeam1 && game.winner === 'team1') || (!player1InTeam1 && game.winner === 'team2')) {
+            winsAgainst++;
+          }
+        }
+      });
+
+      setHeadToHeadData({
+        winsAgainst,
+        winsTogether,
+        totalGamesAgainst,
+        totalGamesTogether
+      });
+    } catch (error) {
+      console.error('Error calculating head-to-head stats:', error);
+      setHeadToHeadData({
+        winsAgainst: 0,
+        winsTogether: 0,
+        totalGamesAgainst: 0,
+        totalGamesTogether: 0
+      });
+    }
+  };
 
   return (
     <Dialog>
@@ -174,12 +230,12 @@ export function PlayerComparison({ currentPlayer, allPlayers }: PlayerComparison
                     <div className="text-center">
                       <div className="text-lg font-semibold">As Opponents</div>
                       <div className="mt-2 space-y-1">
-                        <div className="text-2xl font-bold">{headToHead!.winsAgainst}</div>
+                        <div className="text-2xl font-bold">{headToHeadData?.winsAgainst || 0}</div>
                         <div className="text-sm text-muted-foreground">
                           Wins against {selectedPlayer.name}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          out of {headToHead!.totalGamesAgainst} games
+                          out of {headToHeadData?.totalGamesAgainst || 0} games
                         </div>
                       </div>
                     </div>
@@ -187,18 +243,18 @@ export function PlayerComparison({ currentPlayer, allPlayers }: PlayerComparison
                     <div className="text-center">
                       <div className="text-lg font-semibold">As Teammates</div>
                       <div className="mt-2 space-y-1">
-                        <div className="text-2xl font-bold">{headToHead!.winsTogether}</div>
+                        <div className="text-2xl font-bold">{headToHeadData?.winsTogether || 0}</div>
                         <div className="text-sm text-muted-foreground">
                           Wins together
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          out of {headToHead!.totalGamesTogether} games
+                          out of {headToHeadData?.totalGamesTogether || 0} games
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {headToHead!.totalGamesAgainst === 0 && headToHead!.totalGamesTogether === 0 && (
+                  {(!headToHeadData || (headToHeadData.totalGamesAgainst === 0 && headToHeadData.totalGamesTogether === 0)) && (
                     <div className="text-center py-4 text-muted-foreground">
                       <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No games played together yet</p>
