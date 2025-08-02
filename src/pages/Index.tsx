@@ -220,6 +220,13 @@ const Index = () => {
     }
   };
 
+  // Wrapper function to complete game and immediately refresh event stats
+  const handleCompleteGame = async (gameId: string, winner?: 'team1' | 'team2') => {
+    await completeGame(gameId, winner);
+    // Force immediate refresh of event player stats
+    await refetchEventStats();
+  };
+
   const handleCourtCountChange = async (courtCount: number) => {
     if (currentEvent) {
       try {
@@ -477,7 +484,7 @@ const Index = () => {
                   <EnhancedGameCard 
                     key={game.id} 
                     game={game} 
-                    onComplete={completeGame}
+                    onComplete={handleCompleteGame}
                     onReplacePlayer={replaceInDbGame}
                     onUpdateCourt={updateGameCourt}
                     availablePlayers={availablePlayers}
