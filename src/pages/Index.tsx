@@ -239,7 +239,17 @@ const Index = () => {
   };
 
   const handleUpdateEvent = async (eventId: string, updates: { title?: string; date?: Date; courtCount?: number }) => {
-    // This would need to be implemented in the event manager
+    try {
+      if (updates.courtCount !== undefined) {
+        await updateEventCourtCount(eventId, updates.courtCount);
+      }
+      
+      // Handle other updates if needed (title, date would need to be added to event manager)
+      toast.success('Event updated successfully');
+    } catch (error) {
+      console.error('Error updating event:', error);
+      toast.error('Failed to update event');
+    }
     // For now, just show a success message
     toast.success('Event settings updated');
   };

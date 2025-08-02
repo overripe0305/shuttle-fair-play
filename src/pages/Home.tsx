@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useEventManager } from "@/hooks/useEventManager";
 import { useEnhancedPlayerManager } from "@/hooks/useEnhancedPlayerManager";
+import { BadmintonEvent } from "@/types/event";
 import { 
   Play,
   Users,
@@ -22,11 +23,21 @@ import { format } from 'date-fns';
 import badmintonLogo from '@/assets/badminton-logo.png';
 
 const Home = () => {
-  const { events } = useEventManager();
+  const { events, updateEventStatus } = useEventManager();
   const { players } = useEnhancedPlayerManager();
+  const navigate = useNavigate();
 
   const upcomingEvents = events.filter(event => event.status === 'upcoming').slice(0, 3);
   const activeEvents = events.filter(event => event.status === 'active');
+
+  const handleStartEvent = async (event: BadmintonEvent) => {
+    try {
+      await updateEventStatus(event.id, 'active');
+      navigate(`/event/${event.id}/play`);
+    } catch (error) {
+      console.error('Error starting event:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,11 +201,13 @@ const Home = () => {
                             View Details
                           </Button>
                         </Link>
-                        <Link to={`/event/${event.id}/play`} className="flex-1">
-                          <Button size="sm" className="w-full">
-                            Start Event
-                          </Button>
-                        </Link>
+                        <Button 
+                          size="sm" 
+                          className="w-full flex-1"
+                          onClick={() => handleStartEvent(event)}
+                        >
+                          Start Event
+                        </Button>
                       </div>
                     </div>
                   ))}

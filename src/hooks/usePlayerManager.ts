@@ -67,7 +67,22 @@ export function usePlayerManager() {
       return null;
     }
 
-    // Sort by games played (ensuring fairness - lowest games first), then by name
+    // Helper function to check pairing history between players
+    const getPairingCount = (player1Id: string, player2Id: string): number => {
+      return games.filter(game => {
+        const playerIds = [game.match.pair1.players[0].id, game.match.pair1.players[1].id, 
+                          game.match.pair2.players[0].id, game.match.pair2.players[1].id];
+        return playerIds.includes(player1Id) && playerIds.includes(player2Id);
+      }).length;
+    };
+
+    // Helper function to check if two players have been partners or opponents too many times
+    const hasPlayedTooMuch = (player1Id: string, player2Id: string): boolean => {
+      const pairingCount = getPairingCount(player1Id, player2Id);
+      return pairingCount >= 2; // Limit to max 2 games together/against each other
+    };
+
+    // Sort by games played (ensuring fairness - lowest games first), then randomize within same game count
     const sortedPlayers = [...availablePlayers].sort((a, b) => {
       const aGames = a.gamesPlayed || 0;
       const bGames = b.gamesPlayed || 0;
@@ -75,39 +90,97 @@ export function usePlayerManager() {
       if (aGames !== bGames) {
         return aGames - bGames; // Lowest games first
       }
-      return a.name.localeCompare(b.name);
+      // Within same game count, randomize order
+      return Math.random() - 0.5;
     });
 
-    // CRITICAL: Always select the 4 players with lowest games first
-    const selectedPlayers = sortedPlayers.slice(0, 4);
+    // Try to find the best match considering pairing history
+    const validMatches: GameMatch[] = [];
 
-    // Create pairs - try different combinations to find valid matches
-    const [p1, p2, p3, p4] = selectedPlayers;
-    
-    // Try all possible pair combinations and select the most balanced one
-    const possiblePairings = [
-      { pair1: createPair(p1, p2), pair2: createPair(p3, p4) },
-      { pair1: createPair(p1, p3), pair2: createPair(p2, p4) },
-      { pair1: createPair(p1, p4), pair2: createPair(p2, p3) }
-    ];
-    
-    // Find the first valid pairing
-    for (const pairing of possiblePairings) {
-      if (canPairMatch(pairing.pair1, pairing.pair2)) {
-        console.log('✅ Found valid pairing:', {
-          team1: pairing.pair1.players.map(p => p.name),
-          team2: pairing.pair2.players.map(p => p.name)
-        });
-        return { pair1: pairing.pair1, pair2: pairing.pair2 };
+    // First, try to find matches with players who have played least together
+    for (let i = 0; i < Math.min(sortedPlayers.length, 8); i++) { // Consider more players for randomness
+      for (let j = i + 1; j < Math.min(sortedPlayers.length, 8); j++) {
+        for (let k = j + 1; k < Math.min(sortedPlayers.length, 8); k++) {
+          for (let l = k + 1; l < Math.min(sortedPlayers.length, 8); l++) {
+            const players = [sortedPlayers[i], sortedPlayers[j], sortedPlayers[k], sortedPlayers[l]];
+            
+            // Check if any players have played together too much
+            let hasOverPlayedPairs = false;
+            for (let x = 0; x < players.length && !hasOverPlayedPairs; x++) {
+              for (let y = x + 1; y < players.length && !hasOverPlayedPairs; y++) {
+                if (hasPlayedTooMuch(players[x].id, players[y].id)) {
+                  hasOverPlayedPairs = true;
+                }
+              }
+            }
+            
+            if (hasOverPlayedPairs) continue;
+
+            // Try all possible pair combinations
+            const possiblePairings = [
+              { pair1: createPair(players[0], players[1]), pair2: createPair(players[2], players[3]) },
+              { pair1: createPair(players[0], players[2]), pair2: createPair(players[1], players[3]) },
+              { pair1: createPair(players[0], players[3]), pair2: createPair(players[1], players[2]) }
+            ];
+            
+            for (const pairing of possiblePairings) {
+              if (canPairMatch(pairing.pair1, pairing.pair2)) {
+                validMatches.push({ pair1: pairing.pair1, pair2: pairing.pair2 });
+              }
+            }
+          }
+        }
       }
     }
 
-    // If no valid pairing found with the 4 lowest, fall back to original algorithm
-    console.log('⚠️ No valid pairing with 4 lowest players, trying all combinations...');
-    
-    const validMatches: GameMatch[] = [];
+    // If we found valid matches with minimal pairing history, pick one randomly
+    if (validMatches.length > 0) {
+      const randomMatch = validMatches[Math.floor(Math.random() * validMatches.length)];
+      console.log('✅ Found valid pairing with minimal history:', {
+        team1: randomMatch.pair1.players.map(p => p.name),
+        team2: randomMatch.pair2.players.map(p => p.name)
+      });
+      return randomMatch;
+    }
 
-    // Try to find valid pairs and matches
+    // Fallback: Use the original algorithm but with more randomization
+    console.log('⚠️ No optimal pairing found, using fallback with randomization...');
+    
+    // Shuffle the sorted players to add randomness while still prioritizing lowest games
+    const shuffledLowGamePlayers = sortedPlayers.slice(0, Math.min(8, sortedPlayers.length))
+      .sort(() => Math.random() - 0.5);
+
+    // Try the first few combinations with randomized order
+    for (let attempts = 0; attempts < 10 && attempts < shuffledLowGamePlayers.length - 3; attempts++) {
+      const startIdx = attempts;
+      if (startIdx + 3 >= shuffledLowGamePlayers.length) break;
+      
+      const selectedPlayers = shuffledLowGamePlayers.slice(startIdx, startIdx + 4);
+      const [p1, p2, p3, p4] = selectedPlayers;
+      
+      const possiblePairings = [
+        { pair1: createPair(p1, p2), pair2: createPair(p3, p4) },
+        { pair1: createPair(p1, p3), pair2: createPair(p2, p4) },
+        { pair1: createPair(p1, p4), pair2: createPair(p2, p3) }
+      ];
+      
+      // Randomize the order of pairings to try
+      possiblePairings.sort(() => Math.random() - 0.5);
+      
+      for (const pairing of possiblePairings) {
+        if (canPairMatch(pairing.pair1, pairing.pair2)) {
+          console.log('✅ Found valid pairing (fallback):', {
+            team1: pairing.pair1.players.map(p => p.name),
+            team2: pairing.pair2.players.map(p => p.name)
+          });
+          return { pair1: pairing.pair1, pair2: pairing.pair2 };
+        }
+      }
+    }
+
+    // Final fallback: try any valid combination without pairing history consideration
+    console.log('⚠️ Trying final fallback without pairing history...');
+    
     for (let i = 0; i < sortedPlayers.length - 3; i++) {
       for (let j = i + 1; j < sortedPlayers.length - 2; j++) {
         const pair1 = createPair(sortedPlayers[i], sortedPlayers[j]);
@@ -129,25 +202,23 @@ export function usePlayerManager() {
             }
             
             if (canPairMatch(pair1, pair2)) {
-              validMatches.push({ pair1, pair2 });
+              console.log('✅ Found valid pairing (final fallback):', {
+                team1: pair1.players.map(p => p.name),
+                team2: pair2.players.map(p => p.name)
+              });
+              return { pair1, pair2 };
             }
           }
         }
       }
     }
 
-    if (validMatches.length === 0) {
-      toast({
-        title: "Cannot form fair match",
-        description: "Unable to form a balanced match with current players.",
-        variant: "destructive"
-      });
-      return null;
-    }
-
-    // Randomly select from valid matches to ensure variety
-    const randomIndex = Math.floor(Math.random() * validMatches.length);
-    return validMatches[randomIndex];
+    toast({
+      title: "Cannot form fair match",
+      description: "Unable to form a balanced match with current players.",
+      variant: "destructive"
+    });
+    return null;
   }, [players]);
 
   const startGame = useCallback((match: GameMatch) => {
