@@ -67,7 +67,7 @@ const Index = () => {
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
   
-  const { getPlayerStats, eventPlayerStats, refetch: refetchEventStats } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
+  const { getPlayerStats, eventPlayerStats, refetch: refetchEventStats, updateCounter } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;
@@ -78,12 +78,14 @@ const Index = () => {
         const eventStats = getPlayerStats(player.id);
         return {
           ...player,
-          gamesPlayed: eventStats.gamesPlayed
+          gamesPlayed: eventStats.gamesPlayed,
+          wins: eventStats.wins,
+          losses: eventStats.losses
         };
       }
       return player;
     });
-  }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats]);
+  }, [currentEvent, allPlayers, eventPlayerStats, eventId, updateCounter]);
 
   // Force refresh of event stats when current event players change significantly
   const eventPlayerIds = currentEvent?.selectedPlayerIds;

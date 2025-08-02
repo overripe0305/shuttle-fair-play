@@ -11,6 +11,7 @@ interface EventPlayerStats {
 export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
   const [eventPlayerStats, setEventPlayerStats] = useState<EventPlayerStats[]>([]);
   const [loading, setLoading] = useState(false);
+  const [updateCounter, setUpdateCounter] = useState(0);
 
   const loadEventPlayerStats = useCallback(async () => {
     if (!eventId) return;
@@ -59,6 +60,8 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
       });
 
       setEventPlayerStats(Array.from(playerStatsMap.values()));
+      setUpdateCounter(prev => prev + 1);
+      console.log('Event player stats updated:', Array.from(playerStatsMap.values()).length, 'players');
     } catch (error) {
       console.error('Error loading event player stats:', error);
     } finally {
@@ -109,6 +112,7 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
     eventPlayerStats,
     getPlayerStats,
     loading,
-    refetch: loadEventPlayerStats
+    refetch: loadEventPlayerStats,
+    updateCounter // Force re-renders when stats change
   };
 };
