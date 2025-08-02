@@ -67,7 +67,7 @@ const Index = () => {
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
   
-  const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
+  const { getPlayerStats, eventPlayerStats, refetch: refetchEventStats } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;
@@ -89,13 +89,14 @@ const Index = () => {
   const eventPlayerIds = currentEvent?.selectedPlayerIds;
   React.useEffect(() => {
     if (eventPlayerIds && eventPlayerIds.length > 0) {
-      // Small delay to ensure all hooks are ready
+      // Small delay to ensure all hooks are ready then refresh stats
       const timer = setTimeout(() => {
         console.log('Event players changed, refreshing stats...');
+        refetchEventStats();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [JSON.stringify(eventPlayerIds?.sort())]);
+  }, [JSON.stringify(eventPlayerIds?.sort()), refetchEventStats]);
 
   const filteredPlayers = React.useMemo(() => {
     let filtered = eventPlayers.filter(player => {
