@@ -38,6 +38,15 @@ import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
 import { toast } from 'sonner';
 
 const Index = () => {
+  // State variables first
+  const [searchTerm, setSearchTerm] = useState('');
+  const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
+  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
+  const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
+  const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle'>('games');
+
   const { eventId } = useParams();
   const {
     players,
@@ -59,14 +68,6 @@ const Index = () => {
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
   
   const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
-  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
-  const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
-  const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle'>('games');
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;
