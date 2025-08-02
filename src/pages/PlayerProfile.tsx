@@ -85,24 +85,57 @@ const PlayerProfile = () => {
 
   const loadPlayerGameHistory = async () => {
     try {
-      const { data, error } = await supabase
+      // First, get the games where this player participated
+      const { data: games, error: gamesError } = await supabase
         .from('games')
-        .select(`
-          *,
-          player1:players!player1_id(name),
-          player2:players!player2_id(name),
-          player3:players!player3_id(name),
-          player4:players!player4_id(name)
-        `)
+        .select('*')
         .or(`player1_id.eq.${playerId},player2_id.eq.${playerId},player3_id.eq.${playerId},player4_id.eq.${playerId}`)
         .eq('completed', true)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
-      setGameHistory(data || []);
+      if (gamesError) throw gamesError;
+
+      if (games && games.length > 0) {
+        // Get all unique player IDs from the games
+        const playerIds = new Set<string>();
+        games.forEach(game => {
+          playerIds.add(game.player1_id);
+          playerIds.add(game.player2_id);
+          playerIds.add(game.player3_id);
+          playerIds.add(game.player4_id);
+        });
+
+        // Fetch player names for all involved players
+        const { data: playersData, error: playersError } = await supabase
+          .from('players')
+          .select('id, name')
+          .in('id', Array.from(playerIds));
+
+        if (playersError) throw playersError;
+
+        // Create a map of player ID to name
+        const playerNameMap = new Map();
+        playersData?.forEach(player => {
+          playerNameMap.set(player.id, player.name);
+        });
+
+        // Enhance games with player names
+        const enhancedGames = games.map(game => ({
+          ...game,
+          player1: { name: playerNameMap.get(game.player1_id) },
+          player2: { name: playerNameMap.get(game.player2_id) },
+          player3: { name: playerNameMap.get(game.player3_id) },
+          player4: { name: playerNameMap.get(game.player4_id) }
+        }));
+
+        setGameHistory(enhancedGames);
+      } else {
+        setGameHistory([]);
+      }
     } catch (error) {
       console.error('Error loading game history:', error);
+      setGameHistory([]);
     }
   };
 
