@@ -94,7 +94,7 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
         supabase.removeChannel(channel);
       };
     }
-  }, [eventId, loadEventPlayerStats, playerIds?.length]);
+  }, [eventId, loadEventPlayerStats, JSON.stringify(playerIds?.sort())]);
 
   const getPlayerStats = useCallback((playerId: string): EventPlayerStats => {
     return eventPlayerStats.find(stats => stats.playerId === playerId) || {

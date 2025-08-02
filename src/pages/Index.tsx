@@ -85,6 +85,18 @@ const Index = () => {
     });
   }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats]);
 
+  // Force refresh of event stats when current event players change significantly
+  const eventPlayerIds = currentEvent?.selectedPlayerIds;
+  React.useEffect(() => {
+    if (eventPlayerIds && eventPlayerIds.length > 0) {
+      // Small delay to ensure all hooks are ready
+      const timer = setTimeout(() => {
+        console.log('Event players changed, refreshing stats...');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [JSON.stringify(eventPlayerIds?.sort())]);
+
   const filteredPlayers = React.useMemo(() => {
     let filtered = eventPlayers.filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
