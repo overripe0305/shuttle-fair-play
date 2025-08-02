@@ -53,6 +53,7 @@ export function usePlayerManager() {
     // Use provided players or fall back to local players state
     const playersToUse = eventPlayers || players;
     
+    console.log('=== TEAM SELECTION DEBUG ===');
     console.log('selectFairMatch - Total players:', playersToUse.length);
     console.log('Players with games:', playersToUse.map(p => ({ 
       name: p.name, 
@@ -66,7 +67,8 @@ export function usePlayerManager() {
       p => p.eligible && p.status === 'available'
     );
 
-    console.log('Available players:', availablePlayers.length);
+    console.log('Available players after filter:', availablePlayers.length);
+    console.log('Available players:', availablePlayers.map(p => ({ name: p.name, games: p.gamesPlayed || 0 })));
 
     if (availablePlayers.length < 4) {
       toast({
@@ -82,7 +84,7 @@ export function usePlayerManager() {
       const aGames = a.gamesPlayed || 0;
       const bGames = b.gamesPlayed || 0;
       
-      console.log(`Comparing ${a.name} (${aGames} games) vs ${b.name} (${bGames} games)`);
+      console.log(`⚖️ Comparing ${a.name} (${aGames} games) vs ${b.name} (${bGames} games)`);
       
       if (aGames !== bGames) {
         return aGames - bGames; // Lowest games first
@@ -90,10 +92,12 @@ export function usePlayerManager() {
       return a.name.localeCompare(b.name);
     });
 
-    console.log('Sorted players by games:', sortedPlayers.map(p => ({ 
+    console.log('🏆 Final sorted order:', sortedPlayers.map((p, index) => ({ 
+      rank: index + 1,
       name: p.name, 
       games: p.gamesPlayed || 0 
     })));
+    console.log('=== END DEBUG ===');
 
     // Collect all valid matches instead of returning the first one
     const validMatches: GameMatch[] = [];
