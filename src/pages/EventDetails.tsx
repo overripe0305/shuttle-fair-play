@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,8 +28,10 @@ const EventDetails = () => {
   const navigate = useNavigate();
   const { events, updateEventStatus, addPlayerToEvent } = useEventManager();
   const { players, addPlayer, updatePlayer } = useEnhancedPlayerManager();
+  const { getPlayerStats } = useEventPlayerStats(eventId);
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
+  const [gamesPlayed, setGamesPlayed] = useState<{[key: string]: number}>({});
 
   const event = events.find(e => e.id === eventId);
   
@@ -84,6 +88,47 @@ const EventDetails = () => {
       toast.error('Failed to update player');
     }
   };
+
+  // Update games played for each player when they change
+  useEffect(() => {
+    const newGamesPlayed: {[key: string]: number} = {};
+    eventPlayers.forEach(player => {
+      const stats = getPlayerStats(player.id);
+      newGamesPlayed[player.id] = stats.gamesPlayed;
+    });
+    setGamesPlayed(newGamesPlayed);
+  }, [eventPlayers, getPlayerStats]);
+
+  // Set up real-time sync for games
+  useEffect(() => {
+    if (!eventId) return;
+
+    const channel = supabase
+      .channel('event-details-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games',
+          filter: `event_id=eq.${eventId}`
+        },
+        () => {
+          // Update games played when games change
+          const newGamesPlayed: {[key: string]: number} = {};
+          eventPlayers.forEach(player => {
+            const stats = getPlayerStats(player.id);
+            newGamesPlayed[player.id] = stats.gamesPlayed;
+          });
+          setGamesPlayed(newGamesPlayed);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId, eventPlayers, getPlayerStats]);
 
   const editingPlayerData = editingPlayer ? eventPlayers.find(p => p.id === editingPlayer) : null;
 
@@ -214,7 +259,7 @@ const EventDetails = () => {
 
                       <div className="flex items-center gap-2">
                         <div className="text-right text-sm">
-                          <div className="font-medium">{player.gamesPlayed}</div>
+                          <div className="font-medium">{gamesPlayed[player.id] || 0}</div>
                           <div className="text-muted-foreground">games</div>
                         </div>
                         <Edit className="h-4 w-4 text-muted-foreground" />

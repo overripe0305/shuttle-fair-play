@@ -15,6 +15,7 @@ interface AddPlayerToEventDialogProps {
   availablePlayers: EnhancedPlayer[];
   onAddExistingPlayer: (playerId: string) => void;
   onAddNewPlayer: (playerData: { name: string; majorLevel: MajorLevel; subLevel?: SubLevel }) => void;
+  allowMultiple?: boolean;
 }
 
 export function AddPlayerToEventDialog({ 
@@ -22,10 +23,12 @@ export function AddPlayerToEventDialog({
   onOpenChange, 
   availablePlayers, 
   onAddExistingPlayer,
-  onAddNewPlayer 
+  onAddNewPlayer,
+  allowMultiple = false
 }: AddPlayerToEventDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewPlayerForm, setShowNewPlayerForm] = useState(false);
+  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
   const [newPlayer, setNewPlayer] = useState({
     name: '',
     majorLevel: '' as MajorLevel,
@@ -61,12 +64,35 @@ export function AddPlayerToEventDialog({
   const handleClose = () => {
     setSearchTerm('');
     setShowNewPlayerForm(false);
+    setSelectedPlayers(new Set());
     setNewPlayer({
       name: '',
       majorLevel: '' as MajorLevel,
       subLevel: undefined,
     });
     onOpenChange(false);
+  };
+
+  const handlePlayerToggle = (playerId: string) => {
+    if (allowMultiple) {
+      const newSelected = new Set(selectedPlayers);
+      if (newSelected.has(playerId)) {
+        newSelected.delete(playerId);
+      } else {
+        newSelected.add(playerId);
+      }
+      setSelectedPlayers(newSelected);
+    } else {
+      onAddExistingPlayer(playerId);
+      handleClose();
+    }
+  };
+
+  const handleAddSelectedPlayers = () => {
+    selectedPlayers.forEach(playerId => {
+      onAddExistingPlayer(playerId);
+    });
+    handleClose();
   };
 
   return (
@@ -92,12 +118,19 @@ export function AddPlayerToEventDialog({
               {filteredPlayers.map((player) => (
                 <div 
                   key={player.id} 
-                  className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                  onClick={() => {
-                    onAddExistingPlayer(player.id);
-                    handleClose();
-                  }}
+                  className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 ${
+                    allowMultiple && selectedPlayers.has(player.id) ? 'bg-primary/10 border-primary' : ''
+                  }`}
+                  onClick={() => handlePlayerToggle(player.id)}
                 >
+                  {allowMultiple && (
+                    <input
+                      type="checkbox"
+                      checked={selectedPlayers.has(player.id)}
+                      onChange={() => handlePlayerToggle(player.id)}
+                      className="rounded"
+                    />
+                  )}
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={player.photo} alt={player.name} />
                     <AvatarFallback>
@@ -120,6 +153,12 @@ export function AddPlayerToEventDialog({
                 </div>
               )}
             </div>
+
+            {allowMultiple && selectedPlayers.size > 0 && (
+              <Button onClick={handleAddSelectedPlayers} className="w-full">
+                Add {selectedPlayers.size} Player{selectedPlayers.size > 1 ? 's' : ''}
+              </Button>
+            )}
             
             <Button 
               onClick={() => setShowNewPlayerForm(true)}

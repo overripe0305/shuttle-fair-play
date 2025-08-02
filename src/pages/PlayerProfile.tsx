@@ -57,6 +57,32 @@ const PlayerProfile = () => {
     }
   }, [playerId]);
 
+  // Set up real-time sync for game updates
+  useEffect(() => {
+    if (!playerId) return;
+
+    const channel = supabase
+      .channel('player-profile-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games'
+        },
+        () => {
+          // Reload stats and game history when any game is updated
+          loadPlayerGameHistory();
+          loadPlayerStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [playerId]);
+
   const loadPlayerGameHistory = async () => {
     try {
       const { data, error } = await supabase

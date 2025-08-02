@@ -284,12 +284,6 @@ const Index = () => {
                 </div>
               </div>
               
-              {currentEvent && (
-                <CourtSelector
-                  currentCourtCount={currentEvent.courtCount || 4}
-                  onCourtCountChange={handleCourtCountChange}
-                />
-              )}
               
               <div className="flex gap-2">
                 {currentEvent && (
@@ -333,10 +327,6 @@ const Index = () => {
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Player
-                </Button>
-                <Button variant="outline" onClick={resetAllPlayers}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Reset All
                 </Button>
               </div>
             </div>
@@ -398,13 +388,6 @@ const Index = () => {
                       onClick={() => setSortBy('games')}
                     >
                       Games
-                    </Button>
-                    <Button
-                      variant={sortBy === 'level' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSortBy('level')}
-                    >
-                      Level
                     </Button>
                     <Button
                       variant={sortBy === 'idle' ? 'default' : 'outline'}
@@ -545,6 +528,7 @@ const Index = () => {
         availablePlayers={availablePlayersForEvent}
         onAddExistingPlayer={handleAddExistingPlayer}
         onAddNewPlayer={handleAddNewPlayer}
+        allowMultiple={true}
       />
 
       {editingPlayerData && (

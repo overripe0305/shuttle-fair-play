@@ -14,14 +14,16 @@ import {
   Search,
   Plus,
   Eye,
-  Play
+  Play,
+  Trash2
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 type StatusFilter = 'all' | 'upcoming' | 'active' | 'completed';
 
 const ViewAllEvents = () => {
-  const { events } = useEventManager();
+  const { events, deleteEvent } = useEventManager();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
@@ -50,6 +52,17 @@ const ViewAllEvents = () => {
       totalGames: 0, // TODO: Calculate from actual games data
       activeCourts: event.courtCount || 4
     };
+  };
+
+  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete "${eventTitle}"? This action cannot be undone.`)) {
+      try {
+        await deleteEvent(eventId);
+        toast.success('Event deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete event');
+      }
+    }
   };
 
   return (
@@ -176,12 +189,22 @@ const ViewAllEvents = () => {
                         </Button>
                       </Link>
                     ) : event.status === 'upcoming' ? (
-                      <Link to={`/event/${event.id}`} className="flex-1">
-                        <Button size="sm" className="w-full">
-                          <Play className="h-3 w-3 mr-1" />
-                          Start Event
+                      <>
+                        <Link to={`/event/${event.id}`} className="flex-1">
+                          <Button size="sm" className="w-full">
+                            <Play className="h-3 w-3 mr-1" />
+                            Start Event
+                          </Button>
+                        </Link>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleDeleteEvent(event.id, event.title)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
                         </Button>
-                      </Link>
+                      </>
                     ) : (
                       <Button size="sm" variant="outline" className="flex-1" disabled>
                         Completed
