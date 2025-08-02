@@ -10,10 +10,15 @@ export const useEventManager = () => {
   useEffect(() => {
     loadEvents();
     
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates for both events and event_players tables
     const channel = supabase
       .channel('events-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        console.log('Events table changed, reloading...');
+        loadEvents();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_players' }, () => {
+        console.log('Event players table changed, reloading...');
         loadEvents();
       })
       .subscribe();
