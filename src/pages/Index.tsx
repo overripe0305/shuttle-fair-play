@@ -54,7 +54,11 @@ const Index = () => {
   const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
-  const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId);
+  
+  // Get current event if we're in event context
+  const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
+  
+  const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
@@ -63,10 +67,6 @@ const Index = () => {
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle'>('games');
-
-  // Get current event if we're in event context
-  const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
-  
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;

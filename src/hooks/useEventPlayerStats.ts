@@ -8,7 +8,7 @@ interface EventPlayerStats {
   losses: number;
 }
 
-export const useEventPlayerStats = (eventId?: string) => {
+export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
   const [eventPlayerStats, setEventPlayerStats] = useState<EventPlayerStats[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +68,8 @@ export const useEventPlayerStats = (eventId?: string) => {
 
   useEffect(() => {
     if (eventId) {
+      // Clear old stats and reload when player list changes
+      setEventPlayerStats([]);
       loadEventPlayerStats();
       
       // Set up real-time subscription for games table
@@ -92,7 +94,7 @@ export const useEventPlayerStats = (eventId?: string) => {
         supabase.removeChannel(channel);
       };
     }
-  }, [eventId, loadEventPlayerStats]);
+  }, [eventId, loadEventPlayerStats, playerIds?.length]);
 
   const getPlayerStats = useCallback((playerId: string): EventPlayerStats => {
     return eventPlayerStats.find(stats => stats.playerId === playerId) || {
