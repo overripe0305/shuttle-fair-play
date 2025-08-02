@@ -72,12 +72,13 @@ export function usePlayerManager() {
       return null;
     }
 
-    // Sort by adjusted games played (games + penalty/bonus), then by name
+    // Sort by event-specific games played (if available) or adjusted games played, then by name
     const sortedPlayers = [...availablePlayers].sort((a, b) => {
-      const aAdjusted = a.gamesPlayed + a.gamePenaltyBonus;
-      const bAdjusted = b.gamesPlayed + b.gamePenaltyBonus;
-      if (aAdjusted !== bAdjusted) {
-        return aAdjusted - bAdjusted;
+      // Use event-specific games if available, otherwise fall back to global games + penalty/bonus
+      const aEventGames = (a as any).eventGamesPlayed ?? (a.gamesPlayed + a.gamePenaltyBonus);
+      const bEventGames = (b as any).eventGamesPlayed ?? (b.gamesPlayed + b.gamePenaltyBonus);
+      if (aEventGames !== bEventGames) {
+        return aEventGames - bEventGames;
       }
       return a.name.localeCompare(b.name);
     });
