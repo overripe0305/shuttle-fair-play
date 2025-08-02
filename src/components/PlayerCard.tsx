@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock, Pause, Play } from 'lucide-react';
+import { Clock, Pause, Play, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface PlayerCardProps {
@@ -11,6 +11,7 @@ interface PlayerCardProps {
   onClick?: () => void;
   selected?: boolean;
   onTogglePause?: (playerId: string) => void;
+  onDeletePlayer?: (playerId: string) => void;
 }
 
 const levelColors = {
@@ -28,7 +29,7 @@ const statusColors = {
   paused: 'bg-gray-500 text-white',
 };
 
-export function PlayerCard({ player, onClick, selected, onTogglePause }: PlayerCardProps) {
+export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
   const [idleStartTime] = useState(() => new Date().getTime());
 
@@ -89,6 +90,21 @@ export function PlayerCard({ player, onClick, selected, onTogglePause }: PlayerC
                 ) : (
                   <Pause className="h-3 w-3" />
                 )}
+              </Button>
+            )}
+            {onDeletePlayer && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Are you sure you want to delete ${player.name}?`)) {
+                    onDeletePlayer(player.id);
+                  }
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
               </Button>
             )}
           </div>

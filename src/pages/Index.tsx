@@ -61,7 +61,7 @@ const Index = () => {
   } = usePlayerManager();
 
   const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus } = useEventManager();
-  const { players: allPlayers, addPlayer, updatePlayer } = useEnhancedPlayerManager();
+  const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
   
   // Get current event if we're in event context
@@ -420,6 +420,7 @@ const Index = () => {
                     <PlayerCard 
                       player={player} 
                       onTogglePause={handleTogglePause}
+                      onDeletePlayer={deletePlayer}
                     />
                   </div>
                 ))}
