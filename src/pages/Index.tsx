@@ -71,13 +71,10 @@ const Index = () => {
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;
     
-    console.log('Recalculating eventPlayers with stats:', eventPlayerStats?.length || 0, 'players');
-    
     return allPlayers.filter(p => currentEvent.selectedPlayerIds.includes(p.id)).map(player => {
       // For event context, use event-specific stats
       if (eventId) {
         const eventStats = getPlayerStats(player.id);
-        console.log(`Player ${player.name} games: ${eventStats.gamesPlayed}`);
         return {
           ...player,
           gamesPlayed: eventStats.gamesPlayed

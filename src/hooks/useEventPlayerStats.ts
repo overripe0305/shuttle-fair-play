@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface EventPlayerStats {
@@ -12,37 +12,7 @@ export const useEventPlayerStats = (eventId?: string) => {
   const [eventPlayerStats, setEventPlayerStats] = useState<EventPlayerStats[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (eventId) {
-      loadEventPlayerStats();
-      
-      // Set up real-time subscription for games table
-      const channel = supabase
-        .channel(`event-games-${eventId}`)
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'games',
-          filter: `event_id=eq.${eventId}`
-        }, (payload) => {
-          console.log('Event game change detected:', payload);
-          // Add a small delay to ensure database is consistent
-          setTimeout(() => {
-            loadEventPlayerStats();
-          }, 100);
-        })
-        .subscribe((status) => {
-          console.log('Event stats subscription status:', status);
-        });
-
-      return () => {
-        console.log('Cleaning up event stats subscription');
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [eventId]);
-
-  const loadEventPlayerStats = async () => {
+  const loadEventPlayerStats = useCallback(async () => {
     if (!eventId) return;
     
     setLoading(true);
@@ -94,7 +64,35 @@ export const useEventPlayerStats = (eventId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    if (eventId) {
+      loadEventPlayerStats();
+      
+      // Set up real-time subscription for games table
+      const channel = supabase
+        .channel(`event-games-${eventId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'games',
+          filter: `event_id=eq.${eventId}`
+        }, (payload) => {
+          console.log('Event game change detected:', payload);
+          // Reload stats immediately when games change
+          loadEventPlayerStats();
+        })
+        .subscribe((status) => {
+          console.log('Event stats subscription status:', status);
+        });
+
+      return () => {
+        console.log('Cleaning up event stats subscription');
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [eventId, loadEventPlayerStats]);
 
   const getPlayerStats = (playerId: string): EventPlayerStats => {
     return eventPlayerStats.find(stats => stats.playerId === playerId) || {
