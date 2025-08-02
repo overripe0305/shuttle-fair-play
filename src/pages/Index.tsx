@@ -60,7 +60,7 @@ const Index = () => {
     replacePlayerInGame
   } = usePlayerManager();
 
-  const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus } = useEventManager();
+  const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
   
@@ -421,6 +421,8 @@ const Index = () => {
                       player={player} 
                       onTogglePause={handleTogglePause}
                       onDeletePlayer={deletePlayer}
+                      onRemoveFromEvent={(playerId) => removePlayerFromEvent(currentEvent.id, playerId)}
+                      isInEvent={true}
                     />
                   </div>
                 ))}

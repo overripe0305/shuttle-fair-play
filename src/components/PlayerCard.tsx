@@ -12,6 +12,8 @@ interface PlayerCardProps {
   selected?: boolean;
   onTogglePause?: (playerId: string) => void;
   onDeletePlayer?: (playerId: string) => void;
+  onRemoveFromEvent?: (playerId: string) => void;
+  isInEvent?: boolean;
 }
 
 const levelColors = {
@@ -29,7 +31,7 @@ const statusColors = {
   paused: 'bg-gray-500 text-white',
 };
 
-export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer }: PlayerCardProps) {
+export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, isInEvent }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
   const [idleStartTime] = useState(() => new Date().getTime());
 
@@ -92,15 +94,39 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
                 )}
               </Button>
             )}
-            {onDeletePlayer && (
+            {(onDeletePlayer || onRemoveFromEvent) && (
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`Are you sure you want to delete ${player.name}?`)) {
-                    onDeletePlayer(player.id);
+                  
+                  if (isInEvent && onRemoveFromEvent && onDeletePlayer) {
+                    // Show options for both remove from event and delete permanently
+                    const choice = confirm(
+                      `What would you like to do with ${player.name}?\n\n` +
+                      'Click "OK" to remove from this event only\n' +
+                      'Click "Cancel" to delete permanently from database'
+                    );
+                    
+                    if (choice) {
+                      onRemoveFromEvent(player.id);
+                    } else {
+                      if (confirm(`Are you sure you want to permanently delete ${player.name} from the database?`)) {
+                        onDeletePlayer(player.id);
+                      }
+                    }
+                  } else if (onDeletePlayer) {
+                    // Only delete permanently option
+                    if (confirm(`Are you sure you want to permanently delete ${player.name}?`)) {
+                      onDeletePlayer(player.id);
+                    }
+                  } else if (onRemoveFromEvent) {
+                    // Only remove from event option
+                    if (confirm(`Remove ${player.name} from this event?`)) {
+                      onRemoveFromEvent(player.id);
+                    }
                   }
                 }}
               >

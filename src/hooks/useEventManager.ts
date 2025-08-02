@@ -180,12 +180,36 @@ export const useEventManager = () => {
     }
   };
 
+  const removePlayerFromEvent = async (eventId: string, playerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('event_players')
+        .delete()
+        .eq('event_id', eventId)
+        .eq('player_id', playerId);
+
+      if (error) throw error;
+
+      setEvents(prev => 
+        prev.map(event => 
+          event.id === eventId 
+            ? { ...event, selectedPlayerIds: event.selectedPlayerIds.filter(id => id !== playerId) }
+            : event
+        )
+      );
+    } catch (error) {
+      console.error('Error removing player from event:', error);
+      throw error;
+    }
+  };
+
   return {
     events,
     createEvent,
     updateEventStatus,
     updateEventCourtCount,
     deleteEvent,
-    addPlayerToEvent
+    addPlayerToEvent,
+    removePlayerFromEvent
   };
 };
