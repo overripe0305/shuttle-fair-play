@@ -85,8 +85,11 @@ export const useEventPlayerStats = (eventId?: string, playerIds?: string[]) => {
           filter: `event_id=eq.${eventId}`
         }, (payload) => {
           console.log('Event game change detected:', payload);
-          // Reload stats immediately when games change
-          loadEventPlayerStats();
+          // Force immediate reload of stats when games change
+          // Add a small delay to ensure database consistency
+          setTimeout(() => {
+            loadEventPlayerStats();
+          }, 50);
         })
         .subscribe((status) => {
           console.log('Event stats subscription status:', status);

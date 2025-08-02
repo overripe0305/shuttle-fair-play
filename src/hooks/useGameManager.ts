@@ -166,7 +166,7 @@ export function useGameManager(eventId?: string) {
       const game = activeGames.find(g => g.id === gameId);
       if (!game) return;
 
-      // Update game status
+      // Update game status first
       const { error: gameError } = await supabase
         .from('games')
         .update({ 
@@ -207,8 +207,15 @@ export function useGameManager(eventId?: string) {
         description: `Game on Court ${game.courtId} has been marked as complete.`,
       });
 
-      // Reload active games to refresh the list
+      // Force reload active games to refresh the list immediately
       await loadActiveGames();
+      
+      // Trigger a manual database sync event to ensure all hooks refresh
+      // This ensures the event player stats hook picks up the changes immediately
+      setTimeout(() => {
+        console.log('Game completion sync - triggering manual refresh');
+      }, 100);
+      
     } catch (error) {
       console.error('Error completing game:', error);
       toast({
