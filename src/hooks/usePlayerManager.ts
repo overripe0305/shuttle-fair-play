@@ -53,22 +53,10 @@ export function usePlayerManager() {
     // Use provided players or fall back to local players state
     const playersToUse = eventPlayers || players;
     
-    console.log('=== TEAM SELECTION DEBUG ===');
-    console.log('selectFairMatch - Total players:', playersToUse.length);
-    console.log('Players with games:', playersToUse.map(p => ({ 
-      name: p.name, 
-      status: p.status, 
-      eligible: p.eligible,
-      gamesPlayed: p.gamesPlayed || 0
-    })));
-    
     // Filter eligible and available players (not paused, waiting, queued, or in progress)
     const availablePlayers = playersToUse.filter(
       p => p.eligible && p.status === 'available'
     );
-
-    console.log('Available players after filter:', availablePlayers.length);
-    console.log('Available players:', availablePlayers.map(p => ({ name: p.name, games: p.gamesPlayed || 0 })));
 
     if (availablePlayers.length < 4) {
       toast({
@@ -84,24 +72,14 @@ export function usePlayerManager() {
       const aGames = a.gamesPlayed || 0;
       const bGames = b.gamesPlayed || 0;
       
-      console.log(`⚖️ Comparing ${a.name} (${aGames} games) vs ${b.name} (${bGames} games)`);
-      
       if (aGames !== bGames) {
         return aGames - bGames; // Lowest games first
       }
       return a.name.localeCompare(b.name);
     });
 
-    console.log('🏆 Final sorted order:', sortedPlayers.map((p, index) => ({ 
-      rank: index + 1,
-      name: p.name, 
-      games: p.gamesPlayed || 0 
-    })));
-    console.log('=== END DEBUG ===');
-
     // CRITICAL: Always select the 4 players with lowest games first
     const selectedPlayers = sortedPlayers.slice(0, 4);
-    console.log('🎯 Selected 4 players with lowest games:', selectedPlayers.map(p => ({ name: p.name, games: p.gamesPlayed })));
 
     // Create pairs - try different combinations to find valid matches
     const [p1, p2, p3, p4] = selectedPlayers;
