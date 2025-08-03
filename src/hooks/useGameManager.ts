@@ -177,8 +177,9 @@ export function useGameManager(eventId?: string) {
 
       if (gameError) throw gameError;
 
-      // Calculate game duration in minutes
-      const gameDurationMinutes = Math.floor((new Date().getTime() - new Date(game.startTime).getTime()) / 60000);
+      // Calculate game duration in minutes (max 20 minutes)
+      const actualDurationMinutes = Math.floor((new Date().getTime() - new Date(game.startTime).getTime()) / 60000);
+      const gameDurationMinutes = Math.min(actualDurationMinutes, 20);
       
       // Update player statuses and increment games played
       const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];

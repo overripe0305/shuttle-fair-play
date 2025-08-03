@@ -443,12 +443,24 @@ const Index = () => {
               }}
               onStartGame={(match) => {
                 if (currentEvent) {
+                  // Find available court (not used by active games)
+                  const usedCourts = dbActiveGames.map(game => game.courtId);
+                  const maxCourts = currentEvent.courtCount || 4;
+                  let availableCourt = 1;
+                  
+                  for (let court = 1; court <= maxCourts; court++) {
+                    if (!usedCourts.includes(court)) {
+                      availableCourt = court;
+                      break;
+                    }
+                  }
+                  
                   createGame(
                     match.pair1.players[0].id,
                     match.pair1.players[1].id,
                     match.pair2.players[0].id,
                     match.pair2.players[1].id,
-                    1 // Default to court 1, can be changed later
+                    availableCourt
                   );
                 }
               }}

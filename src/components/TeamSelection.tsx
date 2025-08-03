@@ -334,12 +334,12 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
             
             {/* Search Input */}
             <div className="space-y-2">
-              <Label htmlFor="player-search">Search Players</Label>
+              <Label htmlFor="player-search">Search and Select Player</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="player-search"
-                  placeholder="Search by name..."
+                  placeholder="Type player name to search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -347,24 +347,34 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
               </div>
             </div>
             
-            <Select onValueChange={handlePlayerSubstitution}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select replacement player" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredPlayers.length > 0 ? (
-                  filteredPlayers.map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.name} - {player.level.major} Level {player.level.bracket}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-players" disabled>
-                    No players found
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            {/* Direct selection interface */}
+            <div className="max-h-48 overflow-y-auto space-y-2">
+              {searchTerm && filteredPlayers.length > 0 ? (
+                filteredPlayers.map((player) => (
+                  <Button
+                    key={player.id}
+                    variant="outline"
+                    className="w-full justify-start p-3 h-auto"
+                    onClick={() => handlePlayerSubstitution(player.id)}
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">{player.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {player.level.major} Level {player.level.bracket}
+                      </span>
+                    </div>
+                  </Button>
+                ))
+              ) : searchTerm ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  No players found matching "{searchTerm}"
+                </div>
+              ) : (
+                 <div className="text-center py-4 text-muted-foreground">
+                   Start typing to search for players
+                 </div>
+               )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
