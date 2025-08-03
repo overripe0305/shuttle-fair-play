@@ -355,7 +355,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="" disabled>
+                  <SelectItem value="no-players" disabled>
                     No players found
                   </SelectItem>
                 )}
