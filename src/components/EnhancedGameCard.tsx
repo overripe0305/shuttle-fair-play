@@ -69,8 +69,12 @@ export function EnhancedGameCard({
 
   // Filter players based on search term
   const filteredPlayers = availablePlayers
-    .filter(p => p.status === 'Available' && p.eligible)
-    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    .filter(p => {
+      const statusMatch = p.status === 'Available' || p.status === 'available';
+      const eligibleMatch = p.eligible !== false; // Allow if eligible is undefined or true
+      const nameMatch = searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return statusMatch && eligibleMatch && nameMatch;
+    });
 
   const handleCourtChange = (courtId: string) => {
     if (onUpdateCourt) {

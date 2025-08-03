@@ -40,8 +40,12 @@ export function GameCard({ game, onMarkDone, onReplacePlayer, availablePlayers =
 
   // Filter players based on search term
   const filteredPlayers = availablePlayers
-    .filter(p => p.status === 'Available' && p.eligible)
-    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    .filter(p => {
+      const statusMatch = p.status === 'Available' || p.status === 'available';
+      const eligibleMatch = p.eligible !== false; // Allow if eligible is undefined or true
+      const nameMatch = searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return statusMatch && eligibleMatch && nameMatch;
+    });
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
