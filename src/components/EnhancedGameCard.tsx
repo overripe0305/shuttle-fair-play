@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Clock, Users, UserX, MapPin } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { CheckCircle, Clock, Users, UserX, MapPin, Search } from 'lucide-react';
 import { ActiveGame } from '@/hooks/useGameManager';
 
 interface EnhancedGameCardProps {
@@ -28,6 +30,7 @@ export function EnhancedGameCard({
     open: boolean;
     playerToReplace?: { id: string; name: string };
   }>({ open: false });
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [gameDuration, setGameDuration] = useState('00:00');
 
@@ -61,7 +64,13 @@ export function EnhancedGameCard({
     
     onReplacePlayer(game.id, substitutionDialog.playerToReplace.id, newPlayerId);
     setSubstitutionDialog({ open: false });
+    setSearchTerm('');
   };
+
+  // Filter players based on search term
+  const filteredPlayers = availablePlayers
+    .filter(p => p.status === 'Available' && p.eligible)
+    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleCourtChange = (courtId: string) => {
     if (onUpdateCourt) {
@@ -132,10 +141,13 @@ export function EnhancedGameCard({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => setSubstitutionDialog({
-                        open: true,
-                        playerToReplace: player
-                      })}
+                       onClick={() => {
+                         setSubstitutionDialog({
+                           open: true,
+                           playerToReplace: player
+                         });
+                         setSearchTerm('');
+                       }}
                     >
                       <UserX className="h-3 w-3" />
                     </Button>
@@ -159,10 +171,13 @@ export function EnhancedGameCard({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => setSubstitutionDialog({
-                        open: true,
-                        playerToReplace: player
-                      })}
+                       onClick={() => {
+                         setSubstitutionDialog({
+                           open: true,
+                           playerToReplace: player
+                         });
+                         setSearchTerm('');
+                       }}
                     >
                       <UserX className="h-3 w-3" />
                     </Button>
@@ -196,7 +211,10 @@ export function EnhancedGameCard({
       {/* Player Substitution Dialog */}
       <Dialog 
         open={substitutionDialog.open} 
-        onOpenChange={(open) => setSubstitutionDialog({ open })}
+        onOpenChange={(open) => {
+          setSubstitutionDialog({ open });
+          if (!open) setSearchTerm('');
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -206,18 +224,38 @@ export function EnhancedGameCard({
             <p>
               Replace <strong>{substitutionDialog.playerToReplace?.name}</strong> with:
             </p>
+            
+            {/* Search Input */}
+            <div className="space-y-2">
+              <Label htmlFor="player-search">Search Players</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="player-search"
+                  placeholder="Search by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            
             <Select onValueChange={handlePlayerSubstitution}>
               <SelectTrigger>
                 <SelectValue placeholder="Select replacement player" />
               </SelectTrigger>
               <SelectContent>
-                {availablePlayers
-                  .filter(p => p.status === 'Available' && p.eligible)
-                  .map((player) => (
+                {filteredPlayers.length > 0 ? (
+                  filteredPlayers.map((player) => (
                     <SelectItem key={player.id} value={player.id}>
                       {player.name} - {player.level.major} Level {player.level.bracket}
                     </SelectItem>
-                  ))}
+                  ))
+                ) : (
+                  <SelectItem value="no-players" disabled>
+                    No players found
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
