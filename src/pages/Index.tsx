@@ -45,7 +45,7 @@ const Index = () => {
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle'>('games');
+  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
 
   const { eventId } = useParams();
   const {
@@ -62,7 +62,7 @@ const Index = () => {
 
   const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager();
-  const { activeGames: dbActiveGames, createGame, completeGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
+  const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
   
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -120,6 +120,11 @@ const Index = () => {
           if (a.status === 'available' && b.status !== 'available') return -1;
           if (a.status !== 'available' && b.status === 'available') return 1;
           return a.name.localeCompare(b.name);
+        case 'chronological':
+          // Show most recently added players first
+          const aAddedTime = a.addedAt ? new Date(a.addedAt).getTime() : 0;
+          const bAddedTime = b.addedAt ? new Date(b.addedAt).getTime() : 0;
+          return bAddedTime - aAddedTime;
         default:
           return 0;
       }
@@ -238,7 +243,7 @@ const Index = () => {
     }
   };
 
-  const handleUpdateEvent = async (eventId: string, updates: { title?: string; date?: Date; courtCount?: number }) => {
+  const handleUpdateEvent = async (eventId: string, updates: { title?: string; date?: Date; courtCount?: number; queueFee?: number }) => {
     try {
       if (updates.courtCount !== undefined) {
         await updateEventCourtCount(eventId, updates.courtCount);
@@ -406,6 +411,13 @@ const Index = () => {
                     >
                       Idle Time
                     </Button>
+                    <Button
+                      variant={sortBy === 'chronological' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSortBy('chronological')}
+                    >
+                      Added Order
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -494,6 +506,7 @@ const Index = () => {
                     onComplete={handleCompleteGame}
                     onReplacePlayer={replaceInDbGame}
                     onUpdateCourt={updateGameCourt}
+                    onCancel={cancelGame}
                     availablePlayers={availablePlayers}
                     maxCourts={currentEvent?.courtCount || 4}
                   />

@@ -301,10 +301,47 @@ export function useGameManager(eventId?: string) {
     }
   }, [activeGames]);
 
+  const cancelGame = useCallback(async (gameId: string) => {
+    try {
+      const game = activeGames.find(g => g.id === gameId);
+      if (!game) return;
+
+      // Delete the game without recording it
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId);
+
+      if (error) throw error;
+
+      // Update player statuses back to available
+      const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];
+      await supabase
+        .from('players')
+        .update({ status: 'available' })
+        .in('id', playerIds);
+
+      toast({
+        title: "Game cancelled",
+        description: `Game on Court ${game.courtId} has been cancelled without recording.`,
+      });
+
+      loadActiveGames();
+    } catch (error) {
+      console.error('Error cancelling game:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel game",
+        variant: "destructive"
+      });
+    }
+  }, [activeGames]);
+
   return {
     activeGames,
     createGame,
     completeGame,
+    cancelGame,
     updateGameCourt,
     replacePlayerInGame,
     loadActiveGames

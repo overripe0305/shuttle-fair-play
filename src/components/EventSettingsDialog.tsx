@@ -15,22 +15,24 @@ interface EventSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: BadmintonEvent;
-  onUpdateEvent: (eventId: string, updates: { title?: string; date?: Date; courtCount?: number }) => void;
+  onUpdateEvent: (eventId: string, updates: { title?: string; date?: Date; courtCount?: number; queueFee?: number }) => void;
 }
 
 export function EventSettingsDialog({ open, onOpenChange, event, onUpdateEvent }: EventSettingsDialogProps) {
   const [title, setTitle] = useState(event.title);
   const [date, setDate] = useState<Date>(new Date(event.date));
   const [courtCount, setCourtCount] = useState((event.courtCount || 4).toString());
+  const [queueFee, setQueueFee] = useState((event.queueFee || 0).toString());
 
   useEffect(() => {
     setTitle(event.title);
     setDate(new Date(event.date));
     setCourtCount((event.courtCount || 4).toString());
+    setQueueFee((event.queueFee || 0).toString());
   }, [event]);
 
   const handleSave = () => {
-    const updates: { title?: string; date?: Date; courtCount?: number } = {};
+    const updates: { title?: string; date?: Date; courtCount?: number; queueFee?: number } = {};
     
     if (title !== event.title) {
       updates.title = title;
@@ -43,6 +45,11 @@ export function EventSettingsDialog({ open, onOpenChange, event, onUpdateEvent }
     const newCourtCount = parseInt(courtCount);
     if (newCourtCount !== (event.courtCount || 4)) {
       updates.courtCount = newCourtCount;
+    }
+
+    const newQueueFee = parseFloat(queueFee);
+    if (newQueueFee !== (event.queueFee || 0)) {
+      updates.queueFee = newQueueFee;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -116,6 +123,20 @@ export function EventSettingsDialog({ open, onOpenChange, event, onUpdateEvent }
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Queue Fee */}
+          <div className="space-y-2">
+            <Label htmlFor="queue-fee">Queue Fee (₱)</Label>
+            <Input
+              id="queue-fee"
+              type="number"
+              value={queueFee}
+              onChange={(e) => setQueueFee(e.target.value)}
+              placeholder="Enter queue fee amount"
+              min="0"
+              step="0.01"
+            />
           </div>
 
           {/* Action Buttons */}

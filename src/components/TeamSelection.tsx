@@ -49,14 +49,8 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
   const handleQuickMatch = () => {
     const match = onSelectMatch();
     if (match) {
-      // If there are available courts, start immediately, otherwise add to queue
-      const availableCourts = maxCourts - activeGamesCount;
-      if (availableCourts > 0) {
-        onStartGame(match);
-      } else {
-        // Add to waiting queue directly
-        addWaitingMatch(match, onPlayerStatusUpdate);
-      }
+      // Always add to waiting queue first, let waiting queue manager handle court availability
+      addWaitingMatch(match, onPlayerStatusUpdate);
     }
   };
 
@@ -131,17 +125,7 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
                 className="flex-1"
               >
                 <Users className="h-4 w-4 mr-2" />
-                Quick Match
-              </Button>
-              
-              <Button 
-                onClick={handleSelectMatch}
-                size="lg"
-                variant="outline"
-                className="flex-1"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Review Match
+                Queue
               </Button>
             </div>
             
@@ -151,169 +135,93 @@ export function TeamSelection({ onSelectMatch, onStartGame, onReplacePlayer, onP
             </div>
           </div>
           
-          {selectedMatch && (
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-semibold">Review Selected Match:</h3>
-              
-              {/* Team 1 */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium">
-                  Team 1 ({selectedMatch.pair1.pairType})
-                </div>
-                <div className="space-y-1">
-                  {selectedMatch.pair1.players.map((player) => (
-                    <div 
-                      key={player.id} 
-                      className="flex items-center justify-between p-2 bg-muted rounded-lg"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium truncate">{player.name}</span>
-                        <span className="text-xs text-muted-foreground">{player.level.major}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={levelColors[player.level.major]} variant="secondary">
-                          Level {player.level.bracket}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSubstitutionDialog({
-                              open: true,
-                              playerToReplace: player
-                            });
-                            setSearchTerm('');
-                          }}
-                        >
-                          <UserX className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Team 2 */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium">
-                  Team 2 ({selectedMatch.pair2.pairType})
-                </div>
-                <div className="space-y-1">
-                  {selectedMatch.pair2.players.map((player) => (
-                    <div 
-                      key={player.id} 
-                      className="flex items-center justify-between p-2 bg-muted rounded-lg"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium truncate">{player.name}</span>
-                        <span className="text-xs text-muted-foreground">{player.level.major}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={levelColors[player.level.major]} variant="secondary">
-                          Level {player.level.bracket}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSubstitutionDialog({
-                              open: true,
-                              playerToReplace: player
-                            });
-                            setSearchTerm('');
-                          }}
-                        >
-                          <UserX className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="court-select">Select Court</Label>
-                <Select value={selectedCourt.toString()} onValueChange={(value) => setSelectedCourt(parseInt(value))}>
-                  <SelectTrigger id="court-select">
-                    <SelectValue placeholder="Choose court" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: maxCourts }, (_, i) => i + 1).map((court) => (
-                      <SelectItem key={court} value={court.toString()}>
-                        Court {court}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleStartGame}
-                  className="flex-1"
-                  variant="default"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  {maxCourts - activeGamesCount > 0 ? `Start Game` : 'Add to Queue'}
-                </Button>
-                
-                <Button 
-                  onClick={() => setSelectedMatch(null)}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {/* Waiting Matches Queue */}
-      {waitingMatches.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Waiting Queue ({waitingMatches.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {waitingMatches.map((waitingMatch) => (
-              <div key={waitingMatch.id} className="border rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium">
-                      {waitingMatch.matchData.pair1.players.map(p => p.name).join(' & ')} vs{' '}
-                      {waitingMatch.matchData.pair2.players.map(p => p.name).join(' & ')}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Queue ({waitingMatches.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {waitingMatches.length > 0 ? (
+            waitingMatches.map((waitingMatch) => (
+              <div key={waitingMatch.id} className="border rounded-lg p-4">
+                {/* Team 1 */}
+                <div className="space-y-3">
+                  <div className="text-sm font-medium text-center">
+                    Team 1 ({waitingMatch.matchData.pair1.pairType}) vs Team 2 ({waitingMatch.matchData.pair2.pairType})
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Team 1 Players */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground">Team 1</div>
+                      {waitingMatch.matchData.pair1.players.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{player.name}</span>
+                            <span className="text-xs text-muted-foreground">{player.level.major}</span>
+                          </div>
+                          <Badge className={levelColors[player.level.major]} variant="secondary">
+                            L{player.level.bracket}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
+                    
+                    {/* Team 2 Players */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground">Team 2</div>
+                      {waitingMatch.matchData.pair2.players.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{player.name}</span>
+                            <span className="text-xs text-muted-foreground">{player.level.major}</span>
+                          </div>
+                          <Badge className={levelColors[player.level.major]} variant="secondary">
+                            L{player.level.bracket}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t">
                     <div className="text-xs text-muted-foreground">
                       Waiting for {Math.floor((new Date().getTime() - waitingMatch.createdAt.getTime()) / 60000)} minutes
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm"
-                      onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
-                      disabled={maxCourts - activeGamesCount <= 0}
-                    >
-                      Start Now
-                    </Button>
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      onClick={() => removeWaitingMatch(waitingMatch.id)}
-                    >
-                      Cancel
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
+                        disabled={maxCourts - activeGamesCount <= 0}
+                      >
+                        <Play className="h-3 w-3 mr-1" />
+                        Start Now
+                      </Button>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeWaitingMatch(waitingMatch.id)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No matches in queue
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Player Substitution Dialog with Search */}
       <Dialog 

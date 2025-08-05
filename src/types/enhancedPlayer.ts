@@ -12,4 +12,5 @@ export interface EnhancedPlayer {
   status: PlayerStatus;
   matchHistory: string[];
   createdAt: Date;
+  addedAt?: Date; // When player was added to an event
 }

@@ -14,6 +14,7 @@ interface EnhancedGameCardProps {
   onComplete: (gameId: string, winner?: 'team1' | 'team2') => void;
   onReplacePlayer?: (gameId: string, oldPlayerId: string, newPlayerId: string) => void;
   onUpdateCourt?: (gameId: string, courtId: number) => void;
+  onCancel?: (gameId: string) => void;
   availablePlayers?: any[];
   maxCourts?: number;
 }
@@ -23,6 +24,7 @@ export function EnhancedGameCard({
   onComplete, 
   onReplacePlayer, 
   onUpdateCourt,
+  onCancel,
   availablePlayers = [],
   maxCourts = 4
 }: EnhancedGameCardProps) {
@@ -193,22 +195,42 @@ export function EnhancedGameCard({
         </div>
         
         {!game.completed && (
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => onComplete(game.id, 'team1')}
-              className="flex-1"
-              variant="outline"
-            >
-              Team 1 Wins
-            </Button>
-            <Button 
-              onClick={() => onComplete(game.id, 'team2')}
-              className="flex-1"
-              variant="outline"
-            >
-              Team 2 Wins
-            </Button>
-          </div>
+          <>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => onComplete(game.id, 'team1')}
+                className="flex-1"
+                variant="outline"
+              >
+                Team 1 Wins
+              </Button>
+              <Button 
+                onClick={() => onComplete(game.id, 'team2')}
+                className="flex-1"
+                variant="outline"
+              >
+                Team 2 Wins
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => onComplete(game.id)}
+                className="flex-1"
+                variant="secondary"
+              >
+                Complete (No Winner)
+              </Button>
+              {onCancel && (
+                <Button 
+                  onClick={() => onCancel(game.id)}
+                  className="flex-1"
+                  variant="destructive"
+                >
+                  Cancel Game
+                </Button>
+              )}
+            </div>
+          </>
         )}
       </CardContent>
       
