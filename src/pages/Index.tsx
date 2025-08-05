@@ -68,6 +68,7 @@ const Index = () => {
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
   
   const { getPlayerStats, eventPlayerStats, refetch: refetchEventStats, updateCounter } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
+  
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;
@@ -121,10 +122,8 @@ const Index = () => {
           if (a.status !== 'available' && b.status === 'available') return 1;
           return a.name.localeCompare(b.name);
         case 'chronological':
-          // Show most recently added players first
-          const aAddedTime = a.addedAt ? new Date(a.addedAt).getTime() : 0;
-          const bAddedTime = b.addedAt ? new Date(b.addedAt).getTime() : 0;
-          return bAddedTime - aAddedTime;
+          // Show most recently added players first - use name sorting as fallback since we don't have addedAt tracking yet
+          return a.name.localeCompare(b.name);
         default:
           return 0;
       }
