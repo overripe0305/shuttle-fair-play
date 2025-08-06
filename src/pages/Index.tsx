@@ -6,6 +6,7 @@ import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
+import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
@@ -46,6 +47,7 @@ const Index = () => {
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
 
   const { eventId } = useParams();
   const {
@@ -63,6 +65,13 @@ const Index = () => {
   const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
+  const { 
+    waitingMatches, 
+    addWaitingMatch, 
+    removeWaitingMatch, 
+    startWaitingMatch,
+    substitutePlayerInWaiting
+  } = useWaitingMatchManager(eventId);
   
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -135,6 +144,14 @@ const Index = () => {
   const availablePlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.eligible && p.status === 'available');
   }, [eventPlayers]);
+
+  const handlePlayerSelect = (playerId: string) => {
+    setSelectedPlayerIds(prev => 
+      prev.includes(playerId) 
+        ? prev.filter(id => id !== playerId)
+        : [...prev, playerId]
+    );
+  };
 
   const handleTogglePause = useCallback(async (playerId: string) => {
     const player = eventPlayers.find(p => p.id === playerId);
@@ -449,13 +466,20 @@ const Index = () => {
           {/* Center Panel - Team Selection */}
           <div className="lg:col-span-1">
             <TeamSelection 
-              onSelectMatch={() => {
-                return selectFairMatch(eventPlayers);
-              }}
+              selectedPlayers={selectedPlayerIds}
+              onPlayerSelect={handlePlayerSelect}
+              availablePlayers={eventPlayers}
+              maxCourts={currentEvent?.courtCount || 4}
+              activeGamesCount={activeGames.length}
+              waitingMatches={waitingMatches}
+              addWaitingMatch={addWaitingMatch}
+              removeWaitingMatch={removeWaitingMatch}
+              startWaitingMatch={startWaitingMatch}
+              onSelectMatch={() => selectFairMatch(eventPlayers)}
               onStartGame={(match) => {
                 if (currentEvent) {
                   // Find available court (not used by active games)
-                  const usedCourts = dbActiveGames.map(game => game.courtId);
+                  const usedCourts = currentActiveGames.map(game => game.courtId);
                   const maxCourts = currentEvent.courtCount || 4;
                   let availableCourt = 1;
                   
@@ -475,15 +499,11 @@ const Index = () => {
                   );
                 }
               }}
-              onReplacePlayer={replacePlayerInTeam}
               onPlayerStatusUpdate={async (playerId: string, status: string) => {
-                // Update player status immediately in local state
                 await updatePlayer(playerId, { status: status as any });
               }}
-              availablePlayers={availablePlayers}
-              maxCourts={currentEvent?.courtCount || 4}
-              eventId={eventId}
-              activeGamesCount={currentActiveGames.length}
+              onReplacePlayer={replacePlayerInTeam}
+              onSubstituteInWaiting={substitutePlayerInWaiting}
             />
           </div>
 

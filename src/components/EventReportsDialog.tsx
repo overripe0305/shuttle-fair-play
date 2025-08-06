@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
+import { useEventManager } from '@/hooks/useEventManager';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -44,6 +45,7 @@ interface EventReportsDialogProps {
 
 export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: EventReportsDialogProps) {
   const { getPlayerStats, eventPlayerStats } = useEventPlayerStats(eventId);
+  const { events } = useEventManager();
   const [playerReports, setPlayerReports] = useState<PlayerReport[]>([]);
   const [sortedReports, setSortedReports] = useState<PlayerReport[]>([]);
   const [sortField, setSortField] = useState<SortField>('name');
@@ -163,8 +165,9 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
       if (playerError) throw playerError;
 
-      // Add payment record (assuming a standard amount, you can make this configurable)
-      const amount = 50.00; // Default amount, make configurable as needed
+      // Get queue fee from event settings
+      const currentEvent = events.find(e => e.id === eventId);
+      const amount = currentEvent?.queueFee || 50.00;
       const { error: paymentError } = await supabase
         .from('event_payments')
         .insert({

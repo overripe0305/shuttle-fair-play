@@ -3,8 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock, Pause, Play, Trash2 } from 'lucide-react';
+import { Clock, Pause, Play, Trash2, GripVertical } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useDraggable } from '@dnd-kit/core';
 
 interface PlayerCardProps {
   player: Player;
@@ -14,6 +15,8 @@ interface PlayerCardProps {
   onDeletePlayer?: (playerId: string) => void;
   onRemoveFromEvent?: (playerId: string) => void;
   isInEvent?: boolean;
+  isDraggable?: boolean;
+  dragId?: string;
 }
 
 const levelColors = {
@@ -31,9 +34,24 @@ const statusColors = {
   paused: 'bg-gray-500 text-white',
 };
 
-export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, isInEvent }: PlayerCardProps) {
+export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, isInEvent, isDraggable = false, dragId }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
   const [idleStartTime] = useState(() => new Date().getTime());
+  
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: dragId || player.id,
+    disabled: !isDraggable,
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
 
   // Calculate idle time for available players
   useEffect(() => {
@@ -62,17 +80,28 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
   }, [player.status, idleStartTime]);
   return (
     <Card 
+      ref={setNodeRef}
+      style={style}
       className={cn(
         "cursor-pointer transition-all duration-200 hover:shadow-md",
         selected && "ring-2 ring-primary",
         !player.eligible && "opacity-50",
-        player.status === 'in_progress' && "opacity-75"
+        player.status === 'in_progress' && "opacity-75",
+        isDragging && "opacity-50 z-50",
+        isDraggable && "cursor-grab active:cursor-grabbing"
       )}
       onClick={onClick}
+      {...(isDraggable ? attributes : {})}
+      {...(isDraggable ? listeners : {})}
     >
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold truncate">{player.name}</h3>
+          <div className="flex items-center gap-2">
+            {isDraggable && (
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
+            )}
+            <h3 className="font-semibold truncate">{player.name}</h3>
+          </div>
           <div className="flex items-center gap-2">
             <Badge className={statusColors[player.status as keyof typeof statusColors]} variant="outline">
               {player.status}

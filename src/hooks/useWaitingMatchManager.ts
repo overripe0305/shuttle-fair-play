@@ -169,6 +169,114 @@ export function useWaitingMatchManager(eventId?: string) {
     }
   }, [waitingMatches]);
 
+  const substitutePlayerInWaiting = useCallback(async (matchId: string, oldPlayerId: string, newPlayerId: string) => {
+    try {
+      const match = waitingMatches.find(m => m.id === matchId);
+      if (!match) return;
+
+      // Check if new player is available
+      const { data: newPlayer, error: checkError } = await supabase
+        .from('players')
+        .select('status')
+        .eq('id', newPlayerId)
+        .single();
+
+      if (checkError || newPlayer.status !== 'available') {
+        toast({
+          title: "Player unavailable",
+          description: "Selected player is not available for substitution",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update player statuses
+      await supabase
+        .from('players')
+        .update({ status: 'available' })
+        .eq('id', oldPlayerId);
+
+      await supabase
+        .from('players')
+        .update({ status: 'waiting' })
+        .eq('id', newPlayerId);
+
+      // Update waiting match record
+      const updates: any = {};
+      if (match.player1Id === oldPlayerId) updates.player1_id = newPlayerId;
+      else if (match.player2Id === oldPlayerId) updates.player2_id = newPlayerId;
+      else if (match.player3Id === oldPlayerId) updates.player3_id = newPlayerId;
+      else if (match.player4Id === oldPlayerId) updates.player4_id = newPlayerId;
+
+      // Update match_data as well
+      const updatedMatchData = { ...match.matchData };
+      // Get the full player data for proper substitution
+      const { data: fullPlayerData, error: playerDataError } = await supabase
+        .from('players')
+        .select('id, name, major_level, sub_level')
+        .eq('id', newPlayerId)
+        .single();
+
+      if (playerDataError || !fullPlayerData) {
+        toast({
+          title: "Error",
+          description: "Could not fetch player data for substitution",
+          variant: "destructive"
+        });
+        return;
+      }
+
+       // Create proper player object with correct bracket type
+       const newPlayerData = {
+         id: newPlayerId,
+         name: fullPlayerData.name,
+         level: { 
+           major: fullPlayerData.major_level as any, 
+           bracket: 1 as any // Default bracket
+         },
+         eligible: true,
+         gamesPlayed: 0,
+         gamePenaltyBonus: 0,
+         status: 'waiting' as const,
+         matchHistory: []
+       };
+
+      // Find and update the player in the match data
+      if (updatedMatchData.pair1.players[0].id === oldPlayerId) {
+        updatedMatchData.pair1.players[0] = newPlayerData;
+      } else if (updatedMatchData.pair1.players[1].id === oldPlayerId) {
+        updatedMatchData.pair1.players[1] = newPlayerData;
+      } else if (updatedMatchData.pair2.players[0].id === oldPlayerId) {
+        updatedMatchData.pair2.players[0] = newPlayerData;
+      } else if (updatedMatchData.pair2.players[1].id === oldPlayerId) {
+        updatedMatchData.pair2.players[1] = newPlayerData;
+      }
+
+      updates.match_data = updatedMatchData;
+
+      const { error } = await supabase
+        .from('waiting_matches')
+        .update(updates)
+        .eq('id', matchId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Player substituted",
+        description: "Player has been successfully substituted in the waiting queue",
+      });
+
+      loadWaitingMatches();
+    } catch (error) {
+      console.error('Error substituting player:', error);
+      toast({
+        title: "Error",
+        description: "Failed to substitute player",
+        variant: "destructive"
+      });
+    }
+  }, [waitingMatches, loadWaitingMatches]);
+
   const startWaitingMatch = useCallback(async (matchId: string, courtId: number, onStartGame: (match: GameMatch) => void, onPlayerStatusUpdate?: (playerId: string, status: string) => void) => {
     try {
       const match = waitingMatches.find(m => m.id === matchId);
@@ -212,6 +320,7 @@ export function useWaitingMatchManager(eventId?: string) {
     addWaitingMatch,
     removeWaitingMatch,
     startWaitingMatch,
-    loadWaitingMatches
+    loadWaitingMatches,
+    substitutePlayerInWaiting
   };
 }
