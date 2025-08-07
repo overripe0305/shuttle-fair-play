@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Users, UserPlus, X, RefreshCw } from 'lucide-react';
+import { Clock, Users, UserPlus, X, RefreshCw, UserX } from 'lucide-react';
 import { WaitingMatch } from '@/hooks/useWaitingMatchManager';
 import { useState, useMemo } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor, useDroppable, useDraggable } from '@dnd-kit/core';
 
 interface TeamSelectionProps {
   selectedPlayers: string[];
@@ -76,17 +76,46 @@ export function TeamSelection({
     const { active, over } = event;
     setActiveDragId(null);
     
-    if (!over) return;
+    if (!over || !onSubstituteInWaiting) return;
     
-    const draggedPlayerId = active.id as string;
+    const draggedId = active.id as string;
     const overId = over.id as string;
     
-    // Handle substitution in waiting queue
-    if (overId.startsWith('waiting-player-')) {
-      const [, , waitingMatchId, playerToReplace] = overId.split('-');
-      if (draggedPlayerId !== playerToReplace && onSubstituteInWaiting) {
-        onSubstituteInWaiting(waitingMatchId, playerToReplace, draggedPlayerId);
+    // Extract player ID from drag-{playerId} format
+    const draggedPlayerId = draggedId.startsWith('drag-') ? draggedId.replace('drag-', '') : draggedId;
+    
+    // Handle drag from available players to team slots
+    if (overId.startsWith('team-')) {
+      const [teamPart, waitingMatchId, teamNum, playerPos] = overId.split('-');
+      const waitingMatch = waitingMatches.find(m => m.id === waitingMatchId);
+      if (!waitingMatch) return;
+      
+      const playerIds = [
+        waitingMatch.player1Id,
+        waitingMatch.player2Id, 
+        waitingMatch.player3Id,
+        waitingMatch.player4Id
+      ];
+      
+      // Find the first player in the target team that can be replaced
+      const isTeam1 = parseInt(teamNum) === 1;
+      const startIndex = isTeam1 ? 0 : 2;
+      const endIndex = isTeam1 ? 2 : 4;
+      
+      // Try to find a suitable slot in the target team
+      for (let i = startIndex; i < endIndex; i++) {
+        const oldPlayerId = playerIds[i];
+        if (oldPlayerId !== draggedPlayerId) {
+          onSubstituteInWaiting(waitingMatchId, oldPlayerId, draggedPlayerId);
+          break;
+        }
       }
+    }
+    
+    // Handle drag between team positions within the same match
+    if (overId.startsWith('team-') && draggedId.startsWith('drag-')) {
+      // This is handled above
+      return;
     }
   };
 
@@ -131,6 +160,80 @@ export function TeamSelection({
     setSubstitutionDialog({ open: false });
   };
 
+  // Draggable Player Component
+  function DraggablePlayer({ playerId, playerName, teamLabel, waitingMatchId }: {
+    playerId: string;
+    playerName: string;
+    teamLabel: string;
+    waitingMatchId: string;
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      isDragging,
+    } = useDraggable({
+      id: `drag-${playerId}`,
+    });
+
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    } : undefined;
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={`flex items-center justify-between p-2 bg-muted rounded-md cursor-move ${
+          isDragging ? 'opacity-50' : ''
+        }`}
+      >
+        <span className="font-medium truncate">{playerName}</span>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSubstitutionDialog({
+              open: true,
+              waitingMatchId: waitingMatchId,
+              playerToReplace: playerId,
+              playerName: playerName
+            });
+          }}
+        >
+          <UserX className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  // Droppable Team Component
+  function DroppableTeam({ teamId, children }: { teamId: string; children: React.ReactNode }) {
+    const {
+      isOver,
+      setNodeRef,
+    } = useDroppable({
+      id: teamId,
+    });
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`space-y-1 p-2 rounded-lg border-2 border-dashed transition-colors ${
+          isOver 
+            ? 'border-primary bg-primary/5' 
+            : 'border-muted-foreground/20'
+        }`}
+      >
+        {children}
+      </div>
+    );
+  }
+
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -164,6 +267,29 @@ export function TeamSelection({
           </CardContent>
         </Card>
 
+        {/* Available Players for Drag & Drop */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Available Players ({eligiblePlayers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+              {eligiblePlayers.map(player => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  onClick={() => {}}
+                  isDraggable={true}
+                  dragId={player.id}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Waiting Matches Queue */}
         <Card>
           <CardHeader>
@@ -172,64 +298,79 @@ export function TeamSelection({
               Queue ({waitingMatches.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {waitingMatches.length > 0 ? (
-              waitingMatches.map((waitingMatch) => (
-                <div key={waitingMatch.id} className="border rounded-lg p-4">
-                  <div className="space-y-3">
-                    <div className="text-sm font-medium text-center">
-                      Team 1 vs Team 2
-                    </div>
+              waitingMatches.map((waitingMatch) => {
+                const team1Players = [
+                  { id: waitingMatch.player1Id, name: availablePlayers.find(p => p.id === waitingMatch.player1Id)?.name || 'Player 1' },
+                  { id: waitingMatch.player2Id, name: availablePlayers.find(p => p.id === waitingMatch.player2Id)?.name || 'Player 2' }
+                ];
+                const team2Players = [
+                  { id: waitingMatch.player3Id, name: availablePlayers.find(p => p.id === waitingMatch.player3Id)?.name || 'Player 3' },
+                  { id: waitingMatch.player4Id, name: availablePlayers.find(p => p.id === waitingMatch.player4Id)?.name || 'Player 4' }
+                ];
+
+                return (
+                  <Card key={waitingMatch.id} className="w-full">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center justify-between text-lg">
+                        <span className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Waiting Match
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {Math.floor((new Date().getTime() - waitingMatch.createdAt.getTime()) / 60000)}m
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
                     
-                    <div className="space-y-2">
-                      {[
-                        waitingMatch.player1Id,
-                        waitingMatch.player2Id,
-                        waitingMatch.player3Id,
-                        waitingMatch.player4Id
-                      ].map((playerId, index) => {
-                        const playerName = availablePlayers.find(p => p.id === playerId)?.name;
-                        return (
-                          <div 
-                            key={`waiting-player-${waitingMatch.id}-${index}`}
-                            id={`waiting-player-${waitingMatch.id}-${index}`}
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                                <span className="text-sm font-medium">
-                                  {(index < 2 ? 'T1' : 'T2') + (index % 2 + 1)}
-                                </span>
-                              </div>
-                              <span className="font-medium">{playerName}</span>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setSubstitutionDialog({
-                                open: true,
-                                waitingMatchId: waitingMatch.id,
-                                playerToReplace: playerId,
-                                playerName: playerName
-                              })}
-                            >
-                              <RefreshCw className="h-4 w-4 mr-1" />
-                              Substitute
-                            </Button>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        {/* Team 1 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <Users className="h-3 w-3" />
+                            Team 1
                           </div>
-                        );
-                      })}
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="text-xs text-muted-foreground">
-                        Waiting for {Math.floor((new Date().getTime() - waitingMatch.createdAt.getTime()) / 60000)} minutes
+                          <DroppableTeam teamId={`team-${waitingMatch.id}-1-0`}>
+                            {team1Players.map((player, index) => (
+                              <DraggablePlayer
+                                key={player.id}
+                                playerId={player.id}
+                                playerName={player.name}
+                                teamLabel={`T1P${index + 1}`}
+                                waitingMatchId={waitingMatch.id}
+                              />
+                            ))}
+                          </DroppableTeam>
+                        </div>
+                        
+                        {/* Team 2 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            <Users className="h-3 w-3" />
+                            Team 2
+                          </div>
+                          <DroppableTeam teamId={`team-${waitingMatch.id}-2-0`}>
+                            {team2Players.map((player, index) => (
+                              <DraggablePlayer
+                                key={player.id}
+                                playerId={player.id}
+                                playerName={player.name}
+                                teamLabel={`T2P${index + 1}`}
+                                waitingMatchId={waitingMatch.id}
+                              />
+                            ))}
+                          </DroppableTeam>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
+                      
+                      <div className="flex gap-2 pt-2 border-t">
                         <Button 
                           size="sm"
                           onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
                           disabled={maxCourts - activeGamesCount <= 0}
+                          className="flex-1"
                         >
                           Start Now
                         </Button>
@@ -241,10 +382,10 @@ export function TeamSelection({
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              ))
+                    </CardContent>
+                  </Card>
+                );
+              })
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 No matches in queue
@@ -258,7 +399,10 @@ export function TeamSelection({
           {activeDragId ? (
             <div className="bg-card border rounded-lg p-2 shadow-lg opacity-80">
               <span className="font-medium">
-                {availablePlayers.find(p => p.id === activeDragId)?.name}
+                {(() => {
+                  const playerId = activeDragId.startsWith('drag-') ? activeDragId.replace('drag-', '') : activeDragId;
+                  return availablePlayers.find(p => p.id === playerId)?.name || 'Player';
+                })()}
               </span>
             </div>
           ) : null}
