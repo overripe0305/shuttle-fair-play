@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useEventManager } from '@/hooks/useEventManager';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -431,9 +431,6 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Record Payment for {paymentDialog.playerName}</DialogTitle>
-                <DialogDescription>
-                  Record payment for this player's event participation.
-                </DialogDescription>
               </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -475,9 +472,6 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
                 <Receipt className="h-5 w-5" />
                 Add Expense for {eventTitle}
               </DialogTitle>
-              <DialogDescription>
-                Add an expense related to this event.
-              </DialogDescription>
             </DialogHeader>
           <div className="space-y-4">
             <div>

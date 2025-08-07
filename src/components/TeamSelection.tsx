@@ -68,6 +68,28 @@ export function TeamSelection({
     [availablePlayers]
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+    
+    if (!over) return;
+    
+    const draggedPlayerId = active.id as string;
+    const overId = over.id as string;
+    
+    // Handle substitution in waiting queue
+    if (overId.startsWith('waiting-player-')) {
+      const [, , waitingMatchId, playerToReplace] = overId.split('-');
+      if (draggedPlayerId !== playerToReplace && onSubstituteInWaiting) {
+        onSubstituteInWaiting(waitingMatchId, playerToReplace, draggedPlayerId);
+      }
+    }
+  };
+
   const handleSelectMatch = () => {
     const match = onSelectMatch();
     if (match) {
@@ -109,38 +131,6 @@ export function TeamSelection({
     setSubstitutionDialog({ open: false });
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(event.active.id as string);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveDragId(null);
-
-    if (!over || active.id === over.id) return;
-
-    // Handle drag to substitute player in waiting queue
-    if (over.id.toString().startsWith('waiting-player-')) {
-      const [, , waitingMatchId, playerPosition] = over.id.toString().split('-');
-      const draggedPlayerId = active.id as string;
-      
-      const waitingMatch = waitingMatches.find(m => m.id === waitingMatchId);
-      if (!waitingMatch) return;
-
-      const playerIds = [
-        waitingMatch.player1Id,
-        waitingMatch.player2Id,
-        waitingMatch.player3Id,
-        waitingMatch.player4Id
-      ];
-      
-      const oldPlayerId = playerIds[parseInt(playerPosition)];
-      
-      if (onSubstituteInWaiting) {
-        onSubstituteInWaiting(waitingMatchId, oldPlayerId, draggedPlayerId);
-      }
-    }
-  };
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
