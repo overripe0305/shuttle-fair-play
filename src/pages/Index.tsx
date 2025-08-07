@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
+import { DndContext, closestCenter, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
@@ -48,6 +49,15 @@ const Index = () => {
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const { eventId } = useParams();
   const {
@@ -277,8 +287,38 @@ const Index = () => {
 
   const editingPlayerData = editingPlayer ? allPlayers.find(p => p.id === editingPlayer) : null;
 
+  const handleDragStart = (event: any) => {
+    setActiveDragId(event.active.id);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+    
+    if (!over) return;
+    
+    const draggedPlayerId = active.id as string;
+    const overId = over.id as string;
+    
+    // Handle drop zones for player cards
+    if (overId === 'available-players' || overId === 'event-players') {
+      // Handle moving players between available and event lists
+      const draggedPlayer = allPlayers.find(p => p.id === draggedPlayerId);
+      if (!draggedPlayer || !currentEvent) return;
+      
+      const isInEvent = eventPlayers.some(p => p.id === draggedPlayerId);
+      
+      if (overId === 'event-players' && !isInEvent) {
+        addPlayerToEvent(currentEvent.id, draggedPlayerId);
+      } else if (overId === 'available-players' && isInEvent) {
+        removePlayerFromEvent(currentEvent.id, draggedPlayerId);
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b">
         <div className="container mx-auto px-6 py-4">
@@ -541,6 +581,17 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeDragId ? (
+            <div className="bg-card border rounded-lg p-2 shadow-lg opacity-80">
+              <span className="font-medium">
+                {allPlayers.find(p => p.id === activeDragId)?.name}
+              </span>
+            </div>
+          ) : null}
+        </DragOverlay>
+
         {/* Stats Summary */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -613,7 +664,8 @@ const Index = () => {
           onUpdateEvent={handleUpdateEvent}
         />
       )}
-    </div>
+      </div>
+    </DndContext>
   );
 };
 

@@ -10,7 +10,7 @@ import { PlayerCard } from './PlayerCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 
 interface TeamSelectionProps {
   selectedPlayers: string[];
@@ -46,13 +46,21 @@ export function TeamSelection({
   onSubstituteInWaiting
 }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [substitutionDialog, setSubstitutionDialog] = useState<{
     open: boolean;
     waitingMatchId?: string;
     playerToReplace?: string;
     playerName?: string;
   }>({ open: false });
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   // Available players for selection (not waiting, in progress, etc.)
   const eligiblePlayers = useMemo(() => 

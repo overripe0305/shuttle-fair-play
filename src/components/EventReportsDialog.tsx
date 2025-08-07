@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useEventManager } from '@/hooks/useEventManager';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -134,6 +134,10 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
   const loadPaymentTotals = async () => {
     try {
+      // Get the current event's queue fee
+      const currentEvent = events.find(e => e.id === eventId);
+      const queueFee = currentEvent?.queueFee || 50; // Default to $50 if not set
+      
       const { data: payments, error } = await supabase
         .from('event_payments')
         .select('amount, payment_method')
@@ -141,8 +145,9 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
       if (error) throw error;
 
-      const cash = payments?.filter(p => p.payment_method === 'cash').reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      const online = payments?.filter(p => p.payment_method === 'online').reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      // Use queue fee as the base amount for calculations
+      const cash = payments?.filter(p => p.payment_method === 'cash').length * queueFee || 0;
+      const online = payments?.filter(p => p.payment_method === 'online').length * queueFee || 0;
 
       setCashTotal(cash);
       setOnlineTotal(online);
@@ -153,11 +158,15 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
   const handleMarkPaid = async (playerId: string, paymentMethod: 'cash' | 'online') => {
     try {
+      // Get the current event's queue fee
+      const currentEvent = events.find(e => e.id === eventId);
+      const queueFee = currentEvent?.queueFee || 50; // Default to $50 if not set
+      
       // Update player payment status
       const { error: playerError } = await supabase
         .from('players')
-        .update({
-          payment_status: 'paid',
+        .update({ 
+          payment_status: 'paid', 
           payment_method: paymentMethod,
           payment_date: new Date().toISOString()
         })
@@ -165,16 +174,15 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
       if (playerError) throw playerError;
 
-      // Get queue fee from event settings
-      const currentEvent = events.find(e => e.id === eventId);
-      const amount = currentEvent?.queueFee || 50.00;
+      // Insert payment record with queue fee
       const { error: paymentError } = await supabase
         .from('event_payments')
         .insert({
           event_id: eventId,
           player_id: playerId,
-          amount: amount,
-          payment_method: paymentMethod
+          amount: queueFee,
+          payment_method: paymentMethod,
+          payment_date: new Date().toISOString()
         });
 
       if (paymentError) throw paymentError;
@@ -420,10 +428,13 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
 
       {/* Payment Method Dialog */}
       <Dialog open={paymentDialog.open} onOpenChange={(open) => setPaymentDialog({ open })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Record Payment for {paymentDialog.playerName}</DialogTitle>
-          </DialogHeader>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Record Payment for {paymentDialog.playerName}</DialogTitle>
+                <DialogDescription>
+                  Record payment for this player's event participation.
+                </DialogDescription>
+              </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Payment Method</label>
@@ -457,14 +468,17 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
       </Dialog>
 
       {/* Add Expense Dialog */}
-      <Dialog open={expenseDialog} onOpenChange={setExpenseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Add Expense for {eventTitle}
-            </DialogTitle>
-          </DialogHeader>
+        <Dialog open={expenseDialog} onOpenChange={setExpenseDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Add Expense for {eventTitle}
+              </DialogTitle>
+              <DialogDescription>
+                Add an expense related to this event.
+              </DialogDescription>
+            </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Expense Name *</Label>
