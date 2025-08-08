@@ -36,7 +36,24 @@ const statusColors = {
 
 export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, isInEvent, isDraggable = false, dragId }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
-  const [idleStartTime] = useState(() => new Date().getTime());
+  
+  // Use player's last status change time or fallback to a stored time
+  const getIdleStartTime = () => {
+    // Try to get stored start time for this player
+    const storedTime = localStorage.getItem(`idle_start_${player.id}`);
+    if (storedTime && player.status === 'available') {
+      return parseInt(storedTime);
+    }
+    
+    // If no stored time and player is available, set it now
+    if (player.status === 'available') {
+      const now = new Date().getTime();
+      localStorage.setItem(`idle_start_${player.id}`, now.toString());
+      return now;
+    }
+    
+    return new Date().getTime();
+  };
   
   const {
     attributes,
@@ -57,12 +74,15 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
   useEffect(() => {
     if (player.status !== 'available') {
       setIdleTime('');
+      // Clear stored time when player is no longer available
+      localStorage.removeItem(`idle_start_${player.id}`);
       return;
     }
 
     const updateIdleTime = () => {
       const now = new Date().getTime();
-      const idleMinutes = Math.floor((now - idleStartTime) / 60000);
+      const startTime = getIdleStartTime();
+      const idleMinutes = Math.floor((now - startTime) / 60000);
       
       if (idleMinutes < 60) {
         setIdleTime(`${idleMinutes}m`);
@@ -77,7 +97,7 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
     const interval = setInterval(updateIdleTime, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, [player.status, idleStartTime]);
+  }, [player.status, player.id]);
   return (
     <Card 
       ref={setNodeRef}

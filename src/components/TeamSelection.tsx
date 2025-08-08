@@ -181,10 +181,7 @@ export function TeamSelection({
 
       console.log('Swap successful');
       
-      // Refresh the waiting matches to see the changes
-      if (waitingMatches.length > 0) {
-        window.location.reload(); // Temporary to ensure UI updates
-      }
+      // No need for page refresh - the real-time subscription will handle updates
     } catch (error) {
       console.error('Error swapping players:', error);
     }
