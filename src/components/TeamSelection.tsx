@@ -104,58 +104,87 @@ export function TeamSelection({
   };
 
   const handlePlayerSwap = async (matchId: string, player1Id: string, player2Id: string) => {
+    console.log('Attempting to swap players:', { matchId, player1Id, player2Id });
+    
     const match = waitingMatches.find(m => m.id === matchId);
-    if (!match) return;
-
-    // Update the waiting match record by swapping positions
-    const updates: any = {};
-    let updatedMatchData = { ...match.matchData };
-
-    // Swap player positions in database
-    if (match.player1Id === player1Id && match.player2Id === player2Id) {
-      updates.player1_id = player2Id;
-      updates.player2_id = player1Id;
-      // Swap in match data
-      const temp = updatedMatchData.pair1.players[0];
-      updatedMatchData.pair1.players[0] = updatedMatchData.pair1.players[1];
-      updatedMatchData.pair1.players[1] = temp;
-    } else if (match.player3Id === player1Id && match.player4Id === player2Id) {
-      updates.player3_id = player2Id;
-      updates.player4_id = player1Id;
-      // Swap in match data
-      const temp = updatedMatchData.pair2.players[0];
-      updatedMatchData.pair2.players[0] = updatedMatchData.pair2.players[1];
-      updatedMatchData.pair2.players[1] = temp;
-    } else if ((match.player1Id === player1Id && match.player3Id === player2Id) || 
-               (match.player1Id === player2Id && match.player3Id === player1Id)) {
-      // Cross-team swap
-      const p1Pos = match.player1Id === player1Id ? 'player1_id' : 'player3_id';
-      const p2Pos = match.player3Id === player2Id ? 'player3_id' : 'player1_id';
-      updates[p1Pos] = player2Id;
-      updates[p2Pos] = player1Id;
-      
-      // Update match data
-      const player1Data = match.player1Id === player1Id ? updatedMatchData.pair1.players[0] : updatedMatchData.pair2.players[0];
-      const player2Data = match.player3Id === player2Id ? updatedMatchData.pair2.players[0] : updatedMatchData.pair1.players[0];
-      
-      if (match.player1Id === player1Id) {
-        updatedMatchData.pair1.players[0] = player2Data;
-        updatedMatchData.pair2.players[0] = player1Data;
-      } else {
-        updatedMatchData.pair1.players[0] = player1Data;
-        updatedMatchData.pair2.players[0] = player2Data;
-      }
-    } else {
-      // Handle other swap combinations
-      console.log('Complex swap - handling all cases');
+    if (!match) {
+      console.log('Match not found');
       return;
     }
 
+    console.log('Current match:', match);
+
+    // Create new player arrays by swapping positions
+    const currentPlayers = [match.player1Id, match.player2Id, match.player3Id, match.player4Id];
+    const player1Index = currentPlayers.indexOf(player1Id);
+    const player2Index = currentPlayers.indexOf(player2Id);
+    
+    console.log('Player positions:', { player1Index, player2Index });
+
+    if (player1Index === -1 || player2Index === -1) {
+      console.log('One or both players not found in match');
+      return;
+    }
+
+    // Swap the players in the array
+    const newPlayers = [...currentPlayers];
+    newPlayers[player1Index] = player2Id;
+    newPlayers[player2Index] = player1Id;
+
+    console.log('New player arrangement:', newPlayers);
+
+    // Create the update object
+    const updates: any = {
+      player1_id: newPlayers[0],
+      player2_id: newPlayers[1], 
+      player3_id: newPlayers[2],
+      player4_id: newPlayers[3],
+      match_data: undefined // Will be set below
+    };
+
+    // Also update the match_data to keep it in sync
+    const updatedMatchData = { ...match.matchData };
+    
+    // Swap players in match data structure
+    const matchDataPlayers = [
+      updatedMatchData.pair1.players[0],
+      updatedMatchData.pair1.players[1],
+      updatedMatchData.pair2.players[0], 
+      updatedMatchData.pair2.players[1]
+    ];
+
+    // Swap in match data array
+    const temp = matchDataPlayers[player1Index];
+    matchDataPlayers[player1Index] = matchDataPlayers[player2Index];
+    matchDataPlayers[player2Index] = temp;
+
+    // Reconstruct the match data
+    updatedMatchData.pair1.players[0] = matchDataPlayers[0];
+    updatedMatchData.pair1.players[1] = matchDataPlayers[1];
+    updatedMatchData.pair2.players[0] = matchDataPlayers[2];
+    updatedMatchData.pair2.players[1] = matchDataPlayers[3];
+
     updates.match_data = updatedMatchData;
 
+    console.log('Sending updates to database:', updates);
+
     try {
-      const { error } = await supabase.from('waiting_matches').update(updates).eq('id', matchId);
-      if (error) throw error;
+      const { error } = await supabase
+        .from('waiting_matches')
+        .update(updates)
+        .eq('id', matchId);
+      
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      console.log('Swap successful');
+      
+      // Refresh the waiting matches to see the changes
+      if (waitingMatches.length > 0) {
+        window.location.reload(); // Temporary to ensure UI updates
+      }
     } catch (error) {
       console.error('Error swapping players:', error);
     }
