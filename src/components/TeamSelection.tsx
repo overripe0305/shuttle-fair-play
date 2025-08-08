@@ -84,38 +84,20 @@ export function TeamSelection({
     // Extract player ID from drag-{playerId} format
     const draggedPlayerId = draggedId.startsWith('drag-') ? draggedId.replace('drag-', '') : draggedId;
     
-    // Handle drag from available players to team slots
-    if (overId.startsWith('team-')) {
-      const [teamPart, waitingMatchId, teamNum, playerPos] = overId.split('-');
-      const waitingMatch = waitingMatches.find(m => m.id === waitingMatchId);
-      if (!waitingMatch) return;
-      
-      const playerIds = [
-        waitingMatch.player1Id,
-        waitingMatch.player2Id, 
-        waitingMatch.player3Id,
-        waitingMatch.player4Id
-      ];
-      
-      // Find the first player in the target team that can be replaced
-      const isTeam1 = parseInt(teamNum) === 1;
-      const startIndex = isTeam1 ? 0 : 2;
-      const endIndex = isTeam1 ? 2 : 4;
-      
-      // Try to find a suitable slot in the target team
-      for (let i = startIndex; i < endIndex; i++) {
-        const oldPlayerId = playerIds[i];
-        if (oldPlayerId !== draggedPlayerId) {
-          onSubstituteInWaiting(waitingMatchId, oldPlayerId, draggedPlayerId);
-          break;
+    // Handle direct drop on another player (for swapping)
+    if (overId.startsWith('drop-')) {
+      const targetPlayerId = overId.replace('drop-', '');
+      if (targetPlayerId !== draggedPlayerId) {
+        // Find which waiting match contains both players
+        const waitingMatch = waitingMatches.find(m => 
+          [m.player1Id, m.player2Id, m.player3Id, m.player4Id].includes(draggedPlayerId) &&
+          [m.player1Id, m.player2Id, m.player3Id, m.player4Id].includes(targetPlayerId)
+        );
+        
+        if (waitingMatch) {
+          onSubstituteInWaiting(waitingMatch.id, targetPlayerId, draggedPlayerId);
         }
       }
-    }
-    
-    // Handle drag between team positions within the same match
-    if (overId.startsWith('team-') && draggedId.startsWith('drag-')) {
-      // This is handled above
-      return;
     }
   };
 
@@ -160,7 +142,7 @@ export function TeamSelection({
     setSubstitutionDialog({ open: false });
   };
 
-  // Draggable Player Component
+  // Draggable and Droppable Player Component
   function DraggablePlayer({ playerId, playerName, teamLabel, waitingMatchId }: {
     playerId: string;
     playerName: string;
@@ -170,16 +152,29 @@ export function TeamSelection({
     const {
       attributes,
       listeners,
-      setNodeRef,
+      setNodeRef: setDragRef,
       transform,
       isDragging,
     } = useDraggable({
       id: `drag-${playerId}`,
     });
 
+    const {
+      isOver,
+      setNodeRef: setDropRef,
+    } = useDroppable({
+      id: `drop-${playerId}`,
+    });
+
     const style = transform ? {
       transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     } : undefined;
+
+    // Combine refs
+    const setNodeRef = (node: HTMLElement | null) => {
+      setDragRef(node);
+      setDropRef(node);
+    };
 
     return (
       <div
@@ -187,8 +182,10 @@ export function TeamSelection({
         style={style}
         {...listeners}
         {...attributes}
-        className={`flex items-center justify-between p-2 bg-muted rounded-md cursor-move ${
+        className={`flex items-center justify-between p-2 rounded-md cursor-move transition-colors ${
           isDragging ? 'opacity-50' : ''
+        } ${
+          isOver ? 'bg-primary/20 border-2 border-primary' : 'bg-muted'
         }`}
       >
         <span className="font-medium truncate">{playerName}</span>
@@ -282,8 +279,7 @@ export function TeamSelection({
                   key={player.id}
                   player={player}
                   onClick={() => {}}
-                  isDraggable={true}
-                  dragId={player.id}
+                  isDraggable={false}
                 />
               ))}
             </div>
