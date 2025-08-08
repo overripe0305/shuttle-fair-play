@@ -80,7 +80,8 @@ const Index = () => {
     addWaitingMatch, 
     removeWaitingMatch, 
     startWaitingMatch,
-    substitutePlayerInWaiting
+    substitutePlayerInWaiting,
+    loadWaitingMatches
   } = useWaitingMatchManager(eventId);
   
   // Get current event if we're in event context
@@ -544,6 +545,7 @@ const Index = () => {
               }}
               onReplacePlayer={replacePlayerInTeam}
               onSubstituteInWaiting={substitutePlayerInWaiting}
+              loadWaitingMatches={loadWaitingMatches}
             />
           </div>
 

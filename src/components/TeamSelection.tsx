@@ -28,6 +28,7 @@ interface TeamSelectionProps {
   onPlayerStatusUpdate?: (playerId: string, status: string) => void;
   onReplacePlayer?: (waitingMatchId: string, oldPlayerId: string, newPlayerId: string) => void;
   onSubstituteInWaiting?: (waitingMatchId: string, oldPlayerId: string, newPlayerId: string) => void;
+  loadWaitingMatches?: () => void;
 }
 
 export function TeamSelection({ 
@@ -44,7 +45,8 @@ export function TeamSelection({
   onStartGame, 
   onPlayerStatusUpdate,
   onReplacePlayer,
-  onSubstituteInWaiting
+  onSubstituteInWaiting,
+  loadWaitingMatches
 }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -181,7 +183,12 @@ export function TeamSelection({
 
       console.log('Swap successful');
       
-      // No need for page refresh - the real-time subscription will handle updates
+      // Trigger waiting matches reload to update the UI
+      if (loadWaitingMatches) {
+        loadWaitingMatches();
+      }
+      
+      console.log('UI should update now');
     } catch (error) {
       console.error('Error swapping players:', error);
     }
