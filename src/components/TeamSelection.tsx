@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor, useDroppable, useDraggable } from '@dnd-kit/core';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeamSelectionProps {
   selectedPlayers: string[];
@@ -76,7 +77,7 @@ export function TeamSelection({
     const { active, over } = event;
     setActiveDragId(null);
     
-    if (!over || !onSubstituteInWaiting) return;
+    if (!over) return;
     
     const draggedId = active.id as string;
     const overId = over.id as string;
@@ -84,7 +85,7 @@ export function TeamSelection({
     // Extract player ID from drag-{playerId} format
     const draggedPlayerId = draggedId.startsWith('drag-') ? draggedId.replace('drag-', '') : draggedId;
     
-    // Handle direct drop on another player (for swapping)
+    // Handle direct drop on another player (for swapping within same match)
     if (overId.startsWith('drop-')) {
       const targetPlayerId = overId.replace('drop-', '');
       if (targetPlayerId !== draggedPlayerId) {
@@ -95,9 +96,68 @@ export function TeamSelection({
         );
         
         if (waitingMatch) {
-          onSubstituteInWaiting(waitingMatch.id, targetPlayerId, draggedPlayerId);
+          // This is a swap within the same match, use a different approach
+          handlePlayerSwap(waitingMatch.id, draggedPlayerId, targetPlayerId);
         }
       }
+    }
+  };
+
+  const handlePlayerSwap = async (matchId: string, player1Id: string, player2Id: string) => {
+    const match = waitingMatches.find(m => m.id === matchId);
+    if (!match) return;
+
+    // Update the waiting match record by swapping positions
+    const updates: any = {};
+    let updatedMatchData = { ...match.matchData };
+
+    // Swap player positions in database
+    if (match.player1Id === player1Id && match.player2Id === player2Id) {
+      updates.player1_id = player2Id;
+      updates.player2_id = player1Id;
+      // Swap in match data
+      const temp = updatedMatchData.pair1.players[0];
+      updatedMatchData.pair1.players[0] = updatedMatchData.pair1.players[1];
+      updatedMatchData.pair1.players[1] = temp;
+    } else if (match.player3Id === player1Id && match.player4Id === player2Id) {
+      updates.player3_id = player2Id;
+      updates.player4_id = player1Id;
+      // Swap in match data
+      const temp = updatedMatchData.pair2.players[0];
+      updatedMatchData.pair2.players[0] = updatedMatchData.pair2.players[1];
+      updatedMatchData.pair2.players[1] = temp;
+    } else if ((match.player1Id === player1Id && match.player3Id === player2Id) || 
+               (match.player1Id === player2Id && match.player3Id === player1Id)) {
+      // Cross-team swap
+      const p1Pos = match.player1Id === player1Id ? 'player1_id' : 'player3_id';
+      const p2Pos = match.player3Id === player2Id ? 'player3_id' : 'player1_id';
+      updates[p1Pos] = player2Id;
+      updates[p2Pos] = player1Id;
+      
+      // Update match data
+      const player1Data = match.player1Id === player1Id ? updatedMatchData.pair1.players[0] : updatedMatchData.pair2.players[0];
+      const player2Data = match.player3Id === player2Id ? updatedMatchData.pair2.players[0] : updatedMatchData.pair1.players[0];
+      
+      if (match.player1Id === player1Id) {
+        updatedMatchData.pair1.players[0] = player2Data;
+        updatedMatchData.pair2.players[0] = player1Data;
+      } else {
+        updatedMatchData.pair1.players[0] = player1Data;
+        updatedMatchData.pair2.players[0] = player2Data;
+      }
+    } else {
+      // Handle other swap combinations
+      console.log('Complex swap - handling all cases');
+      return;
+    }
+
+    updates.match_data = updatedMatchData;
+
+    try {
+      const { error } = await supabase.from('waiting_matches').update(updates).eq('id', matchId);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error swapping players:', error);
     }
   };
 
@@ -264,27 +324,6 @@ export function TeamSelection({
           </CardContent>
         </Card>
 
-        {/* Available Players for Drag & Drop */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Available Players ({eligiblePlayers.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
-              {eligiblePlayers.map(player => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  onClick={() => {}}
-                  isDraggable={false}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Waiting Matches Queue */}
         <Card>
