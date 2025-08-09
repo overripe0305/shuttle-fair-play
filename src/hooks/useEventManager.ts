@@ -123,6 +123,38 @@ export const useEventManager = () => {
     }
   };
 
+  const updateEvent = async (eventId: string, updates: { title?: string; date?: Date; courtCount?: number; queueFee?: number }) => {
+    try {
+      const dbUpdates: any = {};
+      
+      if (updates.title !== undefined) dbUpdates.title = updates.title;
+      if (updates.date !== undefined) dbUpdates.date = updates.date.toISOString();
+      if (updates.courtCount !== undefined) dbUpdates.court_count = updates.courtCount;
+      if (updates.queueFee !== undefined) dbUpdates.queue_fee = updates.queueFee;
+
+      const { error } = await supabase
+        .from('events')
+        .update(dbUpdates)
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      setEvents(prev => 
+        prev.map(event => 
+          event.id === eventId ? { 
+            ...event, 
+            ...(updates.title && { title: updates.title }),
+            ...(updates.date && { date: updates.date }),
+            ...(updates.courtCount && { courtCount: updates.courtCount }),
+            ...(updates.queueFee !== undefined && { queueFee: updates.queueFee })
+          } : event
+        )
+      );
+    } catch (error) {
+      console.error('Error updating event:', error);
+    }
+  };
+
   const updateEventCourtCount = async (eventId: string, courtCount: number) => {
     try {
       const { error } = await supabase
@@ -208,6 +240,7 @@ export const useEventManager = () => {
   return {
     events,
     createEvent,
+    updateEvent,
     updateEventStatus,
     updateEventCourtCount,
     deleteEvent,

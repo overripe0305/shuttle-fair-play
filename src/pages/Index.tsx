@@ -72,7 +72,7 @@ const Index = () => {
     replacePlayerInGame
   } = usePlayerManager();
 
-  const { events, addPlayerToEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager();
+  const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager();
   const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager();
   const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
   const { 
@@ -277,18 +277,12 @@ const Index = () => {
 
   const handleUpdateEvent = async (eventId: string, updates: { title?: string; date?: Date; courtCount?: number; queueFee?: number }) => {
     try {
-      if (updates.courtCount !== undefined) {
-        await updateEventCourtCount(eventId, updates.courtCount);
-      }
-      
-      // Handle other updates if needed (title, date would need to be added to event manager)
-      toast.success('Event updated successfully');
+      await updateEvent(eventId, updates);
+      toast.success('Event settings updated');
     } catch (error) {
       console.error('Error updating event:', error);
       toast.error('Failed to update event');
     }
-    // For now, just show a success message
-    toast.success('Event settings updated');
   };
 
   const editingPlayerData = editingPlayer ? allPlayers.find(p => p.id === editingPlayer) : null;
