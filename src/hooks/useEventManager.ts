@@ -34,7 +34,7 @@ export const useEventManager = () => {
         .from('events')
         .select(`
           *,
-          event_players(player_id)
+          event_players(player_id, order_index, created_at)
         `)
         .order('created_at', { ascending: false });
 
@@ -45,6 +45,7 @@ export const useEventManager = () => {
         title: event.title,
         date: new Date(event.date),
         selectedPlayerIds: event.event_players?.map(ep => ep.player_id) || [],
+        playerOrder: event.event_players?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map(ep => ep.player_id) || [],
         createdAt: new Date(event.created_at),
         status: event.status as 'upcoming' | 'active' | 'completed',
         courtCount: event.court_count || 4,

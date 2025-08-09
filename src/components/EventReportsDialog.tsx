@@ -136,7 +136,7 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
     try {
       // Get the current event's queue fee
       const currentEvent = events.find(e => e.id === eventId);
-      const queueFee = currentEvent?.queueFee || 50; // Default to $50 if not set
+      const queueFee = currentEvent?.queueFee || 50; // Default to 50 if not set
       
       const { data: payments, error } = await supabase
         .from('event_payments')
@@ -160,7 +160,7 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
     try {
       // Get the current event's queue fee
       const currentEvent = events.find(e => e.id === eventId);
-      const queueFee = currentEvent?.queueFee || 50; // Default to $50 if not set
+      const queueFee = currentEvent?.queueFee || 50; // Default to 50 if not set
       
       // Update player payment status
       const { error: playerError } = await supabase
@@ -341,7 +341,7 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${cashTotal.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">₱{cashTotal.toFixed(2)}</div>
                 </CardContent>
               </Card>
               
@@ -351,7 +351,7 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${onlineTotal.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">₱{onlineTotal.toFixed(2)}</div>
                 </CardContent>
               </Card>
               
@@ -361,7 +361,7 @@ export function EventReportsDialog({ open, onOpenChange, eventId, eventTitle }: 
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${(cashTotal + onlineTotal).toFixed(2)}</div>
+                  <div className="text-2xl font-bold">₱{(cashTotal + onlineTotal).toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>

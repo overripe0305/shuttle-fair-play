@@ -142,7 +142,12 @@ const Index = () => {
           if (a.status !== 'available' && b.status === 'available') return 1;
           return a.name.localeCompare(b.name);
         case 'chronological':
-          // Show most recently added players first - use name sorting as fallback since we don't have addedAt tracking yet
+          // Sort by event player order (when they were added to the event)
+          if (currentEvent?.playerOrder) {
+            const indexA = currentEvent.playerOrder.indexOf(a.id);
+            const indexB = currentEvent.playerOrder.indexOf(b.id);
+            return indexA - indexB;
+          }
           return a.name.localeCompare(b.name);
         default:
           return 0;

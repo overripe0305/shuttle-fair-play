@@ -3,6 +3,7 @@ export interface BadmintonEvent {
   title: string;
   date: Date;
   selectedPlayerIds: string[];
+  playerOrder?: string[]; // Ordered by when players were added to event
   createdAt: Date;
   status: 'upcoming' | 'active' | 'completed' | 'ended';
   courtCount?: number;
