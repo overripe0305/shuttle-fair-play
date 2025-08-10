@@ -15,7 +15,7 @@ import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
 import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
-import { EventReportsDialog } from '@/components/EventReportsDialog';
+import { BillingDialog } from '@/components/BillingDialog';
 import { EventSettingsDialog } from '@/components/EventSettingsDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,7 @@ const Index = () => {
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   
@@ -131,31 +132,38 @@ const Index = () => {
 
     // Sort players based on selected criteria
     filtered.sort((a, b) => {
+      let result = 0;
       switch (sortBy) {
         case 'level':
-          return a.level.bracket - b.level.bracket;
+          result = a.level.bracket - b.level.bracket;
+          break;
         case 'games':
-          return a.gamesPlayed - b.gamesPlayed;
+          result = a.gamesPlayed - b.gamesPlayed;
+          break;
         case 'idle':
           // For idle time, available players come first, then by status
-          if (a.status === 'available' && b.status !== 'available') return -1;
-          if (a.status !== 'available' && b.status === 'available') return 1;
-          return a.name.localeCompare(b.name);
+          if (a.status === 'available' && b.status !== 'available') result = -1;
+          else if (a.status !== 'available' && b.status === 'available') result = 1;
+          else result = a.name.localeCompare(b.name);
+          break;
         case 'chronological':
           // Sort by event player order (when they were added to the event)
           if (currentEvent?.playerOrder) {
             const indexA = currentEvent.playerOrder.indexOf(a.id);
             const indexB = currentEvent.playerOrder.indexOf(b.id);
-            return indexA - indexB;
+            result = indexA - indexB;
+          } else {
+            result = a.name.localeCompare(b.name);
           }
-          return a.name.localeCompare(b.name);
+          break;
         default:
-          return 0;
+          result = 0;
       }
+      return sortDirection === 'desc' ? -result : result;
     });
 
     return filtered;
-  }, [eventPlayers, searchTerm, levelFilter, sortBy]);
+  }, [eventPlayers, searchTerm, levelFilter, sortBy, sortDirection, currentEvent]);
 
   const availablePlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.eligible && p.status === 'available');
@@ -456,23 +464,44 @@ const Index = () => {
                     <Button
                       variant={sortBy === 'games' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSortBy('games')}
+                      onClick={() => {
+                        if (sortBy === 'games') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('games');
+                          setSortDirection('asc');
+                        }
+                      }}
                     >
-                      Games
+                      Games {sortBy === 'games' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </Button>
                     <Button
                       variant={sortBy === 'idle' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSortBy('idle')}
+                      onClick={() => {
+                        if (sortBy === 'idle') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('idle');
+                          setSortDirection('asc');
+                        }
+                      }}
                     >
-                      Idle Time
+                      Idle Time {sortBy === 'idle' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </Button>
                     <Button
                       variant={sortBy === 'chronological' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSortBy('chronological')}
+                      onClick={() => {
+                        if (sortBy === 'chronological') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('chronological');
+                          setSortDirection('asc');
+                        }
+                      }}
                     >
-                      Added Order
+                      Added Order {sortBy === 'chronological' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </Button>
                   </div>
                 </div>
@@ -649,7 +678,7 @@ const Index = () => {
       )}
 
       {currentEvent && (
-        <EventReportsDialog
+        <BillingDialog
           open={isReportsDialogOpen}
           onOpenChange={setIsReportsDialogOpen}
           eventId={currentEvent.id}

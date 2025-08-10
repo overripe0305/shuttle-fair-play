@@ -61,28 +61,29 @@ export function GameCard({ game, onMarkDone, onReplacePlayer, availablePlayers =
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
           {/* Team 1 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Users className="h-3 w-3" />
               Team 1 ({game.match.pair1.pairType})
             </div>
-            <div className="grid grid-cols-1 gap-1 pl-5">
+            <div className="space-y-1">
                {game.match.pair1.players.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                  <div className="flex flex-col">
+                <div key={player.id} className="flex items-center justify-between p-1.5 bg-muted rounded text-xs">
+                  <div className="flex flex-col min-w-0 flex-1">
                     <span className="font-medium truncate">{player.name}</span>
                     <span className="text-xs text-muted-foreground">{player.level.major}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={levelColors[player.level.major]} variant="secondary">
-                      Level {player.level.bracket}
+                  <div className="flex items-center gap-1 ml-2">
+                    <Badge className={`${levelColors[player.level.major]} text-xs px-1`} variant="secondary">
+                      L{player.level.bracket}
                     </Badge>
                     {!game.completed && availablePlayers.length > 0 && (
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-5 w-5 p-0"
                          onClick={() => {
                            setSubstitutionDialog({
                              open: true,
@@ -106,21 +107,22 @@ export function GameCard({ game, onMarkDone, onReplacePlayer, availablePlayers =
               <Users className="h-3 w-3" />
               Team 2 ({game.match.pair2.pairType})
             </div>
-            <div className="grid grid-cols-1 gap-1 pl-5">
+            <div className="space-y-1">
               {game.match.pair2.players.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                  <div className="flex flex-col">
+                <div key={player.id} className="flex items-center justify-between p-1.5 bg-muted rounded text-xs">
+                  <div className="flex flex-col min-w-0 flex-1">
                     <span className="font-medium truncate">{player.name}</span>
                     <span className="text-xs text-muted-foreground">{player.level.major}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={levelColors[player.level.major]} variant="secondary">
-                      Level {player.level.bracket}
+                  <div className="flex items-center gap-1 ml-2">
+                    <Badge className={`${levelColors[player.level.major]} text-xs px-1`} variant="secondary">
+                      L{player.level.bracket}
                     </Badge>
                     {!game.completed && availablePlayers.length > 0 && (
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-5 w-5 p-0"
                          onClick={() => {
                            setSubstitutionDialog({
                              open: true,

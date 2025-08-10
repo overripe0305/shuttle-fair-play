@@ -132,21 +132,22 @@ export function EnhancedGameCard({
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
           {/* Team 1 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Users className="h-3 w-3" />
               Team 1
             </div>
-            <div className="grid grid-cols-1 gap-1 pl-5">
+            <div className="space-y-1">
               {team1Players.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                <div key={player.id} className="flex items-center justify-between p-1.5 bg-muted rounded text-xs">
                   <span className="font-medium truncate">{player.name}</span>
                   {!game.completed && availablePlayers.length > 0 && onReplacePlayer && (
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="h-5 w-5 p-0"
                        onClick={() => {
                          setSubstitutionDialog({
                            open: true,
@@ -169,14 +170,15 @@ export function EnhancedGameCard({
               <Users className="h-3 w-3" />
               Team 2
             </div>
-            <div className="grid grid-cols-1 gap-1 pl-5">
+            <div className="space-y-1">
               {team2Players.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                <div key={player.id} className="flex items-center justify-between p-1.5 bg-muted rounded text-xs">
                   <span className="font-medium truncate">{player.name}</span>
                   {!game.completed && availablePlayers.length > 0 && onReplacePlayer && (
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="h-5 w-5 p-0"
                        onClick={() => {
                          setSubstitutionDialog({
                            open: true,

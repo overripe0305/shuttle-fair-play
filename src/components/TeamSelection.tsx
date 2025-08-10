@@ -273,20 +273,26 @@ export function TeamSelection({
       <div
         ref={setNodeRef}
         style={style}
-        {...listeners}
-        {...attributes}
-        className={`flex items-center justify-between p-2 rounded-md cursor-move transition-colors ${
+        className={`flex items-center justify-between p-1.5 rounded text-xs transition-colors ${
           isDragging ? 'opacity-50' : ''
         } ${
           isOver ? 'bg-primary/20 border-2 border-primary' : 'bg-muted'
         }`}
       >
-        <span className="font-medium truncate">{playerName}</span>
+        <div 
+          {...listeners}
+          {...attributes}
+          className="flex-1 cursor-move flex items-center"
+        >
+          <span className="font-medium truncate">{playerName}</span>
+        </div>
         <Button
           size="sm"
           variant="ghost"
+          className="h-5 w-5 p-0"
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             setSubstitutionDialog({
               open: true,
               waitingMatchId: waitingMatchId,
@@ -393,7 +399,7 @@ export function TeamSelection({
                     </CardHeader>
                     
                     <CardContent className="space-y-4">
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
                         {/* Team 1 */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm font-medium">
