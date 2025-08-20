@@ -102,7 +102,7 @@ const Index = () => {
         const override = gameOverrides[player.id] || 0;
         return {
           ...player,
-          gamesPlayed: eventStats.gamesPlayed + override,
+          gamesPlayed: Math.max(0, eventStats.gamesPlayed + override),
           gamePenaltyBonus: override, // Show override as penalty/bonus
           wins: eventStats.wins,
           losses: eventStats.losses
@@ -530,46 +530,21 @@ const Index = () => {
               
               <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
                 {filteredPlayers.map((player) => (
-                  <div key={player.id} className="space-y-2">
-                    <div 
-                      className="cursor-pointer"
-                      onClick={() => setEditingPlayer(player.id)}
-                    >
-                      <PlayerCard 
-                        player={player} 
-                        onTogglePause={handleTogglePause}
-                        onRemoveFromEvent={(playerId) => removePlayerFromEvent(currentEvent.id, playerId)}
-                        onDeletePlayer={deletePlayer}
-                        isInEvent={true}
-                        selected={selectedPlayerIds.includes(player.id)}
-                        isDraggable={false}
-                      />
-                    </div>
-                    <div className="flex justify-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 w-6 p-0 text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGameOverride(player.id, -1);
-                        }}
-                        disabled={player.gamesPlayed <= 0}
-                      >
-                        -
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 w-6 p-0 text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGameOverride(player.id, 1);
-                        }}
-                      >
-                        +
-                      </Button>
-                    </div>
+                  <div 
+                    key={player.id} 
+                    className="cursor-pointer"
+                    onClick={() => setEditingPlayer(player.id)}
+                  >
+                    <PlayerCard 
+                      player={player} 
+                      onTogglePause={handleTogglePause}
+                      onRemoveFromEvent={(playerId) => removePlayerFromEvent(currentEvent.id, playerId)}
+                      onDeletePlayer={deletePlayer}
+                      onGameOverride={handleGameOverride}
+                      isInEvent={true}
+                      selected={selectedPlayerIds.includes(player.id)}
+                      isDraggable={false}
+                    />
                   </div>
                 ))}
                 

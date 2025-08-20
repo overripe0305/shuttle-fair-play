@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock, Pause, Play, Trash2, GripVertical } from 'lucide-react';
+import { Clock, Pause, Play, Trash2, GripVertical, Plus, Minus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 
@@ -14,6 +14,7 @@ interface PlayerCardProps {
   onTogglePause?: (playerId: string) => void;
   onDeletePlayer?: (playerId: string) => void;
   onRemoveFromEvent?: (playerId: string) => void;
+  onGameOverride?: (playerId: string, adjustment: number) => void;
   isInEvent?: boolean;
   isDraggable?: boolean;
   dragId?: string;
@@ -34,7 +35,7 @@ const statusColors = {
   paused: 'bg-gray-500 text-white',
 };
 
-export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, isInEvent, isDraggable = false, dragId }: PlayerCardProps) {
+export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, onGameOverride, isInEvent, isDraggable = false, dragId }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
   
   // Use player's last status change time or fallback to a stored time
@@ -197,14 +198,43 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
             {player.level.major}
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              {player.gamesPlayed} games
-              {player.gamePenaltyBonus !== 0 && (
-                <span className="ml-1 text-xs">
-                  ({player.gamePenaltyBonus > 0 ? '+' : ''}{player.gamePenaltyBonus})
-                </span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">
+                {player.gamesPlayed} games
+                {player.gamePenaltyBonus !== 0 && (
+                  <span className="ml-1 text-xs">
+                    ({player.gamePenaltyBonus > 0 ? '+' : ''}{player.gamePenaltyBonus})
+                  </span>
+                )}
+              </span>
+              {onGameOverride && (
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-5 w-5 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onGameOverride(player.id, -1);
+                    }}
+                    disabled={player.gamesPlayed <= 0}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline" 
+                    className="h-5 w-5 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onGameOverride(player.id, 1);
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
               )}
-            </span>
+            </div>
             <Badge className={levelColors[player.level.major]} variant="secondary">
               Level {player.level.bracket}
             </Badge>
