@@ -51,6 +51,7 @@ const Index = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [gameOverrides, setGameOverrides] = useState<Record<string, number>>({});
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -98,9 +99,11 @@ const Index = () => {
       // For event context, use event-specific stats
       if (eventId) {
         const eventStats = getPlayerStats(player.id);
+        const override = gameOverrides[player.id] || 0;
         return {
           ...player,
-          gamesPlayed: eventStats.gamesPlayed,
+          gamesPlayed: eventStats.gamesPlayed + override,
+          gamePenaltyBonus: override, // Show override as penalty/bonus
           wins: eventStats.wins,
           losses: eventStats.losses
         };
@@ -293,6 +296,17 @@ const Index = () => {
     }
   };
 
+  const handleGameOverride = useCallback((playerId: string, adjustment: number) => {
+    setGameOverrides(prev => ({
+      ...prev,
+      [playerId]: (prev[playerId] || 0) + adjustment
+    }));
+  }, []);
+
+  const getTotalOverrides = useCallback(() => {
+    return Object.values(gameOverrides).reduce((sum, override) => sum + override, 0);
+  }, [gameOverrides]);
+
   const editingPlayerData = editingPlayer ? allPlayers.find(p => p.id === editingPlayer) : null;
 
   const handleDragStart = (event: any) => {
@@ -421,9 +435,16 @@ const Index = () => {
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Player Pool ({filteredPlayers.length})
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Player Pool ({filteredPlayers.length})
+                  </div>
+                  {getTotalOverrides() !== 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      Games {getTotalOverrides() > 0 ? '+' : ''}{getTotalOverrides()}
+                    </Badge>
+                  )}
                 </CardTitle>
                 
                 {/* Search and Filter */}
@@ -509,17 +530,46 @@ const Index = () => {
               
               <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
                 {filteredPlayers.map((player) => (
-                  <div 
-                    key={player.id} 
-                    className="cursor-pointer"
-                    onClick={() => setEditingPlayer(player.id)}
-                  >
-                    <PlayerCard 
-                      player={player} 
-                      onTogglePause={handleTogglePause}
-                      onRemoveFromEvent={(playerId) => removePlayerFromEvent(currentEvent.id, playerId)}
-                      isInEvent={true}
-                    />
+                  <div key={player.id} className="space-y-2">
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => setEditingPlayer(player.id)}
+                    >
+                      <PlayerCard 
+                        player={player} 
+                        onTogglePause={handleTogglePause}
+                        onRemoveFromEvent={(playerId) => removePlayerFromEvent(currentEvent.id, playerId)}
+                        onDeletePlayer={deletePlayer}
+                        isInEvent={true}
+                        selected={selectedPlayerIds.includes(player.id)}
+                        isDraggable={false}
+                      />
+                    </div>
+                    <div className="flex justify-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 w-6 p-0 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGameOverride(player.id, -1);
+                        }}
+                        disabled={player.gamesPlayed <= 0}
+                      >
+                        -
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 w-6 p-0 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGameOverride(player.id, 1);
+                        }}
+                      >
+                        +
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 
