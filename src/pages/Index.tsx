@@ -17,6 +17,7 @@ import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
 import { BillingDialog } from '@/components/BillingDialog';
 import { EventSettingsDialog } from '@/components/EventSettingsDialog';
+import { EventHistoryDialog } from '@/components/EventHistoryDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,7 +48,8 @@ const Index = () => {
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
+  const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological' | 'history'>('games');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -157,6 +159,23 @@ const Index = () => {
             result = indexA - indexB;
           } else {
             result = a.name.localeCompare(b.name);
+          }
+          break;
+        case 'history':
+          // Sort by: highest games played → highest wins → lowest losses → alphabetical
+          result = b.gamesPlayed - a.gamesPlayed;
+          if (result === 0) {
+            const aWins = (a as any).wins || 0;
+            const bWins = (b as any).wins || 0;
+            result = bWins - aWins;
+            if (result === 0) {
+              const aLosses = (a as any).losses || 0;
+              const bLosses = (b as any).losses || 0;
+              result = aLosses - bLosses;
+              if (result === 0) {
+                result = a.name.localeCompare(b.name);
+              }
+            }
           }
           break;
         default:
@@ -395,7 +414,15 @@ const Index = () => {
                       variant="outline"
                     >
                       <FileText className="h-4 w-4 mr-2" />
-                      Event Reports
+                      Billing
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setIsEventHistoryOpen(true)}
+                      variant="outline"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Event History
                     </Button>
                     <Button 
                       size="sm" 
@@ -523,6 +550,16 @@ const Index = () => {
                       }}
                     >
                       Added Order {sortBy === 'chronological' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </Button>
+                    <Button
+                      variant={sortBy === 'history' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSortBy('history');
+                        setSortDirection('desc'); // Always desc for history view
+                      }}
+                    >
+                      Event History {sortBy === 'history' && '↓'}
                     </Button>
                   </div>
                 </div>
@@ -717,6 +754,16 @@ const Index = () => {
           onOpenChange={setIsEventSettingsOpen}
           event={currentEvent}
           onUpdateEvent={handleUpdateEvent}
+        />
+      )}
+      
+      {currentEvent && (
+        <EventHistoryDialog
+          open={isEventHistoryOpen}
+          onOpenChange={setIsEventHistoryOpen}
+          eventId={currentEvent.id}
+          eventTitle={currentEvent.title}
+          players={eventPlayers}
         />
       )}
       </div>
