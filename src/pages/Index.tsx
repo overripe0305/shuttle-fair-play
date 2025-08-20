@@ -110,7 +110,7 @@ const Index = () => {
       }
       return player;
     });
-  }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats, updateCounter]);
+  }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats, updateCounter, gameOverrides]);
 
   // Force refresh when updateCounter changes to ensure UI syncs with database
   // Force refresh of event stats when current event players change significantly
