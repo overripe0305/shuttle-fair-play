@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Users, UserPlus, X, RefreshCw, UserX } from 'lucide-react';
+import { Clock, Users, UserPlus, X, RefreshCw, UserX, Search } from 'lucide-react';
 import { WaitingMatch } from '@/hooks/useWaitingMatchManager';
 import { useState, useMemo } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,6 +57,7 @@ export function TeamSelection({
     playerToReplace?: string;
     playerName?: string;
   }>({ open: false });
+  const [searchTerm, setSearchTerm] = useState('');
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -70,6 +72,13 @@ export function TeamSelection({
     availablePlayers.filter(p => p.status === 'available' && p.eligible !== false),
     [availablePlayers]
   );
+
+  const filteredPlayers = useMemo(() => {
+    if (!searchTerm) return [];
+    return eligiblePlayers.filter(player =>
+      player.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [eligiblePlayers, searchTerm]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(event.active.id as string);
@@ -485,7 +494,10 @@ export function TeamSelection({
         {/* Substitution Dialog */}
         <Dialog 
           open={substitutionDialog.open} 
-          onOpenChange={(open) => setSubstitutionDialog({ open })}
+          onOpenChange={(open) => {
+            setSubstitutionDialog({ open });
+            if (!open) setSearchTerm('');
+          }}
         >
           <DialogContent>
             <DialogHeader>
@@ -494,20 +506,52 @@ export function TeamSelection({
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Select a player to substitute for {substitutionDialog.playerName}:
+              <p>
+                Replace <strong>{substitutionDialog.playerName}</strong> with:
               </p>
               
-              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                {eligiblePlayers.map(player => (
-                  <PlayerCard
-                    key={player.id}
-                    player={player}
-                    onClick={() => handlePlayerSubstitution(player.id)}
-                    isDraggable={true}
-                    dragId={player.id}
+              {/* Search Input */}
+              <div className="space-y-2">
+                <Label htmlFor="player-search">Search and Select Player</Label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="player-search"
+                    placeholder="Type player name to search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
                   />
-                ))}
+                </div>
+              </div>
+              
+              {/* Direct selection interface */}
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {searchTerm && filteredPlayers.length > 0 ? (
+                  filteredPlayers.map((player) => (
+                    <Button
+                      key={player.id}
+                      variant="outline"
+                      className="w-full justify-start p-3 h-auto"
+                      onClick={() => handlePlayerSubstitution(player.id)}
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{player.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {player.level.major} Level {player.level.bracket}
+                        </span>
+                      </div>
+                    </Button>
+                  ))
+                ) : searchTerm ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No players found matching "{searchTerm}"
+                  </div>
+                ) : (
+                   <div className="text-center py-4 text-muted-foreground">
+                     Start typing to search for players
+                   </div>
+                )}
               </div>
             </div>
           </DialogContent>
