@@ -49,7 +49,7 @@ const Index = () => {
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
   const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological' | 'history'>('games');
+  const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -159,23 +159,6 @@ const Index = () => {
             result = indexA - indexB;
           } else {
             result = a.name.localeCompare(b.name);
-          }
-          break;
-        case 'history':
-          // Sort by: highest games played → highest wins → lowest losses → alphabetical
-          result = b.gamesPlayed - a.gamesPlayed;
-          if (result === 0) {
-            const aWins = (a as any).wins || 0;
-            const bWins = (b as any).wins || 0;
-            result = bWins - aWins;
-            if (result === 0) {
-              const aLosses = (a as any).losses || 0;
-              const bLosses = (b as any).losses || 0;
-              result = aLosses - bLosses;
-              if (result === 0) {
-                result = a.name.localeCompare(b.name);
-              }
-            }
           }
           break;
         default:
@@ -550,16 +533,6 @@ const Index = () => {
                       }}
                     >
                       Added Order {sortBy === 'chronological' && (sortDirection === 'asc' ? '↑' : '↓')}
-                    </Button>
-                    <Button
-                      variant={sortBy === 'history' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setSortBy('history');
-                        setSortDirection('desc'); // Always desc for history view
-                      }}
-                    >
-                      Event History {sortBy === 'history' && '↓'}
                     </Button>
                   </div>
                 </div>

@@ -18,6 +18,7 @@ interface EventHistoryDialogProps {
     level: {
       major: string;
       sub?: string;
+      bracket: number;
     };
   }>;
 }
@@ -29,17 +30,17 @@ export const EventHistoryDialog: React.FC<EventHistoryDialogProps> = ({
   eventTitle,
   players
 }) => {
-  // Sort players by: highest games played → highest wins → lowest losses → alphabetical
+  // Sort players by: highest wins → highest level → lowest losses → alphabetical
   const sortedPlayers = [...players].sort((a, b) => {
-    // Highest games played first
-    const gamesResult = b.gamesPlayed - a.gamesPlayed;
-    if (gamesResult !== 0) return gamesResult;
-    
-    // Then highest wins
+    // Highest wins first
     const aWins = a.wins || 0;
     const bWins = b.wins || 0;
     const winsResult = bWins - aWins;
     if (winsResult !== 0) return winsResult;
+    
+    // Then highest level (lower bracket number = higher level)
+    const levelResult = a.level.bracket - b.level.bracket;
+    if (levelResult !== 0) return levelResult;
     
     // Then lowest losses
     const aLosses = a.losses || 0;
@@ -107,7 +108,7 @@ export const EventHistoryDialog: React.FC<EventHistoryDialogProps> = ({
             <CardHeader>
               <CardTitle>Player Rankings</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Sorted by: Games Played → Wins → Losses → Name
+                Sorted by: Wins → Level → Losses → Name
               </p>
             </CardHeader>
             <CardContent>
