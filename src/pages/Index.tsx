@@ -41,7 +41,10 @@ import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
 import { toast } from 'sonner';
 
 const Index = () => {
-  // State variables first
+  // Get eventId first
+  const { eventId } = useParams();
+  
+  // State variables 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
@@ -65,8 +68,6 @@ const Index = () => {
       },
     })
   );
-
-  const { eventId } = useParams();
   const {
     players,
     games,
