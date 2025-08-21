@@ -53,7 +53,10 @@ const Index = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [gameOverrides, setGameOverrides] = useState<Record<string, number>>({});
+  const [gameOverrides, setGameOverrides] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem(`gameOverrides-${eventId}`);
+    return saved ? JSON.parse(saved) : {};
+  });
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -299,11 +302,15 @@ const Index = () => {
   };
 
   const handleGameOverride = useCallback((playerId: string, adjustment: number) => {
-    setGameOverrides(prev => ({
-      ...prev,
-      [playerId]: (prev[playerId] || 0) + adjustment
-    }));
-  }, []);
+    setGameOverrides(prev => {
+      const newOverrides = {
+        ...prev,
+        [playerId]: (prev[playerId] || 0) + adjustment
+      };
+      localStorage.setItem(`gameOverrides-${eventId}`, JSON.stringify(newOverrides));
+      return newOverrides;
+    });
+  }, [eventId]);
 
   const getTotalOverrides = useCallback(() => {
     return Object.values(gameOverrides).reduce((sum, override) => sum + override, 0);

@@ -38,8 +38,8 @@ export const EventHistoryDialog: React.FC<EventHistoryDialogProps> = ({
     const winsResult = bWins - aWins;
     if (winsResult !== 0) return winsResult;
     
-    // Then highest level (lower bracket number = higher level)
-    const levelResult = a.level.bracket - b.level.bracket;
+    // Then highest level (higher bracket number = higher level)
+    const levelResult = b.level.bracket - a.level.bracket;
     if (levelResult !== 0) return levelResult;
     
     // Then lowest losses
