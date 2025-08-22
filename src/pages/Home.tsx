@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useEventManager } from "@/hooks/useEventManager";
 import { useEnhancedPlayerManager } from "@/hooks/useEnhancedPlayerManager";
+import { useAuth } from "@/hooks/useAuth";
 import { BadmintonEvent } from "@/types/event";
 import { 
   Play,
@@ -17,7 +18,8 @@ import {
   Award,
   TrendingUp,
   Receipt,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
 import { format } from 'date-fns';
 import badmintonLogo from '@/assets/badminton-logo.png';
@@ -25,6 +27,7 @@ import badmintonLogo from '@/assets/badminton-logo.png';
 const Home = () => {
   const { events, updateEventStatus } = useEventManager();
   const { players } = useEnhancedPlayerManager();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const upcomingEvents = events.filter(event => event.status === 'upcoming').slice(0, 3);
@@ -65,6 +68,20 @@ const Home = () => {
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4" />
                 <span>{activeEvents.length} Active</span>
+              </div>
+              <div className="flex items-center gap-4 ml-4 pl-4 border-l">
+                <span className="text-xs text-muted-foreground">
+                  {user?.email}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="h-8 px-3"
+                >
+                  <LogOut className="w-3 h-3 mr-1" />
+                  Sign Out
+                </Button>
               </div>
             </div>
           </div>
