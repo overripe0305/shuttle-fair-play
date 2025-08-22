@@ -15,9 +15,8 @@ import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
 import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
-import { BillingDialog } from '@/components/BillingDialog';
 import { EventSettingsDialog } from '@/components/EventSettingsDialog';
-import { EventHistoryDialog } from '@/components/EventHistoryDialog';
+import { EventReportDialog } from '@/components/EventReportDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,9 +48,8 @@ const Index = () => {
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
-  const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
-  const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
+  const [isEventReportOpen, setIsEventReportOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'level' | 'games' | 'idle' | 'chronological'>('games');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
@@ -401,19 +399,11 @@ const Index = () => {
                     </Button>
                     <Button 
                       size="sm" 
-                      onClick={() => setIsReportsDialogOpen(true)}
+                      onClick={() => setIsEventReportOpen(true)}
                       variant="outline"
                     >
                       <FileText className="h-4 w-4 mr-2" />
-                      Billing
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => setIsEventHistoryOpen(true)}
-                      variant="outline"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Event History
+                      Event Report
                     </Button>
                     <Button 
                       size="sm" 
@@ -721,15 +711,6 @@ const Index = () => {
       )}
 
       {currentEvent && (
-        <BillingDialog
-          open={isReportsDialogOpen}
-          onOpenChange={setIsReportsDialogOpen}
-          eventId={currentEvent.id}
-          eventTitle={currentEvent.title}
-        />
-      )}
-
-      {currentEvent && (
         <EventSettingsDialog
           open={isEventSettingsOpen}
           onOpenChange={setIsEventSettingsOpen}
@@ -739,9 +720,9 @@ const Index = () => {
       )}
       
       {currentEvent && (
-        <EventHistoryDialog
-          open={isEventHistoryOpen}
-          onOpenChange={setIsEventHistoryOpen}
+        <EventReportDialog
+          open={isEventReportOpen}
+          onOpenChange={setIsEventReportOpen}
           eventId={currentEvent.id}
           eventTitle={currentEvent.title}
           players={eventPlayers}
