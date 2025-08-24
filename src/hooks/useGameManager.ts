@@ -274,11 +274,17 @@ export function useGameManager(eventId?: string) {
 
       if (gameError) throw gameError;
 
-      // Update player statuses
+      // Update player statuses - preserve idle time for returning player
       await supabase
         .from('players')
         .update({ status: 'available' })
         .eq('id', oldPlayerId);
+
+      // Set idle start time for the returning player if not already set
+      const storedIdleTime = localStorage.getItem(`idle_start_${oldPlayerId}`);
+      if (!storedIdleTime) {
+        localStorage.setItem(`idle_start_${oldPlayerId}`, Date.now().toString());
+      }
 
       await supabase
         .from('players')
@@ -314,12 +320,20 @@ export function useGameManager(eventId?: string) {
 
       if (error) throw error;
 
-      // Update player statuses back to available
+      // Update player statuses back to available and preserve idle time
       const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];
       await supabase
         .from('players')
         .update({ status: 'available' })
         .in('id', playerIds);
+
+      // Set idle start time for all returning players if not already set
+      playerIds.forEach(playerId => {
+        const storedIdleTime = localStorage.getItem(`idle_start_${playerId}`);
+        if (!storedIdleTime) {
+          localStorage.setItem(`idle_start_${playerId}`, Date.now().toString());
+        }
+      });
 
       toast({
         title: "Game cancelled",

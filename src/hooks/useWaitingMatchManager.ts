@@ -147,12 +147,18 @@ export function useWaitingMatchManager(eventId?: string) {
           match.player4Id
         ];
 
-        // Update player statuses back to 'Available'
+        // Update player statuses back to 'Available' and preserve idle time
         for (const playerId of playerIds) {
           await supabase
             .from('players')
             .update({ status: 'available' })
             .eq('id', playerId);
+          
+          // Set idle start time if not already set
+          const storedIdleTime = localStorage.getItem(`idle_start_${playerId}`);
+          if (!storedIdleTime) {
+            localStorage.setItem(`idle_start_${playerId}`, Date.now().toString());
+          }
         }
       }
 
@@ -190,11 +196,17 @@ export function useWaitingMatchManager(eventId?: string) {
         return;
       }
 
-      // Update player statuses
+      // Update player statuses - preserve idle time by NOT removing localStorage
       await supabase
         .from('players')
         .update({ status: 'available' })
         .eq('id', oldPlayerId);
+
+      // Set idle start time for the returning player if not already set
+      const storedIdleTime = localStorage.getItem(`idle_start_${oldPlayerId}`);
+      if (!storedIdleTime) {
+        localStorage.setItem(`idle_start_${oldPlayerId}`, Date.now().toString());
+      }
 
       await supabase
         .from('players')

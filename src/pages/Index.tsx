@@ -46,6 +46,7 @@ const Index = () => {
   // State variables 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
+  const [gamesFilter, setGamesFilter] = useState<number | 'All'>('All');
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
@@ -134,7 +135,8 @@ const Index = () => {
     let filtered = eventPlayers.filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
-      return matchesSearch && matchesLevel;
+      const matchesGames = gamesFilter === 'All' || player.gamesPlayed === gamesFilter;
+      return matchesSearch && matchesLevel && matchesGames;
     });
 
     // Sort players based on selected criteria
@@ -170,7 +172,7 @@ const Index = () => {
     });
 
     return filtered;
-  }, [eventPlayers, searchTerm, levelFilter, sortBy, sortDirection, currentEvent]);
+  }, [eventPlayers, searchTerm, levelFilter, gamesFilter, sortBy, sortDirection, currentEvent]);
 
   const availablePlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.eligible && p.status === 'available');
@@ -467,26 +469,55 @@ const Index = () => {
                     />
                   </div>
                    
-                  <div className="flex gap-2 flex-wrap">
-                    <Button
-                      variant={levelFilter === 'All' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setLevelFilter('All')}
-                    >
-                      All
-                    </Button>
-                    {(['Newbie', 'Beginner', 'Intermediate', 'Advance'] as MajorLevel[]).map(level => (
-                      <Button
-                        key={level}
-                        variant={levelFilter === level ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setLevelFilter(level)}
-                        className={levelFilter === level ? 'text-white' : ''}
-                      >
-                        {level}
-                      </Button>
-                    ))}
-                  </div>
+                   <div className="flex gap-2 flex-wrap">
+                     <span className="text-sm font-medium text-muted-foreground">Level:</span>
+                     <Button
+                       variant={levelFilter === 'All' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setLevelFilter('All')}
+                     >
+                       All
+                     </Button>
+                     {React.useMemo(() => {
+                       const availableLevels = [...new Set(eventPlayers.map(p => p.level.major))];
+                       return availableLevels.map(level => (
+                         <Button
+                           key={level}
+                           variant={levelFilter === level ? 'default' : 'outline'}
+                           size="sm"
+                           onClick={() => setLevelFilter(level)}
+                           className={levelFilter === level ? 'text-white' : ''}
+                         >
+                           {level}
+                         </Button>
+                       ));
+                     }, [eventPlayers, levelFilter])}
+                   </div>
+
+                   <div className="flex gap-2 flex-wrap">
+                     <span className="text-sm font-medium text-muted-foreground">Games:</span>
+                     <Button
+                       variant={gamesFilter === 'All' ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => setGamesFilter('All')}
+                     >
+                       All
+                     </Button>
+                     {React.useMemo(() => {
+                       const availableGameCounts = [...new Set(eventPlayers.map(p => p.gamesPlayed))].sort((a, b) => a - b);
+                       return availableGameCounts.map(gameCount => (
+                         <Button
+                           key={gameCount}
+                           variant={gamesFilter === gameCount ? 'default' : 'outline'}
+                           size="sm"
+                           onClick={() => setGamesFilter(gameCount)}
+                           className={gamesFilter === gameCount ? 'text-white' : ''}
+                         >
+                           {gameCount}
+                         </Button>
+                       ));
+                     }, [eventPlayers, gamesFilter])}
+                   </div>
 
                   <div className="flex gap-2 flex-wrap">
                     <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
