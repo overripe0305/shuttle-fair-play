@@ -147,19 +147,19 @@ export function useWaitingMatchManager(eventId?: string) {
           match.player4Id
         ];
 
-        // Update player statuses back to 'Available' and preserve idle time
-        for (const playerId of playerIds) {
-          await supabase
-            .from('players')
-            .update({ status: 'available' })
-            .eq('id', playerId);
-          
-          // Set idle start time if not already set
-          const storedIdleTime = localStorage.getItem(`idle_start_${playerId}`);
-          if (!storedIdleTime) {
-            localStorage.setItem(`idle_start_${playerId}`, Date.now().toString());
-          }
+      // Update player statuses back to 'Available' and preserve idle time
+      for (const playerId of playerIds) {
+        await supabase
+          .from('players')
+          .update({ status: 'available' })
+          .eq('id', playerId);
+        
+        // Only set idle start time if not already set (preserve existing idle time)
+        const storedIdleTime = localStorage.getItem(`idle_start_${playerId}`);
+        if (!storedIdleTime) {
+          localStorage.setItem(`idle_start_${playerId}`, Date.now().toString());
         }
+      }
       }
 
       const { error } = await supabase
@@ -202,7 +202,7 @@ export function useWaitingMatchManager(eventId?: string) {
         .update({ status: 'available' })
         .eq('id', oldPlayerId);
 
-      // Set idle start time for the returning player if not already set
+      // Preserve idle start time for the returning player (don't reset it)
       const storedIdleTime = localStorage.getItem(`idle_start_${oldPlayerId}`);
       if (!storedIdleTime) {
         localStorage.setItem(`idle_start_${oldPlayerId}`, Date.now().toString());

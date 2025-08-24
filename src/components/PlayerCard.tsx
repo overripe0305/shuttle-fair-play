@@ -20,11 +20,20 @@ interface PlayerCardProps {
   dragId?: string;
 }
 
-const levelColors = {
-  'Newbie': 'bg-level-newbie text-white',
-  'Beginner': 'bg-level-beginner text-white',
-  'Intermediate': 'bg-level-intermediate text-white',
-  'Advance': 'bg-level-advance text-white',
+const getLevelColor = (bracket: number) => {
+  const colorMap: Record<number, string> = {
+    0: 'bg-[hsl(var(--level-0))] text-white',
+    1: 'bg-[hsl(var(--level-1))] text-white',
+    2: 'bg-[hsl(var(--level-2))] text-white',
+    3: 'bg-[hsl(var(--level-3))] text-white',
+    4: 'bg-[hsl(var(--level-4))] text-white',
+    5: 'bg-[hsl(var(--level-5))] text-white',
+    6: 'bg-[hsl(var(--level-6))] text-white',
+    7: 'bg-[hsl(var(--level-7))] text-white',
+    8: 'bg-[hsl(var(--level-8))] text-white',
+    9: 'bg-[hsl(var(--level-9))] text-white',
+  };
+  return colorMap[bracket] || 'bg-gray-500 text-white';
 };
 
 const statusColors = {
@@ -75,8 +84,7 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
   useEffect(() => {
     if (player.status !== 'available') {
       setIdleTime('');
-      // Clear stored time when player is no longer available
-      localStorage.removeItem(`idle_start_${player.id}`);
+      // Don't clear stored time - preserve it for substitutions
       return;
     }
 
@@ -235,7 +243,7 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
                 </div>
               )}
             </div>
-            <Badge className={levelColors[player.level.major]} variant="secondary">
+            <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
               Level {player.level.bracket}
             </Badge>
           </div>

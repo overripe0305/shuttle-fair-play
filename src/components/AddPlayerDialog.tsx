@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus } from 'lucide-react';
 
 interface AddPlayerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onAddPlayer: (name: string, level: PlayerLevel) => void;
 }
 
-export function AddPlayerDialog({ onAddPlayer }: AddPlayerDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddPlayerDialog({ open, onOpenChange, onAddPlayer }: AddPlayerDialogProps) {
   const [name, setName] = useState('');
   const [majorLevel, setMajorLevel] = useState<MajorLevel>('Beginner');
   const [subLevel, setSubLevel] = useState<SubLevel>('Mid');
@@ -30,12 +31,12 @@ export function AddPlayerDialog({ onAddPlayer }: AddPlayerDialogProps) {
       setName('');
       setMajorLevel('Beginner');
       setSubLevel('Mid');
-      setOpen(false);
+      onOpenChange(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <UserPlus className="h-4 w-4 mr-2" />
@@ -95,7 +96,7 @@ export function AddPlayerDialog({ onAddPlayer }: AddPlayerDialogProps) {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit">Add Player</Button>

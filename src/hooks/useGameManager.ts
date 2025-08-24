@@ -280,7 +280,7 @@ export function useGameManager(eventId?: string) {
         .update({ status: 'available' })
         .eq('id', oldPlayerId);
 
-      // Set idle start time for the returning player if not already set
+      // Preserve idle start time for substituted player (don't reset)
       const storedIdleTime = localStorage.getItem(`idle_start_${oldPlayerId}`);
       if (!storedIdleTime) {
         localStorage.setItem(`idle_start_${oldPlayerId}`, Date.now().toString());
@@ -320,14 +320,14 @@ export function useGameManager(eventId?: string) {
 
       if (error) throw error;
 
-      // Update player statuses back to available and preserve idle time
+      // Update player statuses back to available but preserve idle times for cancellations
       const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];
       await supabase
         .from('players')
         .update({ status: 'available' })
         .in('id', playerIds);
 
-      // Set idle start time for all returning players if not already set
+      // Don't reset idle time for cancelled games - preserve existing idle time
       playerIds.forEach(playerId => {
         const storedIdleTime = localStorage.getItem(`idle_start_${playerId}`);
         if (!storedIdleTime) {

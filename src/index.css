@@ -34,8 +34,20 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 142 76% 36%;
 
-    /* Major level colors */
-    --level-newbie: 220 14% 70%;
+    /* Bracket level colors */
+    --level-0: 320 65% 65%; /* Pink */
+    --level-1: 120 60% 70%; /* Light green */
+    --level-2: 120 70% 50%; /* Green */
+    --level-3: 120 80% 30%; /* Dark green */
+    --level-4: 190 60% 70%; /* Light blue */
+    --level-5: 210 80% 50%; /* Blue */
+    --level-6: 220 90% 35%; /* Dark blue */
+    --level-7: 35 80% 70%; /* Light orange */
+    --level-8: 25 90% 60%; /* Orange */
+    --level-9: 45 100% 50%; /* Gold */
+
+    /* Major level colors (legacy) */
+    --level-newbie: 320 65% 65%;
     --level-beginner: 45 93% 65%;
     --level-intermediate: 142 76% 45%;
     --level-advance: 217 91% 60%;

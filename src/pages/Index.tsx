@@ -17,6 +17,8 @@ import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
 import { EventSettingsDialog } from '@/components/EventSettingsDialog';
 import { EventReportDialog } from '@/components/EventReportDialog';
+import { WaitingMatchCard } from '@/components/WaitingMatchCard';
+import { ActiveGameCard } from '@/components/ActiveGameCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +47,7 @@ const Index = () => {
   
   // State variables 
   const [searchTerm, setSearchTerm] = useState('');
-  const [levelFilter, setLevelFilter] = useState<MajorLevel | 'All'>('All');
+  const [levelFilter, setLevelFilter] = useState<number | 'All'>('All');
   const [gamesFilter, setGamesFilter] = useState<number | 'All'>('All');
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
@@ -134,7 +136,7 @@ const Index = () => {
   const filteredPlayers = React.useMemo(() => {
     let filtered = eventPlayers.filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesLevel = levelFilter === 'All' || player.level.major === levelFilter;
+      const matchesLevel = levelFilter === 'All' || player.level.bracket === levelFilter;
       const matchesGames = gamesFilter === 'All' || player.gamesPlayed === gamesFilter;
       return matchesSearch && matchesLevel && matchesGames;
     });
@@ -479,16 +481,16 @@ const Index = () => {
                        All
                      </Button>
                      {React.useMemo(() => {
-                       const availableLevels = [...new Set(eventPlayers.map(p => p.level.major))];
-                       return availableLevels.map(level => (
+                       const availableBrackets = [...new Set(eventPlayers.map(p => p.level.bracket))].sort((a, b) => a - b);
+                       return availableBrackets.map(bracket => (
                          <Button
-                           key={level}
-                           variant={levelFilter === level ? 'default' : 'outline'}
+                           key={bracket}
+                           variant={levelFilter === bracket ? 'default' : 'outline'}
                            size="sm"
-                           onClick={() => setLevelFilter(level)}
-                           className={levelFilter === level ? 'text-white' : ''}
+                           onClick={() => setLevelFilter(bracket)}
+                           className={levelFilter === bracket ? 'text-white' : ''}
                          >
-                           {level}
+                           Level {bracket}
                          </Button>
                        ));
                      }, [eventPlayers, levelFilter])}
