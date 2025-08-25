@@ -130,7 +130,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="font-medium text-blue-800">Team 1</div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="truncate">{formatPlayerName(game.player1Name, getPlayerGames(game.player1Id))}</span>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player1Id)).split(' ')[0]}`}>
+                  {formatPlayerName(game.player1Name, getPlayerGames(game.player1Id))}
+                </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player1Id))} variant="secondary">
                   {getPlayerLevel(game.player1Id)}
                 </Badge>
@@ -146,7 +148,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="truncate">{formatPlayerName(game.player2Name, getPlayerGames(game.player2Id))}</span>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player2Id)).split(' ')[0]}`}>
+                  {formatPlayerName(game.player2Name, getPlayerGames(game.player2Id))}
+                </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player2Id))} variant="secondary">
                   {getPlayerLevel(game.player2Id)}
                 </Badge>
@@ -167,7 +171,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="font-medium text-green-800">Team 2</div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="truncate">{formatPlayerName(game.player3Name, getPlayerGames(game.player3Id))}</span>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player3Id)).split(' ')[0]}`}>
+                  {formatPlayerName(game.player3Name, getPlayerGames(game.player3Id))}
+                </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player3Id))} variant="secondary">
                   {getPlayerLevel(game.player3Id)}
                 </Badge>
@@ -183,7 +189,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="truncate">{formatPlayerName(game.player4Name, getPlayerGames(game.player4Id))}</span>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player4Id)).split(' ')[0]}`}>
+                  {formatPlayerName(game.player4Name, getPlayerGames(game.player4Id))}
+                </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player4Id))} variant="secondary">
                   {getPlayerLevel(game.player4Id)}
                 </Badge>
@@ -211,7 +219,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                   size="sm"
                   variant="outline"
                   onClick={() => handleSubstitute(player.id)}
-                  className="text-xs"
+                  className={`text-xs text-white ${getLevelColor(player.level?.bracket || 0).split(' ')[0]}`}
                 >
                   {formatPlayerName(player.name, player.gamesPlayed)}
                 </Button>

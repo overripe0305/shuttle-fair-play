@@ -94,7 +94,9 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
             {match.matchData.pair1.players.map((player) => (
               <div key={player.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="truncate">{formatPlayerName(player)}</span>
+                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(player.level.bracket).split(' ')[0]}`}>
+                    {formatPlayerName(player)}
+                  </span>
                   <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
                     {player.level.bracket}
                   </Badge>
@@ -117,7 +119,9 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
             {match.matchData.pair2.players.map((player) => (
               <div key={player.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="truncate">{formatPlayerName(player)}</span>
+                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(player.level.bracket).split(' ')[0]}`}>
+                    {formatPlayerName(player)}
+                  </span>
                   <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
                     {player.level.bracket}
                   </Badge>
@@ -146,7 +150,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
                   size="sm"
                   variant="outline"
                   onClick={() => handleSubstitute(player.id)}
-                  className="text-xs"
+                  className={`text-xs text-white ${getLevelColor(player.level?.bracket || 0).split(' ')[0]}`}
                 >
                   {formatPlayerName(player)}
                 </Button>

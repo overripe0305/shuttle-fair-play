@@ -190,7 +190,7 @@ const ViewAllEvents = () => {
                       </Link>
                     ) : event.status === 'upcoming' ? (
                       <>
-                        <Link to={`/event/${event.id}`} className="flex-1">
+                        <Link to="/" className="flex-1">
                           <Button size="sm" className="w-full">
                             <Play className="h-3 w-3 mr-1" />
                             Start Event
