@@ -30,6 +30,22 @@ const getLevelColor = (bracket: number) => {
   return colorMap[bracket] || 'bg-gray-500 text-white';
 };
 
+const getLevelBackgroundColor = (bracket: number) => {
+  const colorMap: Record<number, string> = {
+    0: 'bg-[hsl(var(--level-0))]',
+    1: 'bg-[hsl(var(--level-1))]',
+    2: 'bg-[hsl(var(--level-2))]',
+    3: 'bg-[hsl(var(--level-3))]',
+    4: 'bg-[hsl(var(--level-4))]',
+    5: 'bg-[hsl(var(--level-5))]',
+    6: 'bg-[hsl(var(--level-6))]',
+    7: 'bg-[hsl(var(--level-7))]',
+    8: 'bg-[hsl(var(--level-8))]',
+    9: 'bg-[hsl(var(--level-9))]',
+  };
+  return colorMap[bracket] || 'bg-gray-500';
+};
+
 export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, availablePlayers, courtCount }: WaitingMatchCardProps) {
   const [selectedCourt, setSelectedCourt] = useState(1);
   const [substitutingPlayer, setSubstitutingPlayer] = useState<string | null>(null);
@@ -94,7 +110,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
             {match.matchData.pair1.players.map((player) => (
               <div key={player.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(player.level.bracket).split(' ')[0]}`}>
+                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(player.level.bracket)}`}>
                     {formatPlayerName(player)}
                   </span>
                   <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
@@ -119,7 +135,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
             {match.matchData.pair2.players.map((player) => (
               <div key={player.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(player.level.bracket).split(' ')[0]}`}>
+                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(player.level.bracket)}`}>
                     {formatPlayerName(player)}
                   </span>
                   <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
@@ -150,7 +166,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
                   size="sm"
                   variant="outline"
                   onClick={() => handleSubstitute(player.id)}
-                  className={`text-xs text-white ${getLevelColor(player.level?.bracket || 0).split(' ')[0]}`}
+                  className={`text-xs text-white px-2 py-1 rounded ${getLevelBackgroundColor(player.level?.bracket || 0)}`}
                 >
                   {formatPlayerName(player)}
                 </Button>

@@ -31,6 +31,22 @@ const getLevelColor = (bracket: number) => {
   return colorMap[bracket] || 'bg-gray-500 text-white';
 };
 
+const getLevelBackgroundColor = (bracket: number) => {
+  const colorMap: Record<number, string> = {
+    0: 'bg-[hsl(var(--level-0))]',
+    1: 'bg-[hsl(var(--level-1))]',
+    2: 'bg-[hsl(var(--level-2))]',
+    3: 'bg-[hsl(var(--level-3))]',
+    4: 'bg-[hsl(var(--level-4))]',
+    5: 'bg-[hsl(var(--level-5))]',
+    6: 'bg-[hsl(var(--level-6))]',
+    7: 'bg-[hsl(var(--level-7))]',
+    8: 'bg-[hsl(var(--level-8))]',
+    9: 'bg-[hsl(var(--level-9))]',
+  };
+  return colorMap[bracket] || 'bg-gray-500';
+};
+
 export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onChangeCourt, availablePlayers, courtCount }: ActiveGameCardProps) {
   const [substitutingPlayer, setSubstitutingPlayer] = useState<string | null>(null);
 
@@ -130,7 +146,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="font-medium text-blue-800">Team 1</div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player1Id)).split(' ')[0]}`}>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player1Id))}`}>
                   {formatPlayerName(game.player1Name, getPlayerGames(game.player1Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player1Id))} variant="secondary">
@@ -148,7 +164,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player2Id)).split(' ')[0]}`}>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player2Id))}`}>
                   {formatPlayerName(game.player2Name, getPlayerGames(game.player2Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player2Id))} variant="secondary">
@@ -171,7 +187,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="font-medium text-green-800">Team 2</div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player3Id)).split(' ')[0]}`}>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player3Id))}`}>
                   {formatPlayerName(game.player3Name, getPlayerGames(game.player3Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player3Id))} variant="secondary">
@@ -189,7 +205,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelColor(getPlayerLevel(game.player4Id)).split(' ')[0]}`}>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player4Id))}`}>
                   {formatPlayerName(game.player4Name, getPlayerGames(game.player4Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player4Id))} variant="secondary">
@@ -219,7 +235,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                   size="sm"
                   variant="outline"
                   onClick={() => handleSubstitute(player.id)}
-                  className={`text-xs text-white ${getLevelColor(player.level?.bracket || 0).split(' ')[0]}`}
+                  className={`text-xs text-white px-2 py-1 rounded ${getLevelBackgroundColor(player.level?.bracket || 0)}`}
                 >
                   {formatPlayerName(player.name, player.gamesPlayed)}
                 </Button>
