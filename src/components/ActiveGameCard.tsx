@@ -32,25 +32,29 @@ const getLevelColor = (bracket: number) => {
 };
 
 const getLevelBackgroundColor = (bracket: number) => {
+  console.log('Getting level background color for bracket:', bracket);
   const colorMap: Record<number, string> = {
-    0: 'bg-[hsl(var(--level-0))]',
-    1: 'bg-[hsl(var(--level-1))]',
-    2: 'bg-[hsl(var(--level-2))]',
-    3: 'bg-[hsl(var(--level-3))]',
-    4: 'bg-[hsl(var(--level-4))]',
-    5: 'bg-[hsl(var(--level-5))]',
-    6: 'bg-[hsl(var(--level-6))]',
-    7: 'bg-[hsl(var(--level-7))]',
-    8: 'bg-[hsl(var(--level-8))]',
-    9: 'bg-[hsl(var(--level-9))]',
+    0: 'bg-pink-400',
+    1: 'bg-green-300', 
+    2: 'bg-green-500',
+    3: 'bg-green-700',
+    4: 'bg-blue-300',
+    5: 'bg-blue-500',
+    6: 'bg-blue-700',
+    7: 'bg-orange-300',
+    8: 'bg-orange-500',
+    9: 'bg-yellow-400',
   };
-  return colorMap[bracket] || 'bg-gray-500';
+  const color = colorMap[bracket] || 'bg-gray-500';
+  console.log('Returning color:', color);
+  return color;
 };
 
 export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onChangeCourt, availablePlayers, courtCount }: ActiveGameCardProps) {
   const [substitutingPlayer, setSubstitutingPlayer] = useState<string | null>(null);
 
   const formatPlayerName = (playerName?: string, gamesPlayed?: number) => {
+    console.log('Player name and games in ActiveGameCard:', playerName, gamesPlayed);
     return `G${gamesPlayed || 0}-${playerName || 'Unknown'}`;
   };
 
