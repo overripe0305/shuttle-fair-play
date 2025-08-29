@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Link } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Upload, 
@@ -33,7 +33,14 @@ type SortOption = 'alphabetical' | 'gamesPlayed' | 'wins' | 'losses';
 type SortOrder = 'asc' | 'desc';
 
 const EnhancedPlayerManagement = () => {
-  const { players, addPlayer, updatePlayer, deletePlayer, bulkAddPlayers } = useEnhancedPlayerManager();
+  const { clubId } = useParams<{ clubId: string }>();
+  const navigate = useNavigate();
+  const { players, addPlayer, updatePlayer, deletePlayer, bulkAddPlayers } = useEnhancedPlayerManager(clubId);
+
+  if (!clubId) {
+    navigate('/');
+    return null;
+  }
   const { getPlayerStats } = useCumulativePlayerStats();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('alphabetical');
@@ -160,10 +167,10 @@ const EnhancedPlayerManagement = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/">
+              <Link to={`/club/${clubId}/dashboard`}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
+                  Back to Club
                 </Button>
               </Link>
               <div>

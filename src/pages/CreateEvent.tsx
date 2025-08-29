@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   Plus, 
   ArrowLeft,
@@ -23,9 +23,15 @@ import { MajorLevel, SubLevel, getLevelDisplay } from '@/types/player';
 import { toast } from 'sonner';
 
 const CreateEvent = () => {
+  const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
-  const { createEvent } = useEventManager();
-  const { players, addPlayer } = useEnhancedPlayerManager();
+  const { createEvent } = useEventManager(clubId);
+  const { players, addPlayer } = useEnhancedPlayerManager(clubId);
+
+  if (!clubId) {
+    navigate('/');
+    return null;
+  }
   
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -88,7 +94,7 @@ const CreateEvent = () => {
       });
 
       toast.success('Event created successfully!');
-      navigate('/');
+      navigate(`/club/${clubId}/dashboard`);
     } catch (error) {
       toast.error('Failed to create event');
     }
@@ -107,10 +113,10 @@ const CreateEvent = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/">
+              <Link to={`/club/${clubId}/dashboard`}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
+                  Back to Club
                 </Button>
               </Link>
               <div>

@@ -3,32 +3,36 @@ import { BadmintonEvent } from '@/types/event';
 import { EnhancedPlayer } from '@/types/enhancedPlayer';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useEventManager = () => {
+export const useEventManager = (clubId?: string) => {
   const [events, setEvents] = useState<BadmintonEvent[]>([]);
 
   // Load events from Supabase on mount
   useEffect(() => {
-    loadEvents();
-    
-    // Subscribe to real-time updates for both events and event_players tables
-    const channel = supabase
-      .channel('events-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        console.log('Events table changed, reloading...');
-        loadEvents();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_players' }, () => {
-        console.log('Event players table changed, reloading...');
-        loadEvents();
-      })
-      .subscribe();
+    if (clubId) {
+      loadEvents();
+      
+      // Subscribe to real-time updates for both events and event_players tables
+      const channel = supabase
+        .channel('events-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+          console.log('Events table changed, reloading...');
+          loadEvents();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_players' }, () => {
+          console.log('Event players table changed, reloading...');
+          loadEvents();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [clubId]);
 
   const loadEvents = async () => {
+    if (!clubId) return;
+    
     try {
       const { data, error } = await supabase
         .from('events')
@@ -36,6 +40,7 @@ export const useEventManager = () => {
           *,
           event_players(player_id, order_index, created_at)
         `)
+        .eq('club_id', clubId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -59,6 +64,8 @@ export const useEventManager = () => {
   };
 
   const createEvent = async (eventData: Omit<BadmintonEvent, 'id' | 'createdAt' | 'status'>) => {
+    if (!clubId) throw new Error('Club ID is required');
+    
     try {
       // First, create the event
       const { data: eventDbData, error: eventError } = await supabase
@@ -66,7 +73,8 @@ export const useEventManager = () => {
         .insert({
           title: eventData.title,
           date: eventData.date.toISOString(),
-          status: 'upcoming'
+          status: 'upcoming',
+          club_id: clubId
         })
         .select()
         .single();

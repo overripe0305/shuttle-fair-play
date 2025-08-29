@@ -3,31 +3,36 @@ import { EnhancedPlayer } from '@/types/enhancedPlayer';
 import { PlayerLevel, MajorLevel, SubLevel, PlayerStatus, getBracketFromMajorSub } from '@/types/player';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useEnhancedPlayerManager = () => {
+export const useEnhancedPlayerManager = (clubId?: string) => {
   const [players, setPlayers] = useState<EnhancedPlayer[]>([]);
 
   // Load players from Supabase on mount
   useEffect(() => {
-    loadPlayers();
-    
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('players-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
-        loadPlayers();
-      })
-      .subscribe();
+    if (clubId) {
+      loadPlayers();
+      
+      // Subscribe to real-time updates
+      const channel = supabase
+        .channel('players-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+          loadPlayers();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [clubId]);
 
   const loadPlayers = async () => {
+    if (!clubId) return;
+    
     try {
       const { data, error } = await supabase
         .from('players')
         .select('*')
+        .eq('club_id', clubId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -80,7 +85,8 @@ export const useEnhancedPlayerManager = () => {
           photo: playerData.photo,
           games_played: 0,
           penalty_bonus: 0,
-          status: 'available'
+          status: 'available',
+          club_id: clubId
         })
         .select()
         .single();
@@ -172,7 +178,8 @@ export const useEnhancedPlayerManager = () => {
         birthday: playerData.birthday?.toISOString().split('T')[0],
         games_played: 0,
         penalty_bonus: 0,
-        status: 'available'
+        status: 'available',
+        club_id: clubId
       }));
 
       const { data, error } = await supabase

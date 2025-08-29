@@ -1,9 +1,10 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useEventManager } from "@/hooks/useEventManager";
 import { useEnhancedPlayerManager } from "@/hooks/useEnhancedPlayerManager";
+import { useClubManager } from "@/hooks/useClubManager";
 import { useAuth } from "@/hooks/useAuth";
 import { BadmintonEvent } from "@/types/event";
 import { 
@@ -24,11 +25,33 @@ import {
 import { format } from 'date-fns';
 import badmintonLogo from '@/assets/badminton-logo.png';
 
-const Home = () => {
-  const { events, updateEventStatus } = useEventManager();
-  const { players } = useEnhancedPlayerManager();
+const ClubDashboard = () => {
+  const { clubId } = useParams<{ clubId: string }>();
+  const { events, updateEventStatus } = useEventManager(clubId);
+  const { players } = useEnhancedPlayerManager(clubId);
+  const { clubs } = useClubManager();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const currentClub = clubs.find(club => club.id === clubId);
+
+  if (!clubId) {
+    navigate('/');
+    return null;
+  }
+
+  if (!currentClub) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Club not found</h1>
+          <Link to="/">
+            <Button>Return to Home</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const upcomingEvents = events.filter(event => event.status === 'upcoming').slice(0, 3);
   const activeEvents = events.filter(event => event.status === 'active');
@@ -36,7 +59,7 @@ const Home = () => {
   const handleStartEvent = async (event: BadmintonEvent) => {
     try {
       await updateEventStatus(event.id, 'active');
-      navigate(`/event/${event.id}/play`);
+      navigate(`/club/${clubId}/event/${event.id}/play`);
     } catch (error) {
       console.error('Error starting event:', error);
     }
@@ -51,8 +74,8 @@ const Home = () => {
             <div className="flex items-center gap-3">
               <img src={badmintonLogo} alt="BadmintonPro" className="h-10 w-10" />
               <div>
-                <h1 className="text-2xl font-bold">BadmintonPro</h1>
-                <p className="text-sm text-muted-foreground">Club Management Hub</p>
+                <h1 className="text-2xl font-bold">{currentClub.name}</h1>
+                <p className="text-sm text-muted-foreground">Club Dashboard</p>
               </div>
             </div>
             
@@ -103,30 +126,30 @@ const Home = () => {
               </CardHeader>
               <CardContent className="space-y-4">
               <Button asChild>
-                <Link to="/create-event">
+                <Link to={`/club/${clubId}/create-event`}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Event
                 </Link>
               </Button>
               
               <Button asChild variant="outline">
-                <Link to="/players">
+                <Link to={`/club/${clubId}/players`}>
                   <Users className="h-4 w-4 mr-2" />
                   Player Management
                 </Link>
               </Button>
               
               <Button asChild variant="outline">
-                <Link to="/view-events">
+                <Link to={`/club/${clubId}/events`}>
                   <Calendar className="h-4 w-4 mr-2" />
                   View All Events
                 </Link>
               </Button>
               
               <Button asChild variant="outline">
-                <Link to="/billing">
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Billing
+                <Link to="/">
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Back to Clubs
                 </Link>
               </Button>
               </CardContent>
@@ -147,7 +170,7 @@ const Home = () => {
                   <div className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active events</p>
-                    <Link to="/create-event">
+                    <Link to={`/club/${clubId}/create-event`}>
                       <Button className="mt-4">Create Your First Event</Button>
                     </Link>
                   </div>
@@ -171,7 +194,7 @@ const Home = () => {
                           </div>
                           <div className="flex gap-2">
                             <Badge variant="default">Active</Badge>
-                            <Link to={`/event/${event.id}/play`}>
+                            <Link to={`/club/${clubId}/event/${event.id}/play`}>
                               <Button size="sm">
                                 Enter Game
                               </Button>
@@ -220,7 +243,7 @@ const Home = () => {
                         </div>
                       </div>
                       <div className="flex gap-2 mt-4">
-                        <Link to={`/event/${event.id}`} className="flex-1">
+                        <Link to={`/club/${clubId}/event/${event.id}`} className="flex-1">
                           <Button size="sm" variant="outline" className="w-full">
                             View Details
                           </Button>
@@ -276,4 +299,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default ClubDashboard;
