@@ -358,10 +358,10 @@ const Index = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/">
+              <Link to={`/club/${clubId}/dashboard`}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
+                  Back
                 </Button>
               </Link>
               <div className="flex items-center gap-3">
