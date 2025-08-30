@@ -42,8 +42,8 @@ import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
 import { toast } from 'sonner';
 
 const Index = () => {
-  // Get eventId first
-  const { eventId } = useParams();
+  // Get eventId and clubId from URL params
+  const { eventId, clubId } = useParams();
   
   // State variables 
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,8 +81,8 @@ const Index = () => {
     replacePlayerInGame
   } = usePlayerManager();
 
-  const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager();
-  const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager();
+  const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager(clubId);
+  const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager(clubId);
   const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
   const { 
     waitingMatches, 

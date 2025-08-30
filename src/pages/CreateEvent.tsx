@@ -116,7 +116,7 @@ const CreateEvent = () => {
               <Link to={`/club/${clubId}/dashboard`}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Club
+                  Back to Dashboard
                 </Button>
               </Link>
               <div>
