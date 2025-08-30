@@ -390,8 +390,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_club_ids: {
+        Args: { _user_id?: string }
+        Returns: string[]
+      }
       is_admin: {
         Args: { user_id?: string }
+        Returns: boolean
+      }
+      is_club_member: {
+        Args: { _club_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      is_club_owner: {
+        Args: { _club_id: string; _user_id?: string }
         Returns: boolean
       }
     }
