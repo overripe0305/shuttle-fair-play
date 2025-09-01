@@ -29,7 +29,8 @@ import { useState, useEffect } from 'react';
 
 const PlayerProfile = () => {
   const { playerId, clubId } = useParams();
-  const { players, updatePlayer } = useEnhancedPlayerManager(clubId);
+  const [resolvedClubId, setResolvedClubId] = useState<string | undefined>(clubId);
+  const { players, updatePlayer } = useEnhancedPlayerManager(resolvedClubId);
   const { getPlayerStats, playerStats: allPlayerStats } = useCumulativePlayerStats();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,15 +48,42 @@ const PlayerProfile = () => {
     birthday: ''
   });
 
+  // If no clubId in URL, find the club that contains this player
+  useEffect(() => {
+    if (!clubId && playerId && !resolvedClubId) {
+      const findPlayerClub = async () => {
+        try {
+          const { data: playerData, error } = await supabase
+            .from('players')
+            .select('club_id')
+            .eq('id', playerId)
+            .single();
+          
+          if (error) throw error;
+          
+          if (playerData?.club_id) {
+            setResolvedClubId(playerData.club_id);
+          }
+        } catch (error) {
+          console.error('Error finding player club:', error);
+        }
+      };
+      
+      findPlayerClub();
+    } else if (clubId) {
+      setResolvedClubId(clubId);
+    }
+  }, [clubId, playerId, resolvedClubId]);
+
   const player = players.find(p => p.id === playerId);
 
   // Load player game history and stats
   useEffect(() => {
-    if (playerId) {
+    if (playerId && resolvedClubId) {
       loadPlayerGameHistory();
       loadPlayerStats();
     }
-  }, [playerId, allPlayerStats]); // Add allPlayerStats dependency to refresh when stats change
+  }, [playerId, allPlayerStats, resolvedClubId]); // Add resolvedClubId dependency
 
   // Set up real-time sync for game updates
   useEffect(() => {
