@@ -5,6 +5,8 @@ import { DndContext, closestCenter, DragEndEvent, DragOverlay, useSensor, useSen
 import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useOfflinePlayerManager } from '@/hooks/useOfflinePlayerManager';
+import { useOfflineGameManager } from '@/hooks/useOfflineGameManager';
 import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
@@ -40,6 +42,8 @@ import {
 import badmintonLogo from '@/assets/badminton-logo.png';
 import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
 import { toast } from 'sonner';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 const Index = () => {
   // Get eventId and clubId from URL params
@@ -82,8 +86,31 @@ const Index = () => {
   } = usePlayerManager();
 
   const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager(clubId);
-  const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager(clubId);
-  const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
+  
+  // Use offline managers for better mobile performance
+  const { players: onlinePlayers, addPlayer: addOnlinePlayer, updatePlayer: updateOnlinePlayer, deletePlayer: deleteOnlinePlayer } = useEnhancedPlayerManager(clubId);
+  const { players: offlinePlayers, addPlayer: addOfflinePlayer, updatePlayer: updateOfflinePlayer, deletePlayer: deleteOfflinePlayer } = useOfflinePlayerManager(clubId);
+  const { activeGames: offlineActiveGames, createGame: createOfflineGame, completeGame: completeOfflineGame, cancelGame: cancelOfflineGame, updateGameCourt: updateOfflineGameCourt, replacePlayerInGame: replaceInOfflineGame } = useOfflineGameManager(eventId);
+  
+  // Use offline sync hook to determine which data source to use
+  const { isOnline } = useOfflineSync(clubId);
+  
+  // Switch between online and offline data based on connection
+  const allPlayers = isOnline ? onlinePlayers : offlinePlayers;
+  const addPlayer = isOnline ? addOnlinePlayer : addOfflinePlayer;
+  const updatePlayer = isOnline ? updateOnlinePlayer : updateOfflinePlayer;
+  const deletePlayer = isOnline ? deleteOnlinePlayer : deleteOfflinePlayer;
+  
+  const { activeGames: dbActiveGames, createGame: createOnlineGame, completeGame: completeOnlineGame, cancelGame: cancelOnlineGame, updateGameCourt: updateOnlineGameCourt, replacePlayerInGame: replaceInOnlineGame } = useGameManager(eventId);
+  
+  // Switch between online and offline game management
+  const currentActiveGames = isOnline ? (dbActiveGames || []) : offlineActiveGames;
+  const createGame = isOnline ? createOnlineGame : createOfflineGame;
+  const completeGame = isOnline ? completeOnlineGame : completeOfflineGame;
+  const cancelGame = isOnline ? cancelOnlineGame : cancelOfflineGame;
+  const updateGameCourt = isOnline ? updateOnlineGameCourt : updateOfflineGameCourt;
+  const replaceInDbGame = isOnline ? replaceInOnlineGame : replaceInOfflineGame;
+  
   const { 
     waitingMatches, 
     addWaitingMatch, 
@@ -205,11 +232,6 @@ const Index = () => {
   const inProgressPlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.status === 'in_progress');
   }, [eventPlayers]);
-  
-  // Use database active games instead of local state - memoized
-  const currentActiveGames = React.useMemo(() => {
-    return dbActiveGames || [];
-  }, [dbActiveGames]);
 
   const availablePlayersForEvent = React.useMemo(() => {
     return allPlayers.filter(player => 
@@ -279,8 +301,10 @@ const Index = () => {
   // Wrapper function to complete game and immediately refresh event stats
   const handleCompleteGame = async (gameId: string, winner?: 'team1' | 'team2') => {
     await completeGame(gameId, winner);
-    // Force immediate refresh of event player stats
-    await refetchEventStats();
+    // For offline mode, we don't need to refresh from server
+    if (isOnline) {
+      await refetchEventStats();
+    }
   };
 
   const handleCourtCountChange = async (courtCount: number) => {
@@ -388,6 +412,8 @@ const Index = () => {
                   <span>{currentActiveGames.length} Active Games</span>
                 </div>
               </div>
+              
+              <OfflineIndicator clubId={clubId} />
               
               
               <div className="flex gap-2">
