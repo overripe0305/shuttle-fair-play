@@ -28,8 +28,8 @@ import { getLevelDisplay, MajorLevel, SubLevel } from '@/types/player';
 import { useState, useEffect } from 'react';
 
 const PlayerProfile = () => {
-  const { playerId } = useParams();
-  const { players, updatePlayer } = useEnhancedPlayerManager();
+  const { playerId, clubId } = useParams();
+  const { players, updatePlayer } = useEnhancedPlayerManager(clubId);
   const { getPlayerStats, playerStats: allPlayerStats } = useCumulativePlayerStats();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

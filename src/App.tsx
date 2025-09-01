@@ -39,6 +39,7 @@ const App = () => (
             <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/players" element={<ProtectedRoute><EnhancedPlayerManagement /></ProtectedRoute>} />
             <Route path="/player/:playerId" element={<ProtectedRoute><PlayerProfile /></ProtectedRoute>} />
+            <Route path="/club/:clubId/player/:playerId" element={<ProtectedRoute><PlayerProfile /></ProtectedRoute>} />
             <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
             <Route path="/view-events" element={<ProtectedRoute><ViewAllEvents /></ProtectedRoute>} />
             <Route path="/event/:eventId" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />

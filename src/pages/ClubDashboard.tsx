@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import badmintonLogo from '@/assets/badminton-logo.png';
+import { ClubAdminDialog } from '@/components/ClubAdminDialog';
 
 const ClubDashboard = () => {
   const { clubId } = useParams<{ clubId: string }>();
@@ -152,6 +153,8 @@ const ClubDashboard = () => {
                   Back to Clubs
                 </Link>
               </Button>
+              
+              <ClubAdminDialog clubId={clubId} />
               </CardContent>
             </Card>
           </div>

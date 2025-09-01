@@ -21,6 +21,8 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const navigate = useNavigate();
 
   // Cleanup auth state utility
@@ -170,6 +172,33 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    try {
+      setError(null);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      setResetEmailSent(true);
+      
+    } catch (error: any) {
+      console.error('Error sending reset email:', error);
+      setError(error.message || 'Failed to send reset email. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -245,7 +274,63 @@ const Auth = () => {
             </Alert>
           )}
 
-          <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+          {showForgotPassword ? (
+            <div className="space-y-4">
+              {resetEmailSent ? (
+                <div className="text-center space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    Password reset link sent to your email. Please check your inbox and follow the instructions.
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setResetEmailSent(false);
+                      setEmail('');
+                    }}
+                  >
+                    Back to Sign In
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="reset-email"
+                        placeholder="Enter your email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button type="submit" className="w-full" size="lg">
+                    Send Reset Link
+                  </Button>
+                  
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    className="w-full"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setEmail('');
+                      setError(null);
+                    }}
+                  >
+                    Back to Sign In
+                  </Button>
+                </form>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
@@ -309,8 +394,9 @@ const Auth = () => {
               {isSignUp ? 'Create Account' : 'Sign In'}
             </Button>
           </form>
+          )}
           
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <Button 
               variant="ghost" 
               onClick={() => {
@@ -319,11 +405,28 @@ const Auth = () => {
                 setEmail('');
                 setPassword('');
                 setFullName('');
+                setShowForgotPassword(false);
+                setResetEmailSent(false);
               }}
               disabled={signingIn || signingUp}
             >
               {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
             </Button>
+            
+            {!isSignUp && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setShowForgotPassword(!showForgotPassword);
+                  setError(null);
+                  setResetEmailSent(false);
+                }}
+                disabled={signingIn || signingUp}
+              >
+                Forgot your password?
+              </Button>
+            )}
           </div>
           
           <div className="text-center text-sm text-muted-foreground">
