@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useOfflinePlayerManager } from '@/hooks/useOfflinePlayerManager';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useClubManager } from '@/hooks/useClubManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -24,10 +27,24 @@ import { getLevelDisplay, MajorLevel, SubLevel } from '@/types/player';
 import { toast } from 'sonner';
 
 const EventDetails = () => {
-  const { eventId } = useParams();
+  const { eventId, clubId } = useParams();
   const navigate = useNavigate();
   const { events, updateEventStatus, addPlayerToEvent } = useEventManager();
-  const { players, addPlayer, updatePlayer } = useEnhancedPlayerManager();
+  
+  // Get clubs to determine sync clubId when none is selected
+  const { clubs } = useClubManager();
+  const syncClubId = clubId || (clubs && clubs.length > 0 ? clubs[0]?.id : undefined);
+  
+  // Use offline-aware player management
+  const { players: onlinePlayers, addPlayer: addOnlinePlayer, updatePlayer: updateOnlinePlayer } = useEnhancedPlayerManager(clubId);
+  const { players: offlinePlayers, addPlayer: addOfflinePlayer, updatePlayer: updateOfflinePlayer } = useOfflinePlayerManager(syncClubId);
+  const { isOnline } = useOfflineSync(syncClubId);
+  
+  // Switch between online and offline data based on connection
+  const players = isOnline ? onlinePlayers : offlinePlayers;
+  const addPlayer = isOnline ? addOnlinePlayer : addOfflinePlayer;
+  const updatePlayer = isOnline ? updateOnlinePlayer : updateOfflinePlayer;
+  
   const { getPlayerStats } = useEventPlayerStats(eventId);
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
