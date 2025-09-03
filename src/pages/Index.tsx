@@ -10,6 +10,7 @@ import { useOfflineGameManager } from '@/hooks/useOfflineGameManager';
 import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
+import { useClubManager } from '@/hooks/useClubManager';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
@@ -87,13 +88,17 @@ const Index = () => {
 
   const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager(clubId);
   
+  // Get clubs to determine sync clubId when none is selected
+  const { clubs } = useClubManager();
+  const syncClubId = clubId || (clubs && clubs.length > 0 ? clubs[0]?.id : undefined);
+  
   // Use offline managers for better mobile performance
   const { players: onlinePlayers, addPlayer: addOnlinePlayer, updatePlayer: updateOnlinePlayer, deletePlayer: deleteOnlinePlayer } = useEnhancedPlayerManager(clubId);
-  const { players: offlinePlayers, addPlayer: addOfflinePlayer, updatePlayer: updateOfflinePlayer, deletePlayer: deleteOfflinePlayer } = useOfflinePlayerManager(clubId);
+  const { players: offlinePlayers, addPlayer: addOfflinePlayer, updatePlayer: updateOfflinePlayer, deletePlayer: deleteOfflinePlayer } = useOfflinePlayerManager(syncClubId);
   const { activeGames: offlineActiveGames, createGame: createOfflineGame, completeGame: completeOfflineGame, cancelGame: cancelOfflineGame, updateGameCourt: updateOfflineGameCourt, replacePlayerInGame: replaceInOfflineGame } = useOfflineGameManager(eventId);
   
   // Use offline sync hook to determine which data source to use
-  const { isOnline } = useOfflineSync(clubId);
+  const { isOnline } = useOfflineSync(syncClubId);
   
   // Switch between online and offline data based on connection
   const allPlayers = isOnline ? onlinePlayers : offlinePlayers;
@@ -413,7 +418,7 @@ const Index = () => {
                 </div>
               </div>
               
-              <OfflineIndicator clubId={clubId} />
+              <OfflineIndicator clubId={syncClubId} />
               
               
               <div className="flex gap-2">
