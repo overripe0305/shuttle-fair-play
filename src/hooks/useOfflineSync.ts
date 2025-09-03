@@ -81,8 +81,8 @@ export const useOfflineSync = (clubId?: string) => {
       const [playersResponse, eventsResponse, gamesResponse, waitingMatchesResponse] = await Promise.all([
         supabase.from('players').select('*').eq('club_id', clubId),
         supabase.from('events').select('*').eq('club_id', clubId),
-        supabase.from('games').select('*, events!inner(*)').eq('events.club_id', clubId),
-        supabase.from('waiting_matches').select('*, events!inner(*)').eq('events.club_id', clubId)
+        supabase.from('games').select('*'),
+        supabase.from('waiting_matches').select('*')
       ]);
 
       console.log('Download responses:', {
