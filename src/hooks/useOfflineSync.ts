@@ -89,23 +89,31 @@ export const useOfflineSync = (clubId?: string) => {
         players: playersResponse.data?.length || 0,
         events: eventsResponse.data?.length || 0,
         games: gamesResponse.data?.length || 0,
-        waitingMatches: waitingMatchesResponse.data?.length || 0
+        waitingMatches: waitingMatchesResponse.data?.length || 0,
+        playersError: playersResponse.error,
+        eventsError: eventsResponse.error,
+        gamesError: gamesResponse.error,
+        waitingMatchesError: waitingMatchesResponse.error
       });
 
       if (playersResponse.error) {
         console.error('Players query error:', playersResponse.error);
+        toast.error(`Failed to download players: ${playersResponse.error.message}`);
         throw playersResponse.error;
       }
       if (eventsResponse.error) {
         console.error('Events query error:', eventsResponse.error);
+        toast.error(`Failed to download events: ${eventsResponse.error.message}`);
         throw eventsResponse.error;
       }
       if (gamesResponse.error) {
         console.error('Games query error:', gamesResponse.error);
+        toast.error(`Failed to download games: ${gamesResponse.error.message}`);
         throw gamesResponse.error;
       }
       if (waitingMatchesResponse.error) {
         console.error('Waiting matches query error:', waitingMatchesResponse.error);
+        toast.error(`Failed to download waiting matches: ${waitingMatchesResponse.error.message}`);
         throw waitingMatchesResponse.error;
       }
 
