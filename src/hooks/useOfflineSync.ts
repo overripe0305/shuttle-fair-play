@@ -67,23 +67,47 @@ export const useOfflineSync = (clubId?: string) => {
 
   // Download data from server
   const downloadData = useCallback(async () => {
-    if (!clubId || !isOnline) return null;
+    if (!clubId || !isOnline) {
+      console.log('Download data: Missing clubId or offline:', { clubId, isOnline });
+      toast.error('Unable to sync: Missing club ID or offline');
+      return null;
+    }
 
     try {
       setIsSyncing(true);
+      console.log('Starting data download for club:', clubId);
       
-      // Fetch all necessary data
+      // Fetch all necessary data with better error handling
       const [playersResponse, eventsResponse, gamesResponse, waitingMatchesResponse] = await Promise.all([
         supabase.from('players').select('*').eq('club_id', clubId),
         supabase.from('events').select('*').eq('club_id', clubId),
-        supabase.from('games').select('*, events!inner(club_id)').eq('events.club_id', clubId),
-        supabase.from('waiting_matches').select('*, events!inner(club_id)').eq('events.club_id', clubId)
+        supabase.from('games').select('*, events!inner(*)').eq('events.club_id', clubId),
+        supabase.from('waiting_matches').select('*, events!inner(*)').eq('events.club_id', clubId)
       ]);
 
-      if (playersResponse.error) throw playersResponse.error;
-      if (eventsResponse.error) throw eventsResponse.error;
-      if (gamesResponse.error) throw gamesResponse.error;
-      if (waitingMatchesResponse.error) throw waitingMatchesResponse.error;
+      console.log('Download responses:', {
+        players: playersResponse.data?.length || 0,
+        events: eventsResponse.data?.length || 0,
+        games: gamesResponse.data?.length || 0,
+        waitingMatches: waitingMatchesResponse.data?.length || 0
+      });
+
+      if (playersResponse.error) {
+        console.error('Players query error:', playersResponse.error);
+        throw playersResponse.error;
+      }
+      if (eventsResponse.error) {
+        console.error('Events query error:', eventsResponse.error);
+        throw eventsResponse.error;
+      }
+      if (gamesResponse.error) {
+        console.error('Games query error:', gamesResponse.error);
+        throw gamesResponse.error;
+      }
+      if (waitingMatchesResponse.error) {
+        console.error('Waiting matches query error:', waitingMatchesResponse.error);
+        throw waitingMatchesResponse.error;
+      }
 
       // Transform players data to EnhancedPlayer format
       const enhancedPlayers: EnhancedPlayer[] = playersResponse.data?.map(player => ({
