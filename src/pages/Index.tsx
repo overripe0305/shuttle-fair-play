@@ -424,7 +424,7 @@ const Index = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
-                  if (navigator.onLine) {
+                  if (isOnline) {
                     window.dispatchEvent(new Event('offline'));
                     toast.success('Simulated offline mode');
                   } else {
@@ -434,7 +434,7 @@ const Index = () => {
                 }}
                 className="flex items-center gap-1"
               >
-                {navigator.onLine ? 'Go Offline' : 'Go Online'}
+                {isOnline ? 'Go Offline' : 'Go Online'}
               </Button>
               
               <div className="flex gap-2">
