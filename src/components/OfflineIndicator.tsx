@@ -62,7 +62,7 @@ export const OfflineIndicator = ({ clubId }: OfflineIndicatorProps) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <div className="px-2 py-1.5 text-sm text-muted-foreground">
-            {lastSyncTime ? (
+            {lastSyncTime && !isNaN(new Date(lastSyncTime).getTime()) ? (
               `Last sync: ${format(new Date(lastSyncTime), 'MMM dd, HH:mm')}`
             ) : (
               'Never synced'
