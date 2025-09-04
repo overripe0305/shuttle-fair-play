@@ -217,7 +217,7 @@ const EventDetails = () => {
               
               <div>
                 <Label className="text-sm font-medium">Date & Time</Label>
-                <p>{format(event.date, 'PPP p')}</p>
+                <p>{format(new Date(event.date), 'PPP p')}</p>
               </div>
               
               <div>
