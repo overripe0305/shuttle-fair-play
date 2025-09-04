@@ -7,6 +7,10 @@ interface OfflineGame {
   player2_id: string;
   player3_id: string;
   player4_id: string;
+  player1_name?: string;
+  player2_name?: string;
+  player3_name?: string;
+  player4_name?: string;
   courtId: number;
   completed: boolean;
   winner?: 'team1' | 'team2';
@@ -36,14 +40,25 @@ export const useOfflineGameManager = (eventId?: string) => {
     player2Id: string, 
     player3Id: string,
     player4Id: string,
-    courtId: number
+    courtId: number,
+    players?: any[] // Add players array to get names
   ) => {
+    // Get player names from players array
+    const getPlayerName = (playerId: string) => {
+      const player = players?.find(p => p.id === playerId);
+      return player?.name || `Player ${playerId.slice(-4)}`;
+    };
+
     const newGame: OfflineGame = {
       id: `offline-game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       player1_id: player1Id,
       player2_id: player2Id,
       player3_id: player3Id,
       player4_id: player4Id,
+      player1_name: getPlayerName(player1Id),
+      player2_name: getPlayerName(player2Id),
+      player3_name: getPlayerName(player3Id),
+      player4_name: getPlayerName(player4Id),
       courtId,
       completed: false,
       start_time: new Date().toISOString(),

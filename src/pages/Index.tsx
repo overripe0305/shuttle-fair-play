@@ -7,6 +7,7 @@ import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { useOfflinePlayerManager } from '@/hooks/useOfflinePlayerManager';
 import { useOfflineGameManager } from '@/hooks/useOfflineGameManager';
+import { useOfflineWaitingMatchManager } from '@/hooks/useOfflineWaitingMatchManager';
 import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
@@ -116,14 +117,31 @@ const Index = () => {
   const updateGameCourt = isOnline ? updateOnlineGameCourt : updateOfflineGameCourt;
   const replaceInDbGame = isOnline ? replaceInOnlineGame : replaceInOfflineGame;
   
+  // Online waiting match manager
   const { 
-    waitingMatches, 
-    addWaitingMatch, 
-    removeWaitingMatch, 
-    startWaitingMatch,
+    waitingMatches: onlineWaitingMatches, 
+    addWaitingMatch: addOnlineWaitingMatch, 
+    removeWaitingMatch: removeOnlineWaitingMatch, 
+    startWaitingMatch: startOnlineWaitingMatch,
     substitutePlayerInWaiting,
     loadWaitingMatches
   } = useWaitingMatchManager(eventId);
+  
+  // Offline waiting match manager
+  const { 
+    waitingMatches: offlineWaitingMatches, 
+    addWaitingMatch: addOfflineWaitingMatch, 
+    removeWaitingMatch: removeOfflineWaitingMatch, 
+    startWaitingMatch: startOfflineWaitingMatch
+  } = useOfflineWaitingMatchManager(eventId);
+  
+  // Switch between online and offline waiting match management
+  const waitingMatches = isOnline ? onlineWaitingMatches : offlineWaitingMatches;
+  const addWaitingMatch = isOnline ? 
+    addOnlineWaitingMatch : 
+    (match: any, onPlayerStatusUpdate?: any) => addOfflineWaitingMatch(match, onPlayerStatusUpdate);
+  const removeWaitingMatch = isOnline ? removeOnlineWaitingMatch : removeOfflineWaitingMatch;
+  const startWaitingMatch = isOnline ? startOnlineWaitingMatch : startOfflineWaitingMatch;
   
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -677,7 +695,8 @@ const Index = () => {
                     match.pair1.players[1].id,
                     match.pair2.players[0].id,
                     match.pair2.players[1].id,
-                    availableCourt
+                    availableCourt,
+                    eventPlayers // Pass players array for offline name resolution
                   );
                 }
               }}
