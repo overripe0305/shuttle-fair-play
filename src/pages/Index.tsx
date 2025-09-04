@@ -420,6 +420,22 @@ const Index = () => {
               
               <OfflineIndicator clubId={syncClubId} />
               
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  if (navigator.onLine) {
+                    window.dispatchEvent(new Event('offline'));
+                    toast.success('Simulated offline mode');
+                  } else {
+                    window.dispatchEvent(new Event('online'));
+                    toast.success('Back online');
+                  }
+                }}
+                className="flex items-center gap-1"
+              >
+                {navigator.onLine ? 'Go Offline' : 'Go Online'}
+              </Button>
               
               <div className="flex gap-2">
                 {currentEvent && (
