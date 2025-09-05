@@ -16,7 +16,7 @@ export interface OfflineWaitingMatch {
 
 export function useOfflineWaitingMatchManager(eventId?: string) {
   const [waitingMatches, setWaitingMatches] = useState<OfflineWaitingMatch[]>([]);
-  const { loadFromLocal, saveToLocal } = useOfflineSync();
+  const { loadFromLocal, saveToLocal, lastSyncTime } = useOfflineSync();
 
   // Load waiting matches from offline storage
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useOfflineWaitingMatchManager(eventId?: string) {
       );
       setWaitingMatches(eventMatches);
     }
-  }, [eventId, loadFromLocal]);
+  }, [eventId, loadFromLocal, lastSyncTime]);
 
   const addWaitingMatch = useCallback(async (match: GameMatch, onPlayerStatusUpdate?: (playerId: string, status: string) => void) => {
     if (!eventId) return;

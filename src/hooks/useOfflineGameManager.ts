@@ -22,7 +22,7 @@ interface OfflineGame {
 
 export const useOfflineGameManager = (eventId?: string) => {
   const [activeGames, setActiveGames] = useState<OfflineGame[]>([]);
-  const { loadFromLocal, saveToLocal, isOnline } = useOfflineSync();
+  const { loadFromLocal, saveToLocal, isOnline, lastSyncTime } = useOfflineSync();
 
   // Load games from offline storage
   useEffect(() => {
@@ -33,7 +33,7 @@ export const useOfflineGameManager = (eventId?: string) => {
       );
       setActiveGames(eventGames);
     }
-  }, [eventId, loadFromLocal]);
+  }, [eventId, loadFromLocal, lastSyncTime]);
 
   const createGame = useCallback(async (
     player1Id: string,

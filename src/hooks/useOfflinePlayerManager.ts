@@ -5,7 +5,7 @@ import { useOfflineSync } from './useOfflineSync';
 
 export const useOfflinePlayerManager = (clubId?: string) => {
   const [players, setPlayers] = useState<EnhancedPlayer[]>([]);
-  const { loadFromLocal, saveToLocal, isOnline } = useOfflineSync(clubId);
+  const { loadFromLocal, saveToLocal, isOnline, lastSyncTime } = useOfflineSync(clubId);
 
   // Load players from offline storage
   useEffect(() => {
@@ -15,7 +15,7 @@ export const useOfflinePlayerManager = (clubId?: string) => {
         setPlayers(offlinePlayers);
       }
     }
-  }, [clubId, loadFromLocal]);
+  }, [clubId, loadFromLocal, lastSyncTime]);
 
   const addPlayer = useCallback(async (playerData: {
     name: string;
