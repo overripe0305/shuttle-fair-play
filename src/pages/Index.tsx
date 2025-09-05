@@ -5,13 +5,9 @@ import { DndContext, closestCenter, DragEndEvent, DragOverlay, useSensor, useSen
 import { usePlayerManager } from '@/hooks/usePlayerManager';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
-import { useOfflinePlayerManager } from '@/hooks/useOfflinePlayerManager';
-import { useOfflineGameManager } from '@/hooks/useOfflineGameManager';
-import { useOfflineWaitingMatchManager } from '@/hooks/useOfflineWaitingMatchManager';
 import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
-import { useClubManager } from '@/hooks/useClubManager';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
@@ -44,8 +40,6 @@ import {
 import badmintonLogo from '@/assets/badminton-logo.png';
 import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
 import { toast } from 'sonner';
-import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 const Index = () => {
   // Get eventId and clubId from URL params
@@ -88,60 +82,16 @@ const Index = () => {
   } = usePlayerManager();
 
   const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager(clubId);
-  
-  // Get clubs to determine sync clubId when none is selected
-  const { clubs } = useClubManager();
-  const syncClubId = clubId || (clubs && clubs.length > 0 ? clubs[0]?.id : undefined);
-  
-  // Use offline managers for better mobile performance
-  const { players: onlinePlayers, addPlayer: addOnlinePlayer, updatePlayer: updateOnlinePlayer, deletePlayer: deleteOnlinePlayer } = useEnhancedPlayerManager(clubId);
-  const { players: offlinePlayers, addPlayer: addOfflinePlayer, updatePlayer: updateOfflinePlayer, deletePlayer: deleteOfflinePlayer } = useOfflinePlayerManager(syncClubId);
-  const { activeGames: offlineActiveGames, createGame: createOfflineGame, completeGame: completeOfflineGame, cancelGame: cancelOfflineGame, updateGameCourt: updateOfflineGameCourt, replacePlayerInGame: replaceInOfflineGame } = useOfflineGameManager(eventId);
-  
-  // Use offline sync hook to determine which data source to use
-  const { isOnline, fullSync, hasLocalChanges } = useOfflineSync(syncClubId);
-  
-  // Switch between online and offline data based on connection
-  const allPlayers = isOnline ? onlinePlayers : offlinePlayers;
-  const addPlayer = isOnline ? addOnlinePlayer : addOfflinePlayer;
-  const updatePlayer = isOnline ? updateOnlinePlayer : updateOfflinePlayer;
-  const deletePlayer = isOnline ? deleteOnlinePlayer : deleteOfflinePlayer;
-  
-  const { activeGames: dbActiveGames, createGame: createOnlineGame, completeGame: completeOnlineGame, cancelGame: cancelOnlineGame, updateGameCourt: updateOnlineGameCourt, replacePlayerInGame: replaceInOnlineGame } = useGameManager(eventId);
-  
-  // Switch between online and offline game management
-  const currentActiveGames = isOnline ? (dbActiveGames || []) : offlineActiveGames;
-  const createGame = isOnline ? createOnlineGame : createOfflineGame;
-  const completeGame = isOnline ? completeOnlineGame : completeOfflineGame;
-  const cancelGame = isOnline ? cancelOnlineGame : cancelOfflineGame;
-  const updateGameCourt = isOnline ? updateOnlineGameCourt : updateOfflineGameCourt;
-  const replaceInDbGame = isOnline ? replaceInOnlineGame : replaceInOfflineGame;
-  
-  // Online waiting match manager
+  const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager(clubId);
+  const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
   const { 
-    waitingMatches: onlineWaitingMatches, 
-    addWaitingMatch: addOnlineWaitingMatch, 
-    removeWaitingMatch: removeOnlineWaitingMatch, 
-    startWaitingMatch: startOnlineWaitingMatch,
+    waitingMatches, 
+    addWaitingMatch, 
+    removeWaitingMatch, 
+    startWaitingMatch,
     substitutePlayerInWaiting,
     loadWaitingMatches
   } = useWaitingMatchManager(eventId);
-  
-  // Offline waiting match manager
-  const { 
-    waitingMatches: offlineWaitingMatches, 
-    addWaitingMatch: addOfflineWaitingMatch, 
-    removeWaitingMatch: removeOfflineWaitingMatch, 
-    startWaitingMatch: startOfflineWaitingMatch
-  } = useOfflineWaitingMatchManager(eventId);
-  
-  // Switch between online and offline waiting match management
-  const waitingMatches = isOnline ? onlineWaitingMatches : offlineWaitingMatches;
-  const addWaitingMatch = isOnline ? 
-    addOnlineWaitingMatch : 
-    (match: any, onPlayerStatusUpdate?: any) => addOfflineWaitingMatch(match, onPlayerStatusUpdate);
-  const removeWaitingMatch = isOnline ? removeOnlineWaitingMatch : removeOfflineWaitingMatch;
-  const startWaitingMatch = isOnline ? startOnlineWaitingMatch : startOfflineWaitingMatch;
   
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
@@ -255,6 +205,11 @@ const Index = () => {
   const inProgressPlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.status === 'in_progress');
   }, [eventPlayers]);
+  
+  // Use database active games instead of local state - memoized
+  const currentActiveGames = React.useMemo(() => {
+    return dbActiveGames || [];
+  }, [dbActiveGames]);
 
   const availablePlayersForEvent = React.useMemo(() => {
     return allPlayers.filter(player => 
@@ -324,10 +279,8 @@ const Index = () => {
   // Wrapper function to complete game and immediately refresh event stats
   const handleCompleteGame = async (gameId: string, winner?: 'team1' | 'team2') => {
     await completeGame(gameId, winner);
-    // For offline mode, we don't need to refresh from server
-    if (isOnline) {
-      await refetchEventStats();
-    }
+    // Force immediate refresh of event player stats
+    await refetchEventStats();
   };
 
   const handleCourtCountChange = async (courtCount: number) => {
@@ -436,32 +389,6 @@ const Index = () => {
                 </div>
               </div>
               
-              <OfflineIndicator clubId={syncClubId} />
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={async () => {
-                  if (isOnline) {
-                    window.dispatchEvent(new Event('offline'));
-                    toast.success('Simulated offline mode');
-                  } else {
-                    // Auto-sync before going online
-                    if (hasLocalChanges) {
-                      toast.info('Syncing offline data...');
-                      const success = await fullSync();
-                      if (success) {
-                        toast.success('Data synced successfully');
-                      }
-                    }
-                    window.dispatchEvent(new Event('online'));
-                    toast.success('Back online');
-                  }
-                }}
-                className="flex items-center gap-1"
-              >
-                {isOnline ? 'Go Offline' : 'Go Online'}
-              </Button>
               
               <div className="flex gap-2">
                 {currentEvent && (
@@ -703,8 +630,7 @@ const Index = () => {
                     match.pair1.players[1].id,
                     match.pair2.players[0].id,
                     match.pair2.players[1].id,
-                    availableCourt,
-                    eventPlayers // Pass players array for offline name resolution
+                    availableCourt
                   );
                 }
               }}

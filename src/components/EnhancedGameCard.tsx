@@ -84,21 +84,14 @@ export function EnhancedGameCard({
     }
   };
 
-  // Get player names from either the game object or the available players list
-  const getPlayerName = (playerId: string, position: string, playerName?: string) => {
-    if (playerName) return playerName;
-    const player = availablePlayers?.find(p => p.id === playerId);
-    return player?.name || position;
-  };
-
   const team1Players = [
-    { id: game.player1Id, name: getPlayerName(game.player1Id, 'Player 1', (game as any).player1_name) },
-    { id: game.player2Id, name: getPlayerName(game.player2Id, 'Player 2', (game as any).player2_name) }
+    { id: game.player1Id, name: game.player1Name || 'Player 1' },
+    { id: game.player2Id, name: game.player2Name || 'Player 2' }
   ];
 
   const team2Players = [
-    { id: game.player3Id, name: getPlayerName(game.player3Id, 'Player 3', (game as any).player3_name) },
-    { id: game.player4Id, name: getPlayerName(game.player4Id, 'Player 4', (game as any).player4_name) }
+    { id: game.player3Id, name: game.player3Name || 'Player 3' },
+    { id: game.player4Id, name: game.player4Name || 'Player 4' }
   ];
 
   return (

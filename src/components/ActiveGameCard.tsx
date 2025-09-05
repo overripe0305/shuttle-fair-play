@@ -53,38 +53,9 @@ const getLevelBackgroundColor = (bracket: number) => {
 export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onChangeCourt, availablePlayers, courtCount }: ActiveGameCardProps) {
   const [substitutingPlayer, setSubstitutingPlayer] = useState<string | null>(null);
 
-  const formatPlayerName = (playerId: string, gamesPlayed?: number) => {
-    // Try to get name from game object first (for offline games), then from available players
-    let playerName = 'Unknown';
-    
-    // Check if this is an offline game with stored names
-    if ((game as any).player1_name && (game as any).player1Id === playerId) {
-      playerName = (game as any).player1_name;
-    } else if ((game as any).player2_name && (game as any).player2Id === playerId) {
-      playerName = (game as any).player2_name;
-    } else if ((game as any).player3_name && (game as any).player3Id === playerId) {
-      playerName = (game as any).player3_name;
-    } else if ((game as any).player4_name && (game as any).player4Id === playerId) {
-      playerName = (game as any).player4_name;
-    } else {
-      // Fallback to checking player names from the main game object
-      if (game.player1Id === playerId && game.player1Name) {
-        playerName = game.player1Name;
-      } else if (game.player2Id === playerId && game.player2Name) {
-        playerName = game.player2Name;
-      } else if (game.player3Id === playerId && game.player3Name) {
-        playerName = game.player3Name;
-      } else if (game.player4Id === playerId && game.player4Name) {
-        playerName = game.player4Name;
-      } else {
-        // Final fallback to available players list
-        const player = availablePlayers.find(p => p.id === playerId);
-        playerName = player?.name || 'Unknown';
-      }
-    }
-    
+  const formatPlayerName = (playerName?: string, gamesPlayed?: number) => {
     console.log('Player name and games in ActiveGameCard:', playerName, gamesPlayed);
-    return `G${gamesPlayed || 0}-${playerName}`;
+    return `G${gamesPlayed || 0}-${playerName || 'Unknown'}`;
   };
 
   const handleSubstitute = (newPlayerId: string) => {
@@ -180,7 +151,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player1Id))}`}>
-                  {formatPlayerName(game.player1Id, getPlayerGames(game.player1Id))}
+                  {formatPlayerName(game.player1Name, getPlayerGames(game.player1Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player1Id))} variant="secondary">
                   {getPlayerLevel(game.player1Id)}
@@ -198,7 +169,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player2Id))}`}>
-                  {formatPlayerName(game.player2Id, getPlayerGames(game.player2Id))}
+                  {formatPlayerName(game.player2Name, getPlayerGames(game.player2Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player2Id))} variant="secondary">
                   {getPlayerLevel(game.player2Id)}
@@ -221,7 +192,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player3Id))}`}>
-                  {formatPlayerName(game.player3Id, getPlayerGames(game.player3Id))}
+                  {formatPlayerName(game.player3Name, getPlayerGames(game.player3Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player3Id))} variant="secondary">
                   {getPlayerLevel(game.player3Id)}
@@ -239,7 +210,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player4Id))}`}>
-                  {formatPlayerName(game.player4Id, getPlayerGames(game.player4Id))}
+                  {formatPlayerName(game.player4Name, getPlayerGames(game.player4Id))}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player4Id))} variant="secondary">
                   {getPlayerLevel(game.player4Id)}
@@ -270,7 +241,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                   onClick={() => handleSubstitute(player.id)}
                   className={`text-xs text-white px-2 py-1 rounded ${getLevelBackgroundColor(player.level?.bracket || 0)}`}
                 >
-                  G{player.gamesPlayed || 0}-{player.name}
+                  {formatPlayerName(player.name, player.gamesPlayed)}
                 </Button>
               ))}
               <Button
