@@ -174,13 +174,21 @@ export const useOfflineSync = (clubId?: string) => {
 
     try {
       setIsSyncing(true);
+      console.log('Starting upload changes for club:', clubId);
       
       const localPlayers = loadFromLocal('players');
       const localGames = loadFromLocal('games');
       const localWaitingMatches = loadFromLocal('waitingMatches');
 
+      console.log('Local data to upload:', {
+        playersCount: localPlayers?.length || 0,
+        gamesCount: localGames?.length || 0,
+        waitingMatchesCount: localWaitingMatches?.length || 0
+      });
+
       // Upload players
       if (localPlayers && localPlayers.length > 0) {
+        console.log('Uploading players...');
         for (const player of localPlayers) {
           const { error } = await supabase
             .from('players')
@@ -197,32 +205,69 @@ export const useOfflineSync = (clubId?: string) => {
               club_id: clubId
             });
           
-          if (error) throw error;
+          if (error) {
+            console.error('Player upload error:', error);
+            throw error;
+          }
         }
+        console.log('Players upload completed');
       }
 
       // Upload games
       if (localGames && localGames.length > 0) {
         for (const game of localGames) {
+          const gameData = {
+            id: game.id,
+            event_id: game.event_id,
+            player1_id: game.player1_id,
+            player2_id: game.player2_id,
+            player3_id: game.player3_id,
+            player4_id: game.player4_id,
+            court_id: game.court_id,
+            completed: game.completed,
+            winner: game.winner,
+            start_time: game.start_time,
+            created_at: game.created_at,
+            updated_at: new Date().toISOString()
+          };
+          
           const { error } = await supabase
             .from('games')
-            .upsert(game);
+            .upsert(gameData);
           
-          if (error) throw error;
+          if (error) {
+            console.error('Game upload error:', error, 'Game data:', gameData);
+            throw error;
+          }
         }
       }
 
       // Upload waiting matches
       if (localWaitingMatches && localWaitingMatches.length > 0) {
         for (const match of localWaitingMatches) {
+          const matchData = {
+            id: match.id,
+            event_id: match.eventId,
+            player1_id: match.player1Id,
+            player2_id: match.player2Id,
+            player3_id: match.player3Id,
+            player4_id: match.player4Id,
+            match_data: match.matchData,
+            created_at: match.createdAt
+          };
+          
           const { error } = await supabase
             .from('waiting_matches')
-            .upsert(match);
+            .upsert(matchData);
           
-          if (error) throw error;
+          if (error) {
+            console.error('Waiting match upload error:', error, 'Match data:', matchData);
+            throw error;
+          }
         }
       }
-
+      
+      console.log('Upload completed successfully');
       setLastSyncTime(new Date());
       setHasLocalChanges(false);
       localStorage.setItem(getStorageKey('lastSync'), new Date().toISOString());
