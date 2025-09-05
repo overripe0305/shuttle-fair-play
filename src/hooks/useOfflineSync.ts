@@ -34,12 +34,16 @@ export const useOfflineSync = (clubId?: string) => {
     };
   }, []);
 
-  // Load last sync time
+  // Load last sync time and local changes state
   useEffect(() => {
     const lastSync = localStorage.getItem(getStorageKey('lastSync'));
     if (lastSync) {
       setLastSyncTime(new Date(lastSync));
     }
+    
+    // Initialize hasLocalChanges from localStorage
+    const hasChanges = localStorage.getItem(getStorageKey('hasChanges'));
+    setHasLocalChanges(hasChanges === 'true');
   }, [clubId]);
 
   // Save data to local storage

@@ -99,7 +99,7 @@ const Index = () => {
   const { activeGames: offlineActiveGames, createGame: createOfflineGame, completeGame: completeOfflineGame, cancelGame: cancelOfflineGame, updateGameCourt: updateOfflineGameCourt, replacePlayerInGame: replaceInOfflineGame } = useOfflineGameManager(eventId);
   
   // Use offline sync hook to determine which data source to use
-  const { isOnline } = useOfflineSync(syncClubId);
+  const { isOnline, fullSync, hasLocalChanges } = useOfflineSync(syncClubId);
   
   // Switch between online and offline data based on connection
   const allPlayers = isOnline ? onlinePlayers : offlinePlayers;
@@ -441,11 +441,19 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => {
+                onClick={async () => {
                   if (isOnline) {
                     window.dispatchEvent(new Event('offline'));
                     toast.success('Simulated offline mode');
                   } else {
+                    // Auto-sync before going online
+                    if (hasLocalChanges) {
+                      toast.info('Syncing offline data...');
+                      const success = await fullSync();
+                      if (success) {
+                        toast.success('Data synced successfully');
+                      }
+                    }
                     window.dispatchEvent(new Event('online'));
                     toast.success('Back online');
                   }
