@@ -11,15 +11,27 @@ export const useEnhancedPlayerManager = (clubId?: string) => {
     if (clubId) {
       loadPlayers();
       
-      // Subscribe to real-time updates
+      // Subscribe to real-time updates with unique channel name
       const channel = supabase
-        .channel('players-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
-          loadPlayers();
+        .channel(`players-changes-${clubId}-${Math.random().toString(36).substr(2, 9)}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'players',
+          filter: `club_id=eq.${clubId}`
+        }, (payload) => {
+          console.log('Player status update received:', payload);
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            loadPlayers();
+          }, 50);
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Player subscription status:', status);
+        });
 
       return () => {
+        console.log('Cleaning up player subscription');
         supabase.removeChannel(channel);
       };
     }
