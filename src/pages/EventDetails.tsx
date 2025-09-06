@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
+import { useDataSync } from '@/hooks/useDataSync';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,18 +18,20 @@ import {
   Play,
   Camera,
   Plus,
-  Edit
+  Edit,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getLevelDisplay, MajorLevel, SubLevel } from '@/types/player';
 import { toast } from 'sonner';
 
 const EventDetails = () => {
-  const { eventId } = useParams();
+  const { eventId, clubId } = useParams();
   const navigate = useNavigate();
-  const { events, updateEventStatus, addPlayerToEvent } = useEventManager();
-  const { players, addPlayer, updatePlayer } = useEnhancedPlayerManager();
+  const { events, updateEventStatus, addPlayerToEvent } = useEventManager(clubId);
+  const { players, addPlayer, updatePlayer } = useEnhancedPlayerManager(clubId);
   const { getPlayerStats } = useEventPlayerStats(eventId);
+  const { performSync, isSyncing } = useDataSync(eventId, clubId);
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<{[key: string]: number}>({});
@@ -156,6 +159,15 @@ const EventDetails = () => {
             </div>
             
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={performSync}
+                disabled={isSyncing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Data'}
+              </Button>
               <Badge 
                 variant={event.status === 'active' ? 'default' : 'secondary'}
               >
