@@ -26,9 +26,9 @@ export function useGameManager(eventId?: string) {
     if (eventId) {
       loadActiveGames();
       
-      // Set up real-time subscription
+      // Set up real-time subscription with unique channel name
       const channel = supabase
-        .channel(`active-games-${eventId}`)
+        .channel(`active-games-${eventId}-${Math.random().toString(36).substr(2, 9)}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -39,15 +39,34 @@ export function useGameManager(eventId?: string) {
           // Add a small delay to ensure database is consistent
           setTimeout(() => {
             loadActiveGames();
-          }, 100);
+          }, 50);
         })
         .subscribe((status) => {
           console.log('Active games subscription status:', status);
         });
 
+      // Also subscribe to player status changes to refresh game states
+      const playerChannel = supabase
+        .channel(`game-player-changes-${eventId}-${Math.random().toString(36).substr(2, 9)}`)
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'players'
+        }, (payload) => {
+          console.log('Player status update for games:', payload);
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            loadActiveGames();
+          }, 50);
+        })
+        .subscribe((status) => {
+          console.log('Game player subscription status:', status);
+        });
+
       return () => {
-        console.log('Cleaning up active games subscription');
+        console.log('Cleaning up active games subscriptions');
         supabase.removeChannel(channel);
+        supabase.removeChannel(playerChannel);
       };
     }
   }, [eventId]);

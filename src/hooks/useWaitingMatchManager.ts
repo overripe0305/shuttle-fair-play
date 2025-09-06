@@ -21,16 +21,47 @@ export function useWaitingMatchManager(eventId?: string) {
     if (eventId) {
       loadWaitingMatches();
       
-      // Subscribe to real-time updates
+      // Subscribe to real-time updates with unique channel name
       const channel = supabase
-        .channel('waiting-matches-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'waiting_matches' }, () => {
-          loadWaitingMatches();
+        .channel(`waiting-matches-changes-${eventId}-${Math.random().toString(36).substr(2, 9)}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'waiting_matches',
+          filter: `event_id=eq.${eventId}`
+        }, (payload) => {
+          console.log('Waiting match update received:', payload);
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            loadWaitingMatches();
+          }, 50);
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Waiting match subscription status:', status);
+        });
+
+      // Also subscribe to player status changes to refresh waiting matches
+      const playerChannel = supabase
+        .channel(`waiting-player-changes-${eventId}-${Math.random().toString(36).substr(2, 9)}`)
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'players'
+        }, (payload) => {
+          console.log('Player status update for waiting matches:', payload);
+          // Small delay to ensure database consistency
+          setTimeout(() => {
+            loadWaitingMatches();
+          }, 50);
+        })
+        .subscribe((status) => {
+          console.log('Waiting match player subscription status:', status);
+        });
 
       return () => {
+        console.log('Cleaning up waiting match subscriptions');
         supabase.removeChannel(channel);
+        supabase.removeChannel(playerChannel);
       };
     }
   }, [eventId]);
