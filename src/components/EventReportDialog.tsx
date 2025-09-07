@@ -16,7 +16,7 @@ import {
   Trophy, Medal, Target, Calendar, Clock, 
   DollarSign, CreditCard, Users, Receipt, 
   Search, ArrowUpDown, Plus, Edit, X, Check,
-  History, BarChart3, Wallet
+  History, BarChart3, Wallet, RefreshCw, Filter, FilterX
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -81,24 +81,65 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
   // Match History state
   const [gameReports, setGameReports] = useState<GameReport[]>([]);
   const [editingGame, setEditingGame] = useState<string | null>(null);
+  const [matchHistorySearch, setMatchHistorySearch] = useState('');
+  const [selectedPlayerHistory, setSelectedPlayerHistory] = useState<{ playerId: string; playerName: string } | null>(null);
   
-  // Player Rankings state (reused from current EventHistoryDialog)
-  const sortedPlayers = [...players].sort((a, b) => {
-    const aWins = a.wins || 0;
-    const bWins = b.wins || 0;
-    const winsResult = bWins - aWins;
-    if (winsResult !== 0) return winsResult;
-    
-    const levelResult = b.level.bracket - a.level.bracket;
-    if (levelResult !== 0) return levelResult;
-    
-    const aLosses = a.losses || 0;
-    const bLosses = b.losses || 0;
-    const lossesResult = aLosses - bLosses;
-    if (lossesResult !== 0) return lossesResult;
-    
-    return a.name.localeCompare(b.name);
-  });
+  // Player Rankings state - improved ranking logic
+  const getRankedPlayers = () => {
+    const playersWithRanking = players.map(player => {
+      const wins = player.wins || 0;
+      const losses = player.losses || 0;
+      const total = wins + losses;
+      const winRate = total > 0 ? wins / total : 0;
+      
+      return {
+        ...player,
+        winRate,
+        displayWinRate: total > 0 ? Math.round(winRate * 100) : 0
+      };
+    });
+
+    // Sort by: Win rate -> Level -> Least losses
+    playersWithRanking.sort((a, b) => {
+      // First by win rate (descending)
+      if (a.winRate !== b.winRate) return b.winRate - a.winRate;
+      
+      // Then by level bracket (descending)
+      if (a.level.bracket !== b.level.bracket) return b.level.bracket - a.level.bracket;
+      
+      // Then by least losses (ascending)
+      const aLosses = a.losses || 0;
+      const bLosses = b.losses || 0;
+      if (aLosses !== bLosses) return aLosses - bLosses;
+      
+      // If all are equal, they tie (don't sort alphabetically)
+      return 0;
+    });
+
+    // Assign ranks with ties
+    let currentRank = 1;
+    const rankedPlayers = playersWithRanking.map((player, index) => {
+      if (index > 0) {
+        const prev = playersWithRanking[index - 1];
+        const current = player;
+        
+        // Check if this player should have the same rank as previous
+        const sameWinRate = Math.abs(prev.winRate - current.winRate) < 0.001;
+        const sameLevel = prev.level.bracket === current.level.bracket;
+        const sameLosses = (prev.losses || 0) === (current.losses || 0);
+        
+        if (!sameWinRate || !sameLevel || !sameLosses) {
+          currentRank = index + 1;
+        }
+      }
+      
+      return { ...player, rank: currentRank };
+    });
+
+    return rankedPlayers;
+  };
+
+  const sortedPlayers = getRankedPlayers();
 
   // Billing state (reused from BillingDialog)
   const [playerReports, setPlayerReports] = useState<PlayerReport[]>([]);
@@ -115,6 +156,9 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
   const [cashTotal, setCashTotal] = useState(0);
   const [onlineTotal, setOnlineTotal] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  
+  // Player pool filters
+  const [statusFilter, setStatusFilter] = useState<string>('');
 
   const currentEvent = events.find(e => e.id === eventId);
   const queueFee = currentEvent?.queueFee || 0;
@@ -222,6 +266,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
 
   const loadPaymentTotals = async () => {
     try {
+      // Get payments specifically for this event
       const { data: payments, error } = await supabase
         .from('event_payments')
         .select('amount, payment_method')
@@ -291,6 +336,12 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
 
       setEditingGame(null);
       loadGameReports();
+      
+      // Trigger a refresh of player stats if we're in player ranking view
+      if (selectedReport === 'player-ranking') {
+        // Force a re-render by updating component state
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error updating game result:', error);
       toast({
@@ -466,13 +517,40 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
     </TableHead>
   );
 
-  const renderMatchHistory = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <History className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">Match History</h3>
-        <Badge variant="secondary">{gameReports.length} Games</Badge>
-      </div>
+  const renderMatchHistory = () => {
+    // Filter games based on search term
+    const filteredGames = gameReports.filter(game => {
+      if (!matchHistorySearch) return true;
+      
+      const searchLower = matchHistorySearch.toLowerCase();
+      return (
+        game.player1Name.toLowerCase().includes(searchLower) ||
+        game.player2Name.toLowerCase().includes(searchLower) ||
+        game.player3Name.toLowerCase().includes(searchLower) ||
+        game.player4Name.toLowerCase().includes(searchLower)
+      );
+    });
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            <h3 className="text-lg font-semibold">Match History</h3>
+            <Badge variant="secondary">{filteredGames.length} Games</Badge>
+          </div>
+        </div>
+        
+        {/* Search bar for match history */}
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by player name..."
+            value={matchHistorySearch}
+            onChange={(e) => setMatchHistorySearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       
       <Table>
         <TableHeader>
@@ -487,7 +565,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {gameReports.map((game) => (
+          {filteredGames.map((game) => (
             <TableRow key={game.id}>
               <TableCell>{game.courtId}</TableCell>
               <TableCell>
@@ -558,13 +636,126 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
         </TableBody>
       </Table>
       
+      {filteredGames.length === 0 && gameReports.length > 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No games found matching search criteria
+        </div>
+      )}
+      
       {gameReports.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           No games have been played yet
         </div>
       )}
     </div>
-  );
+    );
+  };
+
+  const showPlayerMatchHistory = async (playerId: string, playerName: string) => {
+    setSelectedPlayerHistory({ playerId, playerName });
+  };
+
+  const renderPlayerMatchHistory = () => {
+    if (!selectedPlayerHistory) return null;
+
+    const playerGames = gameReports.filter(game =>
+      game.player1Name === selectedPlayerHistory.playerName ||
+      game.player2Name === selectedPlayerHistory.playerName ||
+      game.player3Name === selectedPlayerHistory.playerName ||
+      game.player4Name === selectedPlayerHistory.playerName
+    );
+
+    return (
+      <Dialog open={!!selectedPlayerHistory} onOpenChange={() => setSelectedPlayerHistory(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Match History - {selectedPlayerHistory.playerName}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              <h3 className="text-lg font-semibold">Games Played</h3>
+              <Badge variant="secondary">{playerGames.length} Games</Badge>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Court</TableHead>
+                  <TableHead>Team 1</TableHead>
+                  <TableHead>Team 2</TableHead>
+                  <TableHead>Start Time</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Winner</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {playerGames.map((game) => (
+                  <TableRow key={game.id}>
+                    <TableCell>{game.courtId}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className={game.player1Name === selectedPlayerHistory.playerName ? 'font-bold text-primary' : ''}>
+                          {game.player1Name}
+                        </div>
+                        <div className={game.player2Name === selectedPlayerHistory.playerName ? 'font-bold text-primary' : ''}>
+                          {game.player2Name}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className={game.player3Name === selectedPlayerHistory.playerName ? 'font-bold text-primary' : ''}>
+                          {game.player3Name}
+                        </div>
+                        <div className={game.player4Name === selectedPlayerHistory.playerName ? 'font-bold text-primary' : ''}>
+                          {game.player4Name}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>{game.startTime.toLocaleDateString()}</div>
+                        <div>{game.startTime.toLocaleTimeString()}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={game.completed ? 'default' : 'secondary'}>
+                        {game.completed ? 'Completed' : 'In Progress'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {game.completed && game.winner && (
+                        <Badge variant="outline">
+                          Team {game.winner === 'team1' ? '1' : '2'}
+                        </Badge>
+                      )}
+                      {game.completed && !game.winner && (
+                        <Badge variant="destructive">No Contest</Badge>
+                      )}
+                      {!game.completed && '-'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            
+            {playerGames.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No games found for this player
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  const refreshPlayerRankings = () => {
+    // Force refresh of player stats
+    window.location.reload();
+  };
 
   const renderPlayerRankings = () => (
     <div className="space-y-4">
@@ -597,20 +788,32 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            <CardTitle>Player Rankings</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                <CardTitle>Player Rankings</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Sorted by: Win Rate → Level → Least Losses (Click name to view profile, Games to view match history)
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshPlayerRankings}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Sorted by: Wins → Level → Losses → Name (Click name to view profile)
-          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {sortedPlayers.map((player, index) => {
+            {sortedPlayers.map((player) => {
               const wins = player.wins || 0;
               const losses = player.losses || 0;
-              const winRate = getWinRate(wins, losses);
               
               return (
                 <div 
@@ -618,9 +821,9 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 w-8">
-                      {getRankIcon(index)}
-                      <span className="text-sm font-medium">#{index + 1}</span>
+                    <div className="flex items-center gap-2 w-12">
+                      {getRankIcon(player.rank - 1)}
+                      <span className="text-sm font-medium">#{player.rank}</span>
                     </div>
                     <div>
                       <button
@@ -637,7 +840,12 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                   
                   <div className="flex items-center gap-4">
                     <div className="text-center">
-                      <div className="text-lg font-bold">{player.gamesPlayed}</div>
+                      <button
+                        onClick={() => showPlayerMatchHistory(player.id, player.name)}
+                        className="text-lg font-bold hover:underline cursor-pointer text-primary"
+                      >
+                        {player.gamesPlayed}
+                      </button>
                       <div className="text-xs text-muted-foreground">Games</div>
                     </div>
                     
@@ -651,8 +859,8 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                       <div className="text-xs text-muted-foreground">Losses</div>
                     </div>
                     
-                    <Badge variant={winRate >= 70 ? 'default' : winRate >= 50 ? 'secondary' : 'outline'}>
-                      {winRate}% WR
+                    <Badge variant={player.displayWinRate >= 70 ? 'default' : player.displayWinRate >= 50 ? 'secondary' : 'outline'}>
+                      {player.displayWinRate}% WR
                     </Badge>
                   </div>
                 </div>
@@ -667,6 +875,55 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
           </div>
         </CardContent>
       </Card>
+      
+      {/* Player Pool Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Player Pool
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="waiting">Waiting</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="queued">Queued</SelectItem>
+                </SelectContent>
+              </Select>
+              {statusFilter && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setStatusFilter('')}
+                  className="flex items-center gap-1"
+                >
+                  <FilterX className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-muted-foreground">
+            {statusFilter 
+              ? `Showing players with status: ${statusFilter}`
+              : `Showing all ${players.length} players`
+            }
+          </div>
+        </CardContent>
+      </Card>
+      
+      {renderPlayerMatchHistory()}
     </div>
   );
 
