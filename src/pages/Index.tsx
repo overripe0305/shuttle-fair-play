@@ -8,6 +8,7 @@ import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
+import { useDataSync } from '@/hooks/useDataSync';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
@@ -35,7 +36,8 @@ import {
   Plus,
   Edit2,
   FileText,
-  Settings
+  Settings,
+  RefreshCw
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
 import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
@@ -97,6 +99,9 @@ const Index = () => {
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
   
   const { getPlayerStats, eventPlayerStats, refetch: refetchEventStats, updateCounter } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
+  
+  // Initialize data sync hook
+  const { performSync, isSyncing } = useDataSync(eventId, clubId);
   
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
@@ -393,6 +398,15 @@ const Index = () => {
               <div className="flex gap-2">
                 {currentEvent && (
                   <>
+                    <Button 
+                      size="sm" 
+                      onClick={performSync}
+                      variant="outline"
+                      disabled={isSyncing}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                      Sync Data
+                    </Button>
                     <Button 
                       size="sm" 
                       onClick={() => setIsEventSettingsOpen(true)}
