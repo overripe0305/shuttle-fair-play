@@ -158,7 +158,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
   const [totalRevenue, setTotalRevenue] = useState(0);
   
   // Player pool filters
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const currentEvent = events.find(e => e.id === eventId);
   const queueFee = currentEvent?.queueFee || 0;
@@ -890,7 +890,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="available">Available</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="waiting">Waiting</SelectItem>
@@ -899,11 +899,11 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                   <SelectItem value="queued">Queued</SelectItem>
                 </SelectContent>
               </Select>
-              {statusFilter && (
+              {statusFilter !== 'all' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setStatusFilter('')}
+                  onClick={() => setStatusFilter('all')}
                   className="flex items-center gap-1"
                 >
                   <FilterX className="h-4 w-4" />
@@ -915,7 +915,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">
-            {statusFilter 
+            {statusFilter !== 'all'
               ? `Showing players with status: ${statusFilter}`
               : `Showing all ${players.length} players`
             }
