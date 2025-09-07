@@ -99,9 +99,14 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
       };
     });
 
-    // Sort by: Win rate -> Level -> Least losses
+    // Sort by: Most wins -> Highest Win rate -> Highest Level -> Least Losses
     playersWithRanking.sort((a, b) => {
-      // First by win rate (descending)
+      // First by most wins (descending)
+      const aWins = a.wins || 0;
+      const bWins = b.wins || 0;
+      if (aWins !== bWins) return bWins - aWins;
+      
+      // Then by win rate (descending)
       if (a.winRate !== b.winRate) return b.winRate - a.winRate;
       
       // Then by level bracket (descending)
@@ -124,11 +129,12 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
         const current = player;
         
         // Check if this player should have the same rank as previous
+        const sameWins = (prev.wins || 0) === (current.wins || 0);
         const sameWinRate = Math.abs(prev.winRate - current.winRate) < 0.001;
         const sameLevel = prev.level.bracket === current.level.bracket;
         const sameLosses = (prev.losses || 0) === (current.losses || 0);
         
-        if (!sameWinRate || !sameLevel || !sameLosses) {
+        if (!sameWins || !sameWinRate || !sameLevel || !sameLosses) {
           currentRank = index + 1;
         }
       }
@@ -339,8 +345,8 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
       
       // Trigger a refresh of player stats if we're in player ranking view
       if (selectedReport === 'player-ranking') {
-        // Force a re-render by updating component state
-        window.location.reload();
+        // Just reload the reports without full page refresh
+        loadGameReports();
       }
     } catch (error) {
       console.error('Error updating game result:', error);
@@ -568,18 +574,26 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
           {filteredGames.map((game) => (
             <TableRow key={game.id}>
               <TableCell>{game.courtId}</TableCell>
-              <TableCell>
-                <div className="text-sm">
-                  <div>{game.player1Name}</div>
-                  <div>{game.player2Name}</div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="text-sm">
-                  <div>{game.player3Name}</div>
-                  <div>{game.player4Name}</div>
-                </div>
-              </TableCell>
+               <TableCell>
+                 <div className="text-sm">
+                   <div className={game.completed && game.winner === 'team1' ? 'text-green-600 font-semibold' : ''}>
+                     {game.player1Name}
+                   </div>
+                   <div className={game.completed && game.winner === 'team1' ? 'text-green-600 font-semibold' : ''}>
+                     {game.player2Name}
+                   </div>
+                 </div>
+               </TableCell>
+               <TableCell>
+                 <div className="text-sm">
+                   <div className={game.completed && game.winner === 'team2' ? 'text-green-600 font-semibold' : ''}>
+                     {game.player3Name}
+                   </div>
+                   <div className={game.completed && game.winner === 'team2' ? 'text-green-600 font-semibold' : ''}>
+                     {game.player4Name}
+                   </div>
+                 </div>
+               </TableCell>
               <TableCell>
                 <div className="text-sm">
                   <div>{game.startTime.toLocaleDateString()}</div>
@@ -651,9 +665,6 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
     );
   };
 
-  const showPlayerMatchHistory = async (playerId: string, playerName: string) => {
-    setSelectedPlayerHistory({ playerId, playerName });
-  };
 
   const renderPlayerMatchHistory = () => {
     if (!selectedPlayerHistory) return null;
@@ -752,9 +763,21 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
     );
   };
 
-  const refreshPlayerRankings = () => {
-    // Force refresh of player stats
-    window.location.reload();
+  const refreshPlayerRankings = async () => {
+    // Refresh player stats without full page reload
+    if (selectedReport === 'player-ranking') {
+      loadGameReports();
+      // Trigger a re-fetch of the player stats by parent component
+      window.dispatchEvent(new CustomEvent('refreshPlayerStats'));
+    }
+  };
+
+  const showPlayerMatchHistory = async (playerId: string, playerName: string) => {
+    // Load game reports if not already loaded
+    if (gameReports.length === 0) {
+      await loadGameReports();
+    }
+    setSelectedPlayerHistory({ playerId, playerName });
   };
 
   const renderPlayerRankings = () => (
@@ -794,9 +817,9 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                 <BarChart3 className="h-5 w-5" />
                 <CardTitle>Player Rankings</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Sorted by: Win Rate → Level → Least Losses (Click name to view profile, Games to view match history)
-              </p>
+               <p className="text-sm text-muted-foreground">
+                 Sorted by: Most Wins → Highest Win Rate → Highest Level → Least Losses (Click name to view profile, Games to view match history)
+               </p>
             </div>
             <Button 
               variant="outline" 
