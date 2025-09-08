@@ -163,8 +163,6 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
   const [onlineTotal, setOnlineTotal] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   
-  // Player pool filters
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const currentEvent = events.find(e => e.id === eventId);
   const queueFee = currentEvent?.queueFee || 0;
@@ -246,9 +244,18 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
 
       if (playersError) throw playersError;
 
+      // Get payments specifically for this event
+      const { data: eventPayments, error: paymentsError } = await supabase
+        .from('event_payments')
+        .select('player_id, payment_method, payment_date')
+        .eq('event_id', eventId);
+
+      if (paymentsError) throw paymentsError;
+
       const reports: PlayerReport[] = await Promise.all(
         (playersData || []).map(async (player) => {
           const stats = await getPlayerStats(player.id);
+          const eventPayment = eventPayments?.find(p => p.player_id === player.id);
           
           return {
             id: player.id,
@@ -257,9 +264,9 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
             totalMinutes: 0,
             wins: stats?.wins || 0,
             losses: stats?.losses || 0,
-            paymentStatus: player.payment_status as 'paid' | 'unpaid',
-            paymentMethod: player.payment_method as 'cash' | 'online' | undefined,
-            paymentDate: player.payment_date
+            paymentStatus: eventPayment ? 'paid' : 'unpaid',
+            paymentMethod: eventPayment?.payment_method as 'cash' | 'online' | undefined,
+            paymentDate: eventPayment?.payment_date
           };
         })
       );
@@ -364,17 +371,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
 
   const handleMarkPaid = async (playerId: string, method: 'cash' | 'online') => {
     try {
-      const { error: playerError } = await supabase
-        .from('players')
-        .update({ 
-          payment_status: 'paid',
-          payment_method: method,
-          payment_date: new Date().toISOString()
-        })
-        .eq('id', playerId);
-
-      if (playerError) throw playerError;
-
+      // Just insert into event_payments table - don't update global player payment status
       const { error: paymentError } = await supabase
         .from('event_payments')
         .insert({
@@ -764,12 +761,10 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
   };
 
   const refreshPlayerRankings = async () => {
-    // Refresh player stats without full page reload
-    if (selectedReport === 'player-ranking') {
-      loadGameReports();
-      // Trigger a re-fetch of the player stats by parent component
-      window.dispatchEvent(new CustomEvent('refreshPlayerStats'));
-    }
+    // Refresh player stats and billing data
+    await loadGameReports();
+    await loadPlayerReports();
+    await loadPaymentTotals();
   };
 
   const showPlayerMatchHistory = async (playerId: string, playerName: string) => {
@@ -899,52 +894,6 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
         </CardContent>
       </Card>
       
-      {/* Player Pool Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Player Pool
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="waiting">Waiting</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
-                  <SelectItem value="paused">Paused</SelectItem>
-                  <SelectItem value="queued">Queued</SelectItem>
-                </SelectContent>
-              </Select>
-              {statusFilter !== 'all' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setStatusFilter('all')}
-                  className="flex items-center gap-1"
-                >
-                  <FilterX className="h-4 w-4" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground">
-            {statusFilter !== 'all'
-              ? `Showing players with status: ${statusFilter}`
-              : `Showing all ${players.length} players`
-            }
-          </div>
-        </CardContent>
-      </Card>
       
       {renderPlayerMatchHistory()}
     </div>

@@ -51,6 +51,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState<number | 'All'>('All');
   const [gamesFilter, setGamesFilter] = useState<number | 'All'>('All');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [isEventSettingsOpen, setIsEventSettingsOpen] = useState(false);
@@ -143,7 +144,8 @@ const Index = () => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesLevel = levelFilter === 'All' || player.level.bracket === levelFilter;
       const matchesGames = gamesFilter === 'All' || player.gamesPlayed === gamesFilter;
-      return matchesSearch && matchesLevel && matchesGames;
+      const matchesStatus = statusFilter === 'all' || player.status === statusFilter;
+      return matchesSearch && matchesLevel && matchesGames && matchesStatus;
     });
 
     // Sort players based on selected criteria
@@ -510,30 +512,69 @@ const Index = () => {
                      }, [eventPlayers, levelFilter])}
                    </div>
 
-                   <div className="flex gap-2 flex-wrap">
-                     <span className="text-sm font-medium text-muted-foreground">Games:</span>
-                     <Button
-                       variant={gamesFilter === 'All' ? 'default' : 'outline'}
-                       size="sm"
-                       onClick={() => setGamesFilter('All')}
-                     >
-                       All
-                     </Button>
-                     {React.useMemo(() => {
-                       const availableGameCounts = [...new Set(eventPlayers.map(p => p.gamesPlayed))].sort((a, b) => a - b);
-                       return availableGameCounts.map(gameCount => (
-                         <Button
-                           key={gameCount}
-                           variant={gamesFilter === gameCount ? 'default' : 'outline'}
-                           size="sm"
-                           onClick={() => setGamesFilter(gameCount)}
-                           className={gamesFilter === gameCount ? 'text-white' : ''}
-                         >
-                           {gameCount}
-                         </Button>
-                       ));
-                     }, [eventPlayers, gamesFilter])}
-                   </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-muted-foreground">Games:</span>
+                      <Button
+                        variant={gamesFilter === 'All' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setGamesFilter('All')}
+                      >
+                        All
+                      </Button>
+                      {React.useMemo(() => {
+                        const availableGameCounts = [...new Set(eventPlayers.map(p => p.gamesPlayed))].sort((a, b) => a - b);
+                        return availableGameCounts.map(gameCount => (
+                          <Button
+                            key={gameCount}
+                            variant={gamesFilter === gameCount ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setGamesFilter(gameCount)}
+                            className={gamesFilter === gameCount ? 'text-white' : ''}
+                          >
+                            {gameCount}
+                          </Button>
+                        ));
+                      }, [eventPlayers, gamesFilter])}
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                      <Button
+                        variant={statusFilter === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStatusFilter('all')}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant={statusFilter === 'available' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStatusFilter('available')}
+                      >
+                        Available
+                      </Button>
+                      <Button
+                        variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStatusFilter('in_progress')}
+                      >
+                        In Progress
+                      </Button>
+                      <Button
+                        variant={statusFilter === 'waiting' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStatusFilter('waiting')}
+                      >
+                        Waiting
+                      </Button>
+                      <Button
+                        variant={statusFilter === 'paused' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStatusFilter('paused')}
+                      >
+                        Paused
+                      </Button>
+                    </div>
 
                   <div className="flex gap-2 flex-wrap">
                     <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
