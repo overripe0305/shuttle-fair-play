@@ -85,12 +85,14 @@ export function DraggableActiveGameCard({
     const draggedId = active.id as string;
     const overId = over.id as string;
     
-    // Extract player IDs from drag-{gameId}-{playerId} format
-    const draggedPlayerId = draggedId.split('-')[2];
-    const targetPlayerId = overId.split('-')[2];
-    
-    if (draggedPlayerId !== targetPlayerId) {
-      onPlayerSwap(game.id, draggedPlayerId, targetPlayerId);
+    // Both IDs should be in format drag-{gameId}-{playerId} or drop-{gameId}-{playerId}
+    if (draggedId.startsWith('drag-') && overId.startsWith('drop-')) {
+      const draggedPlayerId = draggedId.split('-')[2];
+      const targetPlayerId = overId.split('-')[2];
+      
+      if (draggedPlayerId && targetPlayerId && draggedPlayerId !== targetPlayerId) {
+        onPlayerSwap(game.id, draggedPlayerId, targetPlayerId);
+      }
     }
   };
 
@@ -119,7 +121,7 @@ export function DraggableActiveGameCard({
     { id: game.player4Id, name: game.player4Name || 'Player 4' }
   ];
 
-  // Draggable Player Component
+  // Draggable Player Component with better drop zone handling
   function DraggablePlayer({ playerId, playerName, teamLabel }: {
     playerId: string;
     playerName: string;
@@ -144,6 +146,7 @@ export function DraggableActiveGameCard({
 
     const style = transform ? {
       transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      zIndex: 1000,
     } : undefined;
 
     const setNodeRef = (node: HTMLElement | null) => {
@@ -155,16 +158,17 @@ export function DraggableActiveGameCard({
       <div
         ref={setNodeRef}
         style={style}
-        className={`flex items-center justify-between p-1.5 rounded text-xs transition-colors ${
-          isDragging ? 'opacity-50' : ''
+        className={`flex items-center justify-between p-1.5 rounded text-xs transition-all ${
+          isDragging ? 'opacity-50 bg-primary/10 border-2 border-primary scale-105' : ''
         } ${
-          isOver ? 'bg-primary/20 border-2 border-primary' : 'bg-muted'
+          isOver && !isDragging ? 'bg-primary/20 border-2 border-primary scale-105' : 'bg-muted hover:bg-muted/80'
         }`}
       >
         <div 
           {...listeners}
           {...attributes}
-          className="flex-1 cursor-move flex items-center"
+          className="flex-1 cursor-move flex items-center select-none"
+          style={{ touchAction: 'none' }}
         >
           <span className="font-medium truncate">{playerName}</span>
         </div>
@@ -172,7 +176,7 @@ export function DraggableActiveGameCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-5 w-5 p-0"
+            className="h-5 w-5 p-0 ml-1 shrink-0"
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
