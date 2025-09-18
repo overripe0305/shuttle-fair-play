@@ -13,9 +13,10 @@ interface AddPlayerToEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availablePlayers: EnhancedPlayer[];
-  onAddExistingPlayer: (playerId: string) => void;
-  onAddNewPlayer: (playerData: { name: string; majorLevel: MajorLevel; subLevel?: SubLevel }) => void;
+  onAddExistingPlayer: (playerId: string) => Promise<void>;
+  onAddNewPlayer: (playerData: { name: string; majorLevel: MajorLevel; subLevel?: SubLevel }) => Promise<void>;
   allowMultiple?: boolean;
+  pairMode?: boolean; // New prop for tournament pair mode
 }
 
 export function AddPlayerToEventDialog({ 
@@ -24,7 +25,8 @@ export function AddPlayerToEventDialog({
   availablePlayers, 
   onAddExistingPlayer,
   onAddNewPlayer,
-  allowMultiple = false
+  allowMultiple = false,
+  pairMode = false
 }: AddPlayerToEventDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewPlayerForm, setShowNewPlayerForm] = useState(false);
@@ -74,11 +76,15 @@ export function AddPlayerToEventDialog({
   };
 
   const handlePlayerToggle = (playerId: string) => {
-    if (allowMultiple) {
+    if (allowMultiple || pairMode) {
       const newSelected = new Set(selectedPlayers);
       if (newSelected.has(playerId)) {
         newSelected.delete(playerId);
       } else {
+        // For pair mode, limit to 2 selections
+        if (pairMode && newSelected.size >= 2) {
+          return; // Don't allow more than 2 selections in pair mode
+        }
         newSelected.add(playerId);
       }
       setSelectedPlayers(newSelected);
@@ -88,10 +94,10 @@ export function AddPlayerToEventDialog({
     }
   };
 
-  const handleAddSelectedPlayers = () => {
-    selectedPlayers.forEach(playerId => {
-      onAddExistingPlayer(playerId);
-    });
+  const handleAddSelectedPlayers = async () => {
+    for (const playerId of selectedPlayers) {
+      await onAddExistingPlayer(playerId);
+    }
     handleClose();
   };
 
@@ -99,7 +105,14 @@ export function AddPlayerToEventDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Player to Event</DialogTitle>
+          <DialogTitle>
+            {pairMode ? 'Add Player Pair to Tournament' : 'Add Player to Event'}
+          </DialogTitle>
+          {pairMode && (
+            <p className="text-sm text-muted-foreground">
+              Select exactly 2 players to form a pair for the tournament
+            </p>
+          )}
         </DialogHeader>
         
         {!showNewPlayerForm ? (
@@ -119,11 +132,11 @@ export function AddPlayerToEventDialog({
                 <div 
                   key={player.id} 
                   className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 ${
-                    allowMultiple && selectedPlayers.has(player.id) ? 'bg-primary/10 border-primary' : ''
+                    (allowMultiple || pairMode) && selectedPlayers.has(player.id) ? 'bg-primary/10 border-primary' : ''
                   }`}
                   onClick={() => handlePlayerToggle(player.id)}
                 >
-                  {allowMultiple && (
+                  {(allowMultiple || pairMode) && (
                     <input
                       type="checkbox"
                       checked={selectedPlayers.has(player.id)}
@@ -154,10 +167,19 @@ export function AddPlayerToEventDialog({
               )}
             </div>
 
-            {allowMultiple && selectedPlayers.size > 0 && (
+            {((allowMultiple && selectedPlayers.size > 0) || (pairMode && selectedPlayers.size === 2)) && (
               <Button onClick={handleAddSelectedPlayers} className="w-full">
-                Add {selectedPlayers.size} Player{selectedPlayers.size > 1 ? 's' : ''}
+                {pairMode 
+                  ? `Add Pair (${selectedPlayers.size}/2)` 
+                  : `Add ${selectedPlayers.size} Player${selectedPlayers.size > 1 ? 's' : ''}`
+                }
               </Button>
+            )}
+
+            {pairMode && selectedPlayers.size > 0 && selectedPlayers.size < 2 && (
+              <div className="text-center text-sm text-muted-foreground">
+                Select {2 - selectedPlayers.size} more player{2 - selectedPlayers.size > 1 ? 's' : ''} to form a pair
+              </div>
             )}
             
             <Button 

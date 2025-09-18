@@ -9,6 +9,7 @@ import { useGameManager } from '@/hooks/useGameManager';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { useWaitingMatchManager } from '@/hooks/useWaitingMatchManager';
 import { useDataSync } from '@/hooks/useDataSync';
+import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { PlayerCard } from '@/components/PlayerCard';
 import { GameCard } from '@/components/GameCard';
 import { TeamSelection } from '@/components/TeamSelection';
@@ -21,6 +22,8 @@ import { EventSettingsDialog } from '@/components/EventSettingsDialog';
 import { EventReportDialog } from '@/components/EventReportDialog';
 import { WaitingMatchCard } from '@/components/WaitingMatchCard';
 import { ActiveGameCard } from '@/components/ActiveGameCard';
+import { TournamentBracket } from '@/components/TournamentBracket';
+import { TournamentSetup } from '@/components/TournamentSetup';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,6 +104,22 @@ const Index = () => {
   
   // Get current event if we're in event context
   const currentEvent = eventId ? events.find(e => e.id === eventId) : null;
+  
+  // Load tournament data if this is a tournament event
+  const { 
+    tournament, 
+    matches, 
+    participants, 
+    loading: tournamentLoading,
+    refetch: refetchTournament 
+  } = useTournamentManager();
+
+  // Load tournament when event is available and is tournament type
+  React.useEffect(() => {
+    if (currentEvent && currentEvent.eventType === 'tournament' && eventId) {
+      refetchTournament(eventId);
+    }
+  }, [currentEvent?.eventType, eventId, refetchTournament]);
   
   const { getPlayerStats, eventPlayerStats, refetch: refetchEventStats, updateCounter } = useEventPlayerStats(eventId, currentEvent?.selectedPlayerIds);
   
@@ -546,8 +565,38 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {currentEvent?.eventType === 'tournament' ? (
+        // Tournament Interface
+        <div className="container mx-auto px-6 py-6">
+          {tournament ? (
+            <TournamentBracket 
+              tournament={tournament} 
+              matches={matches}
+              onUpdateMatch={(match) => console.log('Update match:', match)}
+            />
+          ) : (
+            <TournamentSetup 
+              players={allPlayers}
+              onCreateTournament={async (config, selectedPlayerIds) => {
+                if (!eventId) return;
+                // Add players to event first
+                for (const playerId of selectedPlayerIds) {
+                  await handleAddExistingPlayer(playerId);
+                }
+                toast.success('Tournament setup completed!');
+                refetchTournament(eventId);
+              }}
+              onCancel={() => {
+                // Navigate back to dashboard or close setup
+                console.log('Tournament setup cancelled');
+              }}
+            />
+          )}
+        </div>
+      ) : (
+        // Regular Queue Interface
+        <div className="container mx-auto px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Left Panel - Players */}
           <div className="lg:col-span-1">
@@ -875,7 +924,8 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
+        </div>
+      )}
 
       <AddPlayerToEventDialog
         open={isAddPlayerDialogOpen}
@@ -883,7 +933,8 @@ const Index = () => {
         availablePlayers={availablePlayersForEvent}
         onAddExistingPlayer={handleAddExistingPlayer}
         onAddNewPlayer={handleAddNewPlayer}
-        allowMultiple={true}
+        allowMultiple={currentEvent?.eventType !== 'tournament'}
+        pairMode={currentEvent?.eventType === 'tournament'}
       />
 
       {editingPlayerData && (

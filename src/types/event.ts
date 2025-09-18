@@ -8,6 +8,8 @@ export interface BadmintonEvent {
   status: 'upcoming' | 'active' | 'completed' | 'ended';
   courtCount?: number;
   queueFee?: number;
+  eventType?: 'regular' | 'tournament';
+  tournamentConfig?: any;
 }
 
 export interface EventPlayer {
