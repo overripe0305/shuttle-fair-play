@@ -181,7 +181,7 @@ const Index = () => {
     });
 
     return filtered;
-  }, [eventPlayers, searchTerm, levelFilter, gamesFilter, sortBy, sortDirection, currentEvent]);
+  }, [eventPlayers, searchTerm, levelFilter, gamesFilter, statusFilter, sortBy, sortDirection, currentEvent]);
 
   const availablePlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.eligible && p.status === 'available');
