@@ -1,18 +1,43 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { useEventManager } from '@/hooks/useEventManager';
+import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TournamentBracket } from '@/components/TournamentBracket';
-import { ArrowLeft, Trophy, Calendar, Users, Settings } from 'lucide-react';
+import { TournamentSetup } from '@/components/TournamentSetup';
+import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { TournamentConfig } from '@/types/tournament';
 
 const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events } = useEventManager(clubId);
-  const { tournament, matches, participants, loading } = useTournamentManager();
+  const { players } = useEnhancedPlayerManager(clubId);
+  const { tournament, matches, participants, loading, createTournament, refetch } = useTournamentManager();
+  const [showSetup, setShowSetup] = useState(false);
 
   const event = events.find(e => e.id === eventId);
+
+  // Load tournament data when component mounts or eventId changes
+  useEffect(() => {
+    if (eventId) {
+      refetch(eventId);
+    }
+  }, [eventId, refetch]);
+
+  const handleCreateTournament = async (config: TournamentConfig, selectedPlayerIds: string[]) => {
+    if (!eventId) return;
+    
+    try {
+      await createTournament(eventId, config);
+      // Tournament manager will reload data automatically
+      setShowSetup(false);
+    } catch (error) {
+      console.error('Failed to create tournament:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -158,7 +183,20 @@ const TournamentView = () => {
 
           {/* Main Tournament View */}
           <div className="lg:col-span-3">
-            {tournament ? (
+            {showSetup ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tournament Setup</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TournamentSetup
+                    players={players}
+                    onCreateTournament={handleCreateTournament}
+                    onCancel={() => setShowSetup(false)}
+                  />
+                </CardContent>
+              </Card>
+            ) : tournament ? (
               <TournamentBracket 
                 tournament={tournament} 
                 matches={matches}
@@ -169,10 +207,14 @@ const TournamentView = () => {
                 <CardContent className="py-8">
                   <div className="text-center">
                     <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">No Tournament Data</h3>
-                    <p className="text-muted-foreground">
-                      Tournament information could not be loaded.
+                    <h3 className="text-lg font-semibold mb-2">No Tournament Created</h3>
+                    <p className="text-muted-foreground mb-6">
+                      This event is configured as a tournament but hasn't been set up yet. Create the tournament to add participants and generate brackets.
                     </p>
+                    <Button onClick={() => setShowSetup(true)} size="lg">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Tournament
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
