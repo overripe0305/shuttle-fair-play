@@ -54,7 +54,9 @@ export const useEventManager = (clubId?: string) => {
         createdAt: new Date(event.created_at),
         status: event.status as 'upcoming' | 'active' | 'completed',
         courtCount: event.court_count || 4,
-        queueFee: event.queue_fee || 0
+        queueFee: event.queue_fee || 0,
+        eventType: event.event_type as 'regular' | 'tournament' || 'regular',
+        tournamentConfig: event.tournament_config
       })) || [];
 
       setEvents(badmintonEvents);
