@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { useEventManager } from "@/hooks/useEventManager";
 import { useEnhancedPlayerManager } from "@/hooks/useEnhancedPlayerManager";
 import { useClubManager } from "@/hooks/useClubManager";
 import { useAuth } from "@/hooks/useAuth";
+import { ClubPlayerRankingDialog } from "@/components/ClubPlayerRankingDialog";
 import { BadmintonEvent } from "@/types/event";
 import { 
   Play,
@@ -28,6 +30,7 @@ import { ClubAdminDialog } from '@/components/ClubAdminDialog';
 
 const ClubDashboard = () => {
   const { clubId } = useParams<{ clubId: string }>();
+  const [showPlayerRanking, setShowPlayerRanking] = useState(false);
   const { events, updateEventStatus } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
   const { clubs } = useClubManager();
@@ -145,6 +148,14 @@ const ClubDashboard = () => {
                   <Calendar className="h-4 w-4 mr-2" />
                   View All Events
                 </Link>
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => setShowPlayerRanking(true)}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Player Rankings
               </Button>
               
               <Button asChild variant="outline">
@@ -298,6 +309,12 @@ const ClubDashboard = () => {
           </Card>
         </div>
       </div>
+      
+      <ClubPlayerRankingDialog 
+        open={showPlayerRanking}
+        onOpenChange={setShowPlayerRanking}
+        clubId={clubId || ''}
+      />
     </div>
   );
 };

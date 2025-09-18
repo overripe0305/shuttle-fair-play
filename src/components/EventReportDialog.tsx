@@ -16,7 +16,7 @@ import {
   Trophy, Medal, Target, Calendar, Clock, 
   DollarSign, CreditCard, Users, Receipt, 
   Search, ArrowUpDown, Plus, Edit, X, Check,
-  History, BarChart3, Wallet, RefreshCw, Filter, FilterX
+  History, BarChart3, Wallet, RefreshCw, Filter, FilterX, Share2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -760,6 +760,37 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
     );
   };
 
+  const handleShareRankings = async () => {
+    const url = `${window.location.origin}/public/player-ranking/${eventId}`;
+    const title = `Player Rankings - ${eventTitle}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title,
+          url: url
+        });
+      } catch (error) {
+        console.log('Share cancelled');
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: "Link copied",
+          description: "Rankings link copied to clipboard"
+        });
+      } catch (error) {
+        console.error('Failed to copy link:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to copy link",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const refreshPlayerRankings = async () => {
     // Refresh player stats and billing data
     await loadGameReports();
@@ -816,15 +847,26 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
                  Sorted by: Most Wins → Highest Win Rate → Highest Level → Least Losses (Click name to view profile, Games to view match history)
                </p>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={refreshPlayerRankings}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleShareRankings}
+                className="flex items-center gap-2"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshPlayerRankings}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
