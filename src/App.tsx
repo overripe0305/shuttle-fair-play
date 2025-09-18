@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import EventPreview from "./pages/EventPreview";
 import PublicPlayerRanking from "./pages/PublicPlayerRanking";
 import TournamentView from "./pages/TournamentView";
+import PlaySwitch from "./pages/PlaySwitch";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +38,7 @@ const App = () => (
             <Route path="/club/:clubId/players" element={<ProtectedRoute><EnhancedPlayerManagement /></ProtectedRoute>} />
             <Route path="/club/:clubId/events" element={<ProtectedRoute><ViewAllEvents /></ProtectedRoute>} />
             <Route path="/club/:clubId/event/:eventId" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
-            <Route path="/club/:clubId/event/:eventId/play" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/club/:clubId/event/:eventId/play" element={<ProtectedRoute><PlaySwitch /></ProtectedRoute>} />
             <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/players" element={<ProtectedRoute><EnhancedPlayerManagement /></ProtectedRoute>} />
             <Route path="/player/:playerId" element={<ProtectedRoute><PlayerProfile /></ProtectedRoute>} />
@@ -45,7 +46,7 @@ const App = () => (
             <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
             <Route path="/view-events" element={<ProtectedRoute><ViewAllEvents /></ProtectedRoute>} />
             <Route path="/event/:eventId" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
-            <Route path="/event/:eventId/play" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/event/:eventId/play" element={<ProtectedRoute><PlaySwitch /></ProtectedRoute>} />
             <Route path="/event/:eventId/preview" element={<EventPreview />} />
           <Route path="/event/:eventId/ranking" element={<PublicPlayerRanking />} />
           <Route path="/club/:clubId/tournament/:eventId" element={<TournamentView />} />
