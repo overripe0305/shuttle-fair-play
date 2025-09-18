@@ -16,6 +16,7 @@ import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
 import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
+import { DraggableActiveGameCard } from '@/components/DraggableActiveGameCard';
 import { EventSettingsDialog } from '@/components/EventSettingsDialog';
 import { EventReportDialog } from '@/components/EventReportDialog';
 import { WaitingMatchCard } from '@/components/WaitingMatchCard';
@@ -40,8 +41,10 @@ import {
   RefreshCw
 } from 'lucide-react';
 import badmintonLogo from '@/assets/badminton-logo.png';
-import { MajorLevel, SubLevel, PlayerStatus } from '@/types/player';
+import { MajorLevel, SubLevel, PlayerStatus, Player, GameMatch } from '@/types/player';
 import { toast } from 'sonner';
+import { useEventSpecificIdleTime } from '@/hooks/useEventSpecificIdleTime';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   // Get eventId and clubId from URL params
@@ -103,6 +106,9 @@ const Index = () => {
   
   // Initialize data sync hook
   const { performSync, isSyncing } = useDataSync(eventId, clubId);
+  
+  // Initialize event-specific idle time hook
+  const { setIdleStartTime } = useEventSpecificIdleTime();
   
   // Get players for current event or all players - memoize with proper dependencies
   const eventPlayers = React.useMemo(() => {
@@ -193,6 +199,90 @@ const Index = () => {
         ? prev.filter(id => id !== playerId)
         : [...prev, playerId]
     );
+  };
+
+  const handleManualMatch = (players: Player[]) => {
+    if (players.length === 4 && currentEvent) {
+      // Create a match from the selected players
+      const match: GameMatch = {
+        pair1: {
+          players: [players[0], players[1]],
+          averageLevel: (players[0].level.bracket + players[1].level.bracket) / 2,
+          pairType: 'Balanced'
+        },
+        pair2: {
+          players: [players[2], players[3]],
+          averageLevel: (players[2].level.bracket + players[3].level.bracket) / 2,
+          pairType: 'Balanced'
+        }
+      };
+
+      // Add to waiting queue or start immediately if court available
+      const usedCourts = currentActiveGames.map(game => game.courtId);
+      const maxCourts = currentEvent.courtCount || 4;
+      const availableCourts = maxCourts - usedCourts.length;
+
+      if (availableCourts > 0) {
+        // Start immediately
+        let availableCourt = 1;
+        for (let court = 1; court <= maxCourts; court++) {
+          if (!usedCourts.includes(court)) {
+            availableCourt = court;
+            break;
+          }
+        }
+        
+        createGame(
+          match.pair1.players[0].id,
+          match.pair1.players[1].id,
+          match.pair2.players[0].id,
+          match.pair2.players[1].id,
+          availableCourt
+        );
+      } else {
+        // Add to waiting queue
+        addWaitingMatch(match, async (playerId: string, status: string) => {
+          await updatePlayer(playerId, { status: status as any });
+        });
+      }
+    }
+  };
+
+  const handleActiveGamePlayerSwap = async (gameId: string, player1Id: string, player2Id: string) => {
+    try {
+      const game = currentActiveGames.find(g => g.id === gameId);
+      if (!game) return;
+
+      // Find the positions of the players in the game
+      const playerIds = [game.player1Id, game.player2Id, game.player3Id, game.player4Id];
+      const player1Index = playerIds.indexOf(player1Id);
+      const player2Index = playerIds.indexOf(player2Id);
+
+      if (player1Index === -1 || player2Index === -1) return;
+
+      // Create new player arrangement by swapping
+      const newPlayerIds = [...playerIds];
+      newPlayerIds[player1Index] = player2Id;
+      newPlayerIds[player2Index] = player1Id;
+
+      // Update the game in the database
+      const { error } = await supabase
+        .from('games')
+        .update({
+          player1_id: newPlayerIds[0],
+          player2_id: newPlayerIds[1],
+          player3_id: newPlayerIds[2],
+          player4_id: newPlayerIds[3]
+        })
+        .eq('id', gameId);
+
+      if (error) throw error;
+
+      toast.success('Players swapped successfully');
+    } catch (error) {
+      console.error('Error swapping players in active game:', error);
+      toast.error('Failed to swap players');
+    }
   };
 
   const handleTogglePause = useCallback(async (playerId: string) => {
@@ -700,6 +790,7 @@ const Index = () => {
               onReplacePlayer={replacePlayerInTeam}
               onSubstituteInWaiting={substitutePlayerInWaiting}
               loadWaitingMatches={loadWaitingMatches}
+              onManualMatch={handleManualMatch}
             />
           </div>
 
@@ -715,7 +806,7 @@ const Index = () => {
               
               <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
                 {currentActiveGames.map((game) => (
-                  <EnhancedGameCard 
+                  <DraggableActiveGameCard 
                     key={game.id} 
                     game={game} 
                     onComplete={handleCompleteGame}
@@ -724,6 +815,7 @@ const Index = () => {
                     onCancel={cancelGame}
                     availablePlayers={availablePlayers}
                     maxCourts={currentEvent?.courtCount || 4}
+                    onPlayerSwap={handleActiveGamePlayerSwap}
                   />
                 ))}
                 

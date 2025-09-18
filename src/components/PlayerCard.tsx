@@ -47,10 +47,12 @@ const statusColors = {
 export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, onGameOverride, isInEvent, isDraggable = false, dragId }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
   
-  // Use player's last status change time or fallback to a stored time
+  // Use player's last status change time for the specific event
   const getIdleStartTime = () => {
-    // Try to get stored start time for this player
-    const storedTime = localStorage.getItem(`idle_start_${player.id}`);
+    const eventId = window.location.pathname.split('/')[4]; // Extract eventId from URL
+    
+    // Try to get stored start time for this player in this specific event
+    const storedTime = localStorage.getItem(`idle_start_${player.id}_${eventId}`);
     if (storedTime && player.status === 'available') {
       return parseInt(storedTime);
     }
@@ -58,7 +60,7 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
     // If no stored time and player is available, set it now
     if (player.status === 'available') {
       const now = new Date().getTime();
-      localStorage.setItem(`idle_start_${player.id}`, now.toString());
+      localStorage.setItem(`idle_start_${player.id}_${eventId}`, now.toString());
       return now;
     }
     

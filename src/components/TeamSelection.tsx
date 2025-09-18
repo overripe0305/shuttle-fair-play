@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Users, UserPlus, X, RefreshCw, UserX, Search } from 'lucide-react';
+import { Clock, Users, UserPlus, X, RefreshCw, UserX, Search, Settings } from 'lucide-react';
 import { WaitingMatch } from '@/hooks/useWaitingMatchManager';
 import { useState, useMemo } from 'react';
 import { PlayerCard } from './PlayerCard';
@@ -11,8 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
+import { ManualPlayerSelectionDialog } from './ManualPlayerSelectionDialog';
 
 interface TeamSelectionProps {
   selectedPlayers: string[];
@@ -30,6 +32,7 @@ interface TeamSelectionProps {
   onReplacePlayer?: (waitingMatchId: string, oldPlayerId: string, newPlayerId: string) => void;
   onSubstituteInWaiting?: (waitingMatchId: string, oldPlayerId: string, newPlayerId: string) => void;
   loadWaitingMatches?: () => void;
+  onManualMatch?: (players: Player[]) => void;
 }
 
 export function TeamSelection({ 
@@ -47,7 +50,8 @@ export function TeamSelection({
   onPlayerStatusUpdate,
   onReplacePlayer,
   onSubstituteInWaiting,
-  loadWaitingMatches
+  loadWaitingMatches,
+  onManualMatch
 }: TeamSelectionProps) {
   const [selectedMatch, setSelectedMatch] = useState<GameMatch | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -58,6 +62,8 @@ export function TeamSelection({
     playerName?: string;
   }>({ open: false });
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAutoMode, setIsAutoMode] = useState(true);
+  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -211,10 +217,20 @@ export function TeamSelection({
   };
 
   const handleQuickMatch = () => {
-    const match = onSelectMatch();
-    if (match) {
-      // Always add to waiting queue first, let waiting queue manager handle court availability
-      addWaitingMatch(match, onPlayerStatusUpdate);
+    if (isAutoMode) {
+      const match = onSelectMatch();
+      if (match) {
+        // Always add to waiting queue first, let waiting queue manager handle court availability
+        addWaitingMatch(match, onPlayerStatusUpdate);
+      }
+    } else {
+      setIsManualDialogOpen(true);
+    }
+  };
+
+  const handleManualPlayersSelected = (players: Player[]) => {
+    if (onManualMatch) {
+      onManualMatch(players);
     }
   };
 
@@ -352,15 +368,29 @@ export function TeamSelection({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-center space-y-3">
-              <div className="flex gap-2">
+            <div className="space-y-3">
+              {/* Queue Mode Toggle */}
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {isAutoMode ? 'Auto Queue' : 'Manual Selection'}
+                  </span>
+                </div>
+                <Switch
+                  checked={isAutoMode}
+                  onCheckedChange={setIsAutoMode}
+                />
+              </div>
+
+              <div className="text-center">
                 <Button 
                   onClick={handleQuickMatch}
                   size="lg"
-                  className="flex-1"
+                  className="w-full"
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  Queue
+                  {isAutoMode ? 'Auto Queue' : 'Manual Queue'}
                 </Button>
               </div>
               
@@ -556,6 +586,14 @@ export function TeamSelection({
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Manual Player Selection Dialog */}
+        <ManualPlayerSelectionDialog
+          open={isManualDialogOpen}
+          onOpenChange={setIsManualDialogOpen}
+          availablePlayers={eligiblePlayers}
+          onPlayersSelected={handleManualPlayersSelected}
+        />
       </div>
     </DndContext>
   );
