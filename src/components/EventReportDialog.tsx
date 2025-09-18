@@ -761,7 +761,7 @@ export const EventReportDialog: React.FC<EventReportDialogProps> = ({
   };
 
   const handleShareRankings = async () => {
-    const url = `${window.location.origin}/public/player-ranking/${eventId}`;
+    const url = `${window.location.origin}/event/${eventId}/ranking`;
     const title = `Player Rankings - ${eventTitle}`;
     
     if (navigator.share) {
