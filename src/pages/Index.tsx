@@ -537,44 +537,49 @@ const Index = () => {
                       }, [eventPlayers, gamesFilter])}
                     </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-muted-foreground">Status:</span>
-                      <Button
-                        variant={statusFilter === 'all' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStatusFilter('all')}
-                      >
-                        All
-                      </Button>
-                      <Button
-                        variant={statusFilter === 'available' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStatusFilter('available')}
-                      >
-                        Available
-                      </Button>
-                      <Button
-                        variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStatusFilter('in_progress')}
-                      >
-                        In Progress
-                      </Button>
-                      <Button
-                        variant={statusFilter === 'waiting' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStatusFilter('waiting')}
-                      >
-                        Waiting
-                      </Button>
-                      <Button
-                        variant={statusFilter === 'paused' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setStatusFilter('paused')}
-                      >
-                        Paused
-                      </Button>
-                    </div>
+                     <div className="flex gap-2 flex-wrap">
+                       <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                       <Button
+                         variant={statusFilter === 'all' ? 'default' : 'outline'}
+                         size="sm"
+                         onClick={() => setStatusFilter('all')}
+                         className={statusFilter === 'all' ? 'text-white' : ''}
+                       >
+                         All
+                       </Button>
+                       <Button
+                         variant={statusFilter === 'available' ? 'default' : 'outline'}
+                         size="sm"
+                         onClick={() => setStatusFilter('available')}
+                         className={statusFilter === 'available' ? 'text-white' : ''}
+                       >
+                         Available
+                       </Button>
+                       <Button
+                         variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
+                         size="sm"
+                         onClick={() => setStatusFilter('in_progress')}
+                         className={statusFilter === 'in_progress' ? 'text-white' : ''}
+                       >
+                         In Progress
+                       </Button>
+                       <Button
+                         variant={statusFilter === 'waiting' ? 'default' : 'outline'}
+                         size="sm"
+                         onClick={() => setStatusFilter('waiting')}
+                         className={statusFilter === 'waiting' ? 'text-white' : ''}
+                       >
+                         Waiting
+                       </Button>
+                       <Button
+                         variant={statusFilter === 'paused' ? 'default' : 'outline'}
+                         size="sm"
+                         onClick={() => setStatusFilter('paused')}
+                         className={statusFilter === 'paused' ? 'text-white' : ''}
+                       >
+                         Paused
+                       </Button>
+                     </div>
 
                   <div className="flex gap-2 flex-wrap">
                     <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
