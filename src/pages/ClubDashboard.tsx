@@ -7,7 +7,7 @@ import { useEventManager } from "@/hooks/useEventManager";
 import { useEnhancedPlayerManager } from "@/hooks/useEnhancedPlayerManager";
 import { useClubManager } from "@/hooks/useClubManager";
 import { useAuth } from "@/hooks/useAuth";
-import { ClubPlayerRankingDialog } from "@/components/ClubPlayerRankingDialog";
+
 import { BadmintonEvent } from "@/types/event";
 import { 
   Play,
@@ -30,7 +30,6 @@ import { ClubAdminDialog } from '@/components/ClubAdminDialog';
 
 const ClubDashboard = () => {
   const { clubId } = useParams<{ clubId: string }>();
-  const [showPlayerRanking, setShowPlayerRanking] = useState(false);
   const { events, updateEventStatus } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
   const { clubs } = useClubManager();
@@ -150,12 +149,11 @@ const ClubDashboard = () => {
                 </Link>
               </Button>
               
-              <Button 
-                variant="outline"
-                onClick={() => setShowPlayerRanking(true)}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Player Rankings
+              <Button asChild variant="outline">
+                <Link to={`/club/${clubId}/ranking`}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Player Rankings
+                </Link>
               </Button>
               
               <Button asChild variant="outline">
@@ -309,12 +307,6 @@ const ClubDashboard = () => {
           </Card>
         </div>
       </div>
-      
-      <ClubPlayerRankingDialog 
-        open={showPlayerRanking}
-        onOpenChange={setShowPlayerRanking}
-        clubId={clubId || ''}
-      />
     </div>
   );
 };

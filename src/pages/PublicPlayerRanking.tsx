@@ -44,8 +44,9 @@ interface GameReport {
 }
 
 export const PublicPlayerRanking: React.FC = () => {
-  const { eventId } = useParams();
+  const { eventId, clubId } = useParams();
   const [event, setEvent] = useState<PublicEvent | null>(null);
+  const [club, setClub] = useState<{ id: string; name: string } | null>(null);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlayerHistory, setSelectedPlayerHistory] = useState<{ playerId: string; playerName: string } | null>(null);
@@ -56,14 +57,18 @@ export const PublicPlayerRanking: React.FC = () => {
   useEffect(() => {
     if (eventId) {
       loadPublicEventData();
+    } else if (clubId) {
+      loadClubData();
     }
-  }, [eventId]);
+  }, [eventId, clubId]);
 
   // Update players with stats when eventPlayerStats changes
   useEffect(() => {
     if (eventPlayerStats.length > 0 && players.length > 0) {
+      console.log('Updating players with stats:', eventPlayerStats.length, 'stats for', players.length, 'players');
       const updatedPlayers = players.map(player => {
         const stats = getPlayerStats(player.id);
+        console.log(`Player ${player.name} stats:`, stats);
         return {
           ...player,
           wins: stats?.wins || 0,
@@ -73,7 +78,56 @@ export const PublicPlayerRanking: React.FC = () => {
       });
       setPlayers(updatedPlayers);
     }
-  }, [eventPlayerStats, getPlayerStats]);
+  }, [eventPlayerStats, players, getPlayerStats]);
+
+  const loadClubData = async () => {
+    try {
+      setLoading(true);
+
+      // Load club data
+      const { data: clubData, error: clubError } = await supabase
+        .from('clubs')
+        .select('id, name')
+        .eq('id', clubId)
+        .single();
+
+      if (clubError) throw clubError;
+      setClub(clubData);
+
+      // Load all players for this club
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('id, name, major_level, sub_level')
+        .eq('club_id', clubId);
+
+      if (playersError) throw playersError;
+
+      // Create player objects without stats initially
+      const playersWithoutStats = (playersData || []).map((player) => ({
+        id: player.id,
+        name: player.name,
+        level: {
+          major: player.major_level,
+          sub: player.sub_level,
+          bracket: 1 // Will be calculated properly based on level
+        },
+        wins: 0,
+        losses: 0,
+        gamesPlayed: 0
+      }));
+
+      setPlayers(playersWithoutStats);
+    } catch (error) {
+      console.error('Error loading club data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load club data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadPublicEventData = async () => {
     try {
@@ -273,9 +327,21 @@ export const PublicPlayerRanking: React.FC = () => {
 
   const handleShare = async () => {
     try {
+      const title = event 
+        ? `${event.title} - Player Rankings`
+        : club 
+        ? `${club.name} - Player Rankings`
+        : 'Player Rankings';
+      
+      const text = event 
+        ? `Check out the player rankings for ${event.title}!`
+        : club
+        ? `Check out the player rankings for ${club.name}!`
+        : 'Check out these player rankings!';
+        
       await navigator.share({
-        title: `${event?.title} - Player Rankings`,
-        text: `Check out the player rankings for ${event?.title}!`,
+        title,
+        text,
         url: window.location.href,
       });
     } catch (error) {
@@ -301,12 +367,17 @@ export const PublicPlayerRanking: React.FC = () => {
     );
   }
 
-  if (!event) {
+  if (!event && !club) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Event not found</h1>
-          <p className="text-muted-foreground">The event you're looking for doesn't exist or isn't public.</p>
+          <h1 className="text-2xl font-bold mb-4">{eventId ? 'Event not found' : 'Club not found'}</h1>
+          <p className="text-muted-foreground">
+            {eventId 
+              ? "The event you're looking for doesn't exist or isn't public." 
+              : "The club you're looking for doesn't exist or isn't accessible."
+            }
+          </p>
         </div>
       </div>
     );
@@ -321,11 +392,22 @@ export const PublicPlayerRanking: React.FC = () => {
             <div className="flex items-center gap-3">
               <img src={badmintonLogo} alt="BadmintonPro" className="h-10 w-10" />
               <div>
-                <h1 className="text-2xl font-bold">{event.title}</h1>
+                <h1 className="text-2xl font-bold">
+                  {event ? event.title : club ? `${club.name} - Player Rankings` : 'Player Rankings'}
+                </h1>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>{new Date(event.date).toLocaleDateString()}</span>
-                  <Badge variant="outline">{event.status}</Badge>
+                  {event ? (
+                    <>
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(event.date).toLocaleDateString()}</span>
+                      <Badge variant="outline">{event.status}</Badge>
+                    </>
+                  ) : (
+                    <>
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Overall Club Rankings</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
