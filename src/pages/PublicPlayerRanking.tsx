@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trophy, Medal, Target, Calendar, BarChart3, Share2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trophy, Medal, Target, Calendar, BarChart3, Share2, Filter } from 'lucide-react';
 import { useEventPlayerStats } from '@/hooks/useEventPlayerStats';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import badmintonLogo from '@/assets/badminton-logo.png';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 
 interface PublicEvent {
   id: string;
@@ -45,26 +47,53 @@ interface GameReport {
 
 export const PublicPlayerRanking: React.FC = () => {
   const { eventId, clubId } = useParams();
+  const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<PublicEvent | null>(null);
   const [club, setClub] = useState<{ id: string; name: string } | null>(null);
+  const [events, setEvents] = useState<{ id: string; title: string; date: string }[]>([]);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlayerHistory, setSelectedPlayerHistory] = useState<{ playerId: string; playerName: string } | null>(null);
   const [playerGameReports, setPlayerGameReports] = useState<GameReport[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   
   const { getPlayerStats, loading: statsLoading, eventPlayerStats } = useEventPlayerStats(eventId);
 
+  // Generate month options for the last 12 months
+  const monthOptions = React.useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        value: format(date, 'yyyy-MM'),
+        label: format(date, 'MMMM yyyy')
+      });
+    }
+    return months;
+  }, []);
+
   useEffect(() => {
+    // Initialize filters from URL params for club rankings
+    if (clubId) {
+      const eventParam = searchParams.get('event');
+      const monthParam = searchParams.get('month');
+      
+      if (eventParam) setSelectedEvent(eventParam);
+      if (monthParam) setSelectedMonth(monthParam);
+    }
+    
     if (eventId) {
       loadPublicEventData();
     } else if (clubId) {
       loadClubData();
     }
-  }, [eventId, clubId]);
+  }, [eventId, clubId, searchParams]);
 
-  // Update players with stats when eventPlayerStats changes
+  // Update players with stats when eventPlayerStats changes (for event-specific rankings)
   useEffect(() => {
-    if (eventPlayerStats.length > 0 && players.length > 0) {
+    if (eventPlayerStats.length > 0 && players.length > 0 && eventId) {
       console.log('Updating players with stats:', eventPlayerStats.length, 'stats for', players.length, 'players');
       const updatedPlayers = players.map(player => {
         const stats = getPlayerStats(player.id);
@@ -78,7 +107,14 @@ export const PublicPlayerRanking: React.FC = () => {
       });
       setPlayers(updatedPlayers);
     }
-  }, [eventPlayerStats, players, getPlayerStats]);
+  }, [eventPlayerStats, players, getPlayerStats, eventId]);
+
+  // Reload club data when filters change
+  useEffect(() => {
+    if (clubId && (selectedEvent !== 'all' || selectedMonth !== 'all')) {
+      loadClubData();
+    }
+  }, [selectedEvent, selectedMonth]);
 
   const loadClubData = async () => {
     try {
@@ -94,7 +130,51 @@ export const PublicPlayerRanking: React.FC = () => {
       if (clubError) throw clubError;
       setClub(clubData);
 
-      // Load all players for this club
+      // Load events for this club
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('id, title, date')
+        .eq('club_id', clubId)
+        .order('date', { ascending: false });
+
+      if (eventsError) throw eventsError;
+      setEvents(eventsData || []);
+
+      // Load games with filtering
+      let query = supabase
+        .from('games')
+        .select(`
+          *,
+          events!inner(club_id, date)
+        `)
+        .eq('completed', true)
+        .eq('events.club_id', clubId);
+
+      // Apply event filter
+      if (selectedEvent !== 'all') {
+        query = query.eq('event_id', selectedEvent);
+      }
+
+      // Apply month filter
+      if (selectedMonth !== 'all') {
+        const monthStart = startOfMonth(parseISO(selectedMonth + '-01'));
+        const monthEnd = endOfMonth(monthStart);
+        query = query.gte('events.date', monthStart.toISOString().split('T')[0])
+                    .lte('events.date', monthEnd.toISOString().split('T')[0]);
+      }
+
+      const { data: games, error: gamesError } = await query;
+      if (gamesError) throw gamesError;
+
+      // Get all unique player IDs from games
+      const playerIds = new Set<string>();
+      games?.forEach(game => {
+        [game.player1_id, game.player2_id, game.player3_id, game.player4_id].forEach(id => {
+          if (id) playerIds.add(id);
+        });
+      });
+
+      // Load all players for this club (for display even if no games)
       const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('id, name, major_level, sub_level')
@@ -102,21 +182,53 @@ export const PublicPlayerRanking: React.FC = () => {
 
       if (playersError) throw playersError;
 
-      // Create player objects without stats initially
-      const playersWithoutStats = (playersData || []).map((player) => ({
-        id: player.id,
-        name: player.name,
-        level: {
-          major: player.major_level,
-          sub: player.sub_level,
-          bracket: 1 // Will be calculated properly based on level
-        },
-        wins: 0,
-        losses: 0,
-        gamesPlayed: 0
-      }));
+      // Calculate stats for each player
+      const playerStatsMap = new Map<string, { gamesPlayed: number; wins: number; losses: number; }>();
 
-      setPlayers(playersWithoutStats);
+      games?.forEach(game => {
+        const gamePlayerIds = [game.player1_id, game.player2_id, game.player3_id, game.player4_id];
+        const team1Ids = [game.player1_id, game.player2_id];
+        const team2Ids = [game.player3_id, game.player4_id];
+
+        gamePlayerIds.forEach(playerId => {
+          if (!playerId) return;
+          
+          if (!playerStatsMap.has(playerId)) {
+            playerStatsMap.set(playerId, { gamesPlayed: 0, wins: 0, losses: 0 });
+          }
+
+          const stats = playerStatsMap.get(playerId)!;
+          stats.gamesPlayed += 1;
+
+          // Determine if this player won or lost
+          if (game.winner === 'team1' && team1Ids.includes(playerId)) {
+            stats.wins += 1;
+          } else if (game.winner === 'team2' && team2Ids.includes(playerId)) {
+            stats.wins += 1;
+          } else if (game.winner) {
+            stats.losses += 1;
+          }
+        });
+      });
+
+      // Create player objects with stats
+      const playersWithStats = (playersData || []).map((player) => {
+        const stats = playerStatsMap.get(player.id) || { gamesPlayed: 0, wins: 0, losses: 0 };
+        return {
+          id: player.id,
+          name: player.name,
+          level: {
+            major: player.major_level,
+            sub: player.sub_level,
+            bracket: 1 // Will be calculated properly based on level
+          },
+          wins: stats.wins,
+          losses: stats.losses,
+          gamesPlayed: stats.gamesPlayed
+        };
+      });
+
+      setPlayers(playersWithStats);
     } catch (error) {
       console.error('Error loading club data:', error);
       toast({
@@ -339,6 +451,23 @@ export const PublicPlayerRanking: React.FC = () => {
 
   const handleShare = async () => {
     try {
+      let url = window.location.href;
+      
+      // For club rankings, update URL with current filters
+      if (clubId) {
+        const baseUrl = window.location.origin;
+        const newUrl = new URL(`${baseUrl}/club/${clubId}/ranking`);
+        
+        if (selectedEvent !== 'all') {
+          newUrl.searchParams.set('event', selectedEvent);
+        }
+        if (selectedMonth !== 'all') {
+          newUrl.searchParams.set('month', selectedMonth);
+        }
+        
+        url = newUrl.toString();
+      }
+      
       const title = event 
         ? `${event.title} - Player Rankings`
         : club 
@@ -354,11 +483,27 @@ export const PublicPlayerRanking: React.FC = () => {
       await navigator.share({
         title,
         text,
-        url: window.location.href,
+        url,
       });
     } catch (error) {
       // Fallback to copying to clipboard
-      navigator.clipboard.writeText(window.location.href);
+      let url = window.location.href;
+      
+      if (clubId) {
+        const baseUrl = window.location.origin;
+        const newUrl = new URL(`${baseUrl}/club/${clubId}/ranking`);
+        
+        if (selectedEvent !== 'all') {
+          newUrl.searchParams.set('event', selectedEvent);
+        }
+        if (selectedMonth !== 'all') {
+          newUrl.searchParams.set('month', selectedMonth);
+        }
+        
+        url = newUrl.toString();
+      }
+      
+      navigator.clipboard.writeText(url);
       toast({
         title: "Link copied",
         description: "Ranking link copied to clipboard",
@@ -434,6 +579,54 @@ export const PublicPlayerRanking: React.FC = () => {
 
       {/* Content */}
       <main className="container mx-auto px-6 py-8">
+        {/* Filters for club rankings */}
+        {clubId && (
+          <div className="mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span className="text-sm font-medium">Filters:</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select event" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Events</SelectItem>
+                        {events.map(event => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Select month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      {monthOptions.map(month => (
+                        <SelectItem key={month.value} value={month.value}>
+                          {month.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Summary Stats */}
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>

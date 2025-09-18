@@ -42,6 +42,7 @@ export const ClubPlayerRankingDialog: React.FC<ClubPlayerRankingDialogProps> = (
   const [selectedEvent, setSelectedEvent] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [currentClub, setCurrentClub] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   // Generate month options for the last 12 months
@@ -60,10 +61,26 @@ export const ClubPlayerRankingDialog: React.FC<ClubPlayerRankingDialogProps> = (
 
   useEffect(() => {
     if (open && clubId) {
+      loadClubInfo();
       loadEvents();
       loadPlayerRankings();
     }
   }, [open, clubId, selectedEvent, selectedMonth]);
+
+  const loadClubInfo = async () => {
+    try {
+      const { data: clubData, error } = await supabase
+        .from('clubs')
+        .select('id, name')
+        .eq('id', clubId)
+        .single();
+
+      if (error) throw error;
+      setCurrentClub(clubData);
+    } catch (error) {
+      console.error('Error loading club info:', error);
+    }
+  };
 
   const loadEvents = async () => {
     try {
@@ -224,27 +241,35 @@ export const ClubPlayerRankingDialog: React.FC<ClubPlayerRankingDialogProps> = (
   };
 
   const handleShare = async () => {
-    // Create a public ranking URL using the first event if a specific event is selected, otherwise use 'all'
-    const eventParam = selectedEvent !== 'all' ? selectedEvent : (events.length > 0 ? events[0].id : '');
+    // Create a club ranking URL with filters as query parameters
     const baseUrl = window.location.origin;
-    const url = eventParam ? `${baseUrl}/event/${eventParam}/ranking` : window.location.href;
-    const title = `Player Rankings${selectedEvent !== 'all' ? ` - ${events.find(e => e.id === selectedEvent)?.title}` : ''}${selectedMonth !== 'all' ? ` - ${monthOptions.find(m => m.value === selectedMonth)?.label}` : ''}`;
+    const url = new URL(`${baseUrl}/club/${clubId}/ranking`);
+    
+    // Add filter parameters to the URL
+    if (selectedEvent !== 'all') {
+      url.searchParams.set('event', selectedEvent);
+    }
+    if (selectedMonth !== 'all') {
+      url.searchParams.set('month', selectedMonth);
+    }
+    
+    const title = `${currentClub?.name || 'Club'} Player Rankings${getFilterSummary()}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
           title: title,
-          url: url
+          url: url.toString()
         });
       } catch (error) {
         console.log('Share cancelled');
       }
     } else {
       try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(url.toString());
         toast({
           title: "Link copied",
-          description: "Public ranking link copied to clipboard"
+          description: "Club ranking link copied to clipboard"
         });
       } catch (error) {
         console.error('Failed to copy link:', error);
