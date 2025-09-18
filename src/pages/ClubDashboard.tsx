@@ -27,6 +27,7 @@ import {
 import { format } from 'date-fns';
 import badmintonLogo from '@/assets/badminton-logo.png';
 import { ClubAdminDialog } from '@/components/ClubAdminDialog';
+import { ClubPlayerRankingDialog } from '@/components/ClubPlayerRankingDialog';
 
 const ClubDashboard = () => {
   const { clubId } = useParams<{ clubId: string }>();
@@ -35,6 +36,7 @@ const ClubDashboard = () => {
   const { clubs } = useClubManager();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [showRankingDialog, setShowRankingDialog] = useState(false);
 
   const currentClub = clubs.find(club => club.id === clubId);
 
@@ -149,11 +151,9 @@ const ClubDashboard = () => {
                 </Link>
               </Button>
               
-              <Button asChild variant="outline">
-                <Link to={`/club/${clubId}/ranking`}>
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Player Rankings
-                </Link>
+              <Button variant="outline" onClick={() => setShowRankingDialog(true)}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Player Rankings
               </Button>
               
               <Button asChild variant="outline">
@@ -307,6 +307,12 @@ const ClubDashboard = () => {
           </Card>
         </div>
       </div>
+
+      <ClubPlayerRankingDialog 
+        open={showRankingDialog}
+        onOpenChange={setShowRankingDialog}
+        clubId={clubId}
+      />
     </div>
   );
 };

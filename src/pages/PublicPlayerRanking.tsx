@@ -188,6 +188,16 @@ export const PublicPlayerRanking: React.FC = () => {
     }
   };
 
+  const getLevelValue = (level: string): number => {
+    const levelMap: { [key: string]: number } = {
+      'Beginner': 1,
+      'Intermediate': 2,
+      'Advanced': 3,
+      'Professional': 4
+    };
+    return levelMap[level] || 0;
+  };
+
   const getRankedPlayers = () => {
     const playersWithRanking = players.map(player => {
       const wins = player.wins || 0;
@@ -216,9 +226,11 @@ export const PublicPlayerRanking: React.FC = () => {
         return b.winRate - a.winRate;
       }
       
-      // If win rate is equal, sort by level (highest first) 
-      if (a.level.bracket !== b.level.bracket) {
-        return b.level.bracket - a.level.bracket;
+      // If win rate is equal, sort by level (highest first)
+      const aLevel = getLevelValue(a.level.major);
+      const bLevel = getLevelValue(b.level.major);
+      if (aLevel !== bLevel) {
+        return bLevel - aLevel;
       }
       
       // If level is equal, sort by losses (lowest first)
