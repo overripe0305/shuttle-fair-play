@@ -129,7 +129,7 @@ const Index = () => {
   // Initialize event-specific idle time hook
   const { setIdleStartTime } = useEventSpecificIdleTime();
   
-  // Get players for current event or all players - memoize with proper dependencies
+  // For tournament events, we still need regular event data for players
   const eventPlayers = React.useMemo(() => {
     if (!currentEvent) return allPlayers;
     
@@ -150,21 +150,12 @@ const Index = () => {
     });
   }, [currentEvent, allPlayers, eventPlayerStats, eventId, getPlayerStats, updateCounter, gameOverrides]);
 
-  // Force refresh when updateCounter changes to ensure UI syncs with database
-  // Force refresh of event stats when current event players change significantly
-  const eventPlayerIds = currentEvent?.selectedPlayerIds;
-  React.useEffect(() => {
-    if (eventPlayerIds && eventPlayerIds.length > 0) {
-      // Small delay to ensure all hooks are ready then refresh stats
-      const timer = setTimeout(() => {
-        console.log('Event players changed, refreshing stats...');
-        refetchEventStats();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [JSON.stringify(eventPlayerIds?.sort()), refetchEventStats]);
-
+  // Only run filtering for regular events
   const filteredPlayers = React.useMemo(() => {
+    if (currentEvent?.eventType === 'tournament') {
+      return eventPlayers; // No filtering needed for tournaments
+    }
+    
     let filtered = eventPlayers.filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesLevel = levelFilter === 'All' || player.level.bracket === levelFilter;
@@ -207,6 +198,19 @@ const Index = () => {
 
     return filtered;
   }, [eventPlayers, searchTerm, levelFilter, gamesFilter, statusFilter, sortBy, sortDirection, currentEvent]);
+
+  // Force refresh of event stats when current event players change significantly
+  const eventPlayerIds = currentEvent?.selectedPlayerIds;
+  React.useEffect(() => {
+    if (eventPlayerIds && eventPlayerIds.length > 0) {
+      // Small delay to ensure all hooks are ready then refresh stats
+      const timer = setTimeout(() => {
+        console.log('Event players changed, refreshing stats...');
+        refetchEventStats();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [JSON.stringify(eventPlayerIds?.sort()), refetchEventStats]);
 
   const availablePlayers = React.useMemo(() => {
     return eventPlayers.filter(p => p.eligible && p.status === 'available');
