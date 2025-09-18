@@ -224,7 +224,10 @@ export const ClubPlayerRankingDialog: React.FC<ClubPlayerRankingDialogProps> = (
   };
 
   const handleShare = async () => {
-    const url = window.location.href;
+    // Create a public ranking URL using the first event if a specific event is selected, otherwise use 'all'
+    const eventParam = selectedEvent !== 'all' ? selectedEvent : (events.length > 0 ? events[0].id : '');
+    const baseUrl = window.location.origin;
+    const url = eventParam ? `${baseUrl}/event/${eventParam}/ranking` : window.location.href;
     const title = `Player Rankings${selectedEvent !== 'all' ? ` - ${events.find(e => e.id === selectedEvent)?.title}` : ''}${selectedMonth !== 'all' ? ` - ${monthOptions.find(m => m.value === selectedMonth)?.label}` : ''}`;
     
     if (navigator.share) {
@@ -241,7 +244,7 @@ export const ClubPlayerRankingDialog: React.FC<ClubPlayerRankingDialogProps> = (
         await navigator.clipboard.writeText(url);
         toast({
           title: "Link copied",
-          description: "Rankings link copied to clipboard"
+          description: "Public ranking link copied to clipboard"
         });
       } catch (error) {
         console.error('Failed to copy link:', error);

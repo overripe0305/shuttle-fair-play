@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useEventManager } from '@/hooks/useEventManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,8 @@ import { format } from 'date-fns';
 type StatusFilter = 'all' | 'upcoming' | 'active' | 'completed';
 
 const ViewAllEvents = () => {
-  const { events, deleteEvent } = useEventManager();
+  const { clubId } = useParams<{ clubId: string }>();
+  const { events, deleteEvent } = useEventManager(clubId);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
@@ -72,10 +73,10 @@ const ViewAllEvents = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/">
+              <Link to={clubId ? `/club/${clubId}/dashboard` : "/"}>
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
+                  {clubId ? 'Back to Dashboard' : 'Back to Home'}
                 </Button>
               </Link>
               <div>
@@ -84,7 +85,7 @@ const ViewAllEvents = () => {
               </div>
             </div>
             
-            <Link to="/create-event">
+            <Link to={clubId ? `/club/${clubId}/create-event` : "/create-event"}>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Create New Event
@@ -174,7 +175,7 @@ const ViewAllEvents = () => {
                   
                   {/* Action Buttons */}
                   <div className="flex gap-2">
-                    <Link to={`/event/${event.id}`} className="flex-1">
+                    <Link to={clubId ? `/club/${clubId}/event/${event.id}` : `/event/${event.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full">
                         <Eye className="h-3 w-3 mr-1" />
                         View Details
@@ -182,7 +183,7 @@ const ViewAllEvents = () => {
                     </Link>
                     
                     {event.status === 'active' ? (
-                      <Link to={`/event/${event.id}/play`} className="flex-1">
+                      <Link to={clubId ? `/club/${clubId}/event/${event.id}/play` : `/event/${event.id}/play`} className="flex-1">
                         <Button size="sm" className="w-full">
                           <Play className="h-3 w-3 mr-1" />
                           Enter Game
@@ -224,7 +225,7 @@ const ViewAllEvents = () => {
                 ? 'No events found' 
                 : `No ${statusFilter} events found`}
             </div>
-            <Link to="/create-event">
+            <Link to={clubId ? `/club/${clubId}/create-event` : "/create-event"}>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Event
