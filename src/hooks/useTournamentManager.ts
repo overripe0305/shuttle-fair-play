@@ -67,40 +67,37 @@ export const useTournamentManager = () => {
         // Load matches
         const { data: matchesData, error: matchesError } = await supabase
           .from('tournament_matches')
-          .select(`
-            *,
-            participant1:tournament_participants!tournament_matches_participant1_id_fkey(
-              players(name)
-            ),
-            participant2:tournament_participants!tournament_matches_participant2_id_fkey(
-              players(name)
-            )
-          `)
+          .select('*')
           .eq('tournament_id', tournamentData.id)
           .order('round_number', { ascending: true })
           .order('match_number', { ascending: true });
 
         if (matchesError) throw matchesError;
 
-        const tournamentMatches = matchesData?.map(m => ({
-          id: m.id,
-          tournamentId: m.tournament_id,
-          stage: m.stage as any,
-          roundNumber: m.round_number,
-          matchNumber: m.match_number,
-          participant1Id: m.participant1_id,
-          participant2Id: m.participant2_id,
-          participant1Score: m.participant1_score,
-          participant2Score: m.participant2_score,
-          winnerId: m.winner_id,
-          status: m.status as any,
-          scheduledTime: m.scheduled_time ? new Date(m.scheduled_time) : undefined,
-          completedTime: m.completed_time ? new Date(m.completed_time) : undefined,
-          groupId: m.group_id,
-          bracketPosition: m.bracket_position,
-          participant1Name: (m.participant1 as any)?.players?.name,
-          participant2Name: (m.participant2 as any)?.players?.name
-        })) || [];
+        const tournamentMatches = matchesData?.map(m => {
+          const participant1 = tournamentParticipants.find(p => p.id === m.participant1_id);
+          const participant2 = tournamentParticipants.find(p => p.id === m.participant2_id);
+          
+          return {
+            id: m.id,
+            tournamentId: m.tournament_id,
+            stage: m.stage as any,
+            roundNumber: m.round_number,
+            matchNumber: m.match_number,
+            participant1Id: m.participant1_id,
+            participant2Id: m.participant2_id,
+            participant1Score: m.participant1_score,
+            participant2Score: m.participant2_score,
+            winnerId: m.winner_id,
+            status: m.status as any,
+            scheduledTime: m.scheduled_time ? new Date(m.scheduled_time) : undefined,
+            completedTime: m.completed_time ? new Date(m.completed_time) : undefined,
+            groupId: m.group_id,
+            bracketPosition: m.bracket_position,
+            participant1Name: participant1?.playerName,
+            participant2Name: participant2?.playerName
+          };
+        }) || [];
 
         setMatches(tournamentMatches);
       }
