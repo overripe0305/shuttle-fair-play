@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEventManager } from '@/hooks/useEventManager';
 import { useEnhancedPlayerManager } from '@/hooks/useEnhancedPlayerManager';
+import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { TournamentSetup } from '@/components/TournamentSetup';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   Plus, 
@@ -17,15 +20,18 @@ import {
   Calendar,
   Users,
   Camera,
-  Check
+  Check,
+  Trophy
 } from 'lucide-react';
 import { MajorLevel, SubLevel, getLevelDisplay } from '@/types/player';
+import { TournamentConfig } from '@/types/tournament';
 import { toast } from 'sonner';
 
 const CreateEvent = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
   const { createEvent } = useEventManager(clubId);
+  const { createTournament } = useTournamentManager();
   const { players, addPlayer } = useEnhancedPlayerManager(clubId);
 
   if (!clubId) {
@@ -37,6 +43,8 @@ const CreateEvent = () => {
   const [eventDate, setEventDate] = useState('');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [isTournament, setIsTournament] = useState(false);
+  const [showTournamentSetup, setShowTournamentSetup] = useState(false);
 
   // Add player form state
   const [newPlayer, setNewPlayer] = useState({
@@ -86,6 +94,11 @@ const CreateEvent = () => {
       return;
     }
 
+    if (isTournament) {
+      setShowTournamentSetup(true);
+      return;
+    }
+
     try {
       await createEvent({
         title: eventTitle,
@@ -100,11 +113,70 @@ const CreateEvent = () => {
     }
   };
 
+  const handleCreateTournament = async (config: TournamentConfig, tournamentPlayerIds: string[]) => {
+    if (!eventTitle || !eventDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      // First create the event
+      const event = await createEvent({
+        title: eventTitle,
+        date: new Date(eventDate),
+        selectedPlayerIds: tournamentPlayerIds
+      });
+
+      // Then create the tournament
+      if (event?.id) {
+        await createTournament(event.id, config);
+      }
+
+      toast.success('Tournament created successfully!');
+      navigate(`/club/${clubId}/dashboard`);
+    } catch (error) {
+      toast.error('Failed to create tournament');
+    }
+  };
+
   const needsSubLevel = (major: MajorLevel) => {
     return major === 'Beginner' || major === 'Intermediate' || major === 'Advance';
   };
 
   const selectedPlayers = players.filter(player => selectedPlayerIds.includes(player.id));
+
+  if (showTournamentSetup) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="bg-card border-b">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" onClick={() => setShowTournamentSetup(false)}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Event Setup
+                </Button>
+                <div>
+                  <h1 className="text-2xl font-bold">Tournament Setup</h1>
+                  <p className="text-sm text-muted-foreground">Configure your tournament: {eventTitle}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <div className="container mx-auto px-6 py-6">
+          <TournamentSetup
+            players={players}
+            onCreateTournament={handleCreateTournament}
+            onCancel={() => setShowTournamentSetup(false)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,7 +218,7 @@ const CreateEvent = () => {
                 <Input
                   value={eventTitle}
                   onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="Weekend Tournament"
+                  placeholder={isTournament ? "Championship Tournament" : "Weekend Tournament"}
                 />
               </div>
               
@@ -157,6 +229,32 @@ const CreateEvent = () => {
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
                 />
+              </div>
+
+              {/* Event Type Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">Event Type</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isTournament 
+                      ? 'Tournament with brackets and structured competition'
+                      : 'Regular event with casual games and matchmaking'
+                    }
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={!isTournament ? 'font-medium' : 'text-muted-foreground'}>
+                    Regular
+                  </span>
+                  <Switch
+                    checked={isTournament}
+                    onCheckedChange={setIsTournament}
+                  />
+                  <span className={isTournament ? 'font-medium' : 'text-muted-foreground'}>
+                    <Trophy className="h-4 w-4 inline mr-1" />
+                    Tournament
+                  </span>
+                </div>
               </div>
 
               <div className="pt-4">
@@ -188,7 +286,14 @@ const CreateEvent = () => {
                 className="w-full mt-6"
                 disabled={!eventTitle || !eventDate}
               >
-                Create Event
+                {isTournament ? (
+                  <>
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Setup Tournament
+                  </>
+                ) : (
+                  'Create Event'
+                )}
               </Button>
             </CardContent>
           </Card>

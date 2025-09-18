@@ -18,6 +18,7 @@ import Billing from "./pages/Billing";
 import Auth from "./pages/Auth";
 import EventPreview from "./pages/EventPreview";
 import PublicPlayerRanking from "./pages/PublicPlayerRanking";
+import TournamentView from "./pages/TournamentView";
 
 const queryClient = new QueryClient();
 
@@ -46,7 +47,8 @@ const App = () => (
             <Route path="/event/:eventId" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
             <Route path="/event/:eventId/play" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/event/:eventId/preview" element={<EventPreview />} />
-            <Route path="/event/:eventId/ranking" element={<PublicPlayerRanking />} />
+          <Route path="/event/:eventId/ranking" element={<PublicPlayerRanking />} />
+          <Route path="/club/:clubId/tournament/:eventId" element={<TournamentView />} />
             <Route path="/club/:clubId/ranking" element={<ProtectedRoute><PublicPlayerRanking /></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
