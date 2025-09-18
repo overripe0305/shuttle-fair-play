@@ -51,13 +51,29 @@ export const PublicPlayerRanking: React.FC = () => {
   const [selectedPlayerHistory, setSelectedPlayerHistory] = useState<{ playerId: string; playerName: string } | null>(null);
   const [playerGameReports, setPlayerGameReports] = useState<GameReport[]>([]);
   
-  const { getPlayerStats } = useEventPlayerStats(eventId);
+  const { getPlayerStats, loading: statsLoading, eventPlayerStats } = useEventPlayerStats(eventId);
 
   useEffect(() => {
     if (eventId) {
       loadPublicEventData();
     }
   }, [eventId]);
+
+  // Update players with stats when eventPlayerStats changes
+  useEffect(() => {
+    if (eventPlayerStats.length > 0 && players.length > 0) {
+      const updatedPlayers = players.map(player => {
+        const stats = getPlayerStats(player.id);
+        return {
+          ...player,
+          wins: stats?.wins || 0,
+          losses: stats?.losses || 0,
+          gamesPlayed: stats?.gamesPlayed || 0
+        };
+      });
+      setPlayers(updatedPlayers);
+    }
+  }, [eventPlayerStats, getPlayerStats]);
 
   const loadPublicEventData = async () => {
     try {
@@ -90,26 +106,21 @@ export const PublicPlayerRanking: React.FC = () => {
 
         if (playersError) throw playersError;
 
-        // Get player stats and create player objects
-        const playersWithStats = await Promise.all(
-          (playersData || []).map(async (player) => {
-            const stats = getPlayerStats(player.id);
-            return {
-              id: player.id,
-              name: player.name,
-              level: {
-                major: player.major_level,
-                sub: player.sub_level,
-                bracket: 1 // Will be calculated properly based on level
-              },
-              wins: stats?.wins || 0,
-              losses: stats?.losses || 0,
-              gamesPlayed: stats?.gamesPlayed || 0
-            };
-          })
-        );
+        // Create player objects without stats initially
+        const playersWithoutStats = (playersData || []).map((player) => ({
+          id: player.id,
+          name: player.name,
+          level: {
+            major: player.major_level,
+            sub: player.sub_level,
+            bracket: 1 // Will be calculated properly based on level
+          },
+          wins: 0,
+          losses: 0,
+          gamesPlayed: 0
+        }));
 
-        setPlayers(playersWithStats);
+        setPlayers(playersWithoutStats);
       }
     } catch (error) {
       console.error('Error loading public event data:', error);
@@ -279,7 +290,7 @@ export const PublicPlayerRanking: React.FC = () => {
 
   const sortedPlayers = getRankedPlayers();
 
-  if (loading) {
+  if (loading || statsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
