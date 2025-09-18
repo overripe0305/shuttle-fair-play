@@ -576,6 +576,7 @@ const Index = () => {
             <TournamentBracket 
               tournament={tournament} 
               matches={matches}
+              participants={participants}
               onUpdateMatch={(match) => console.log('Update match:', match)}
             />
           ) : (

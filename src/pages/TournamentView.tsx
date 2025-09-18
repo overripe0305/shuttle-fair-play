@@ -31,8 +31,7 @@ const TournamentView = () => {
     if (!eventId) return;
     
     try {
-      await createTournament(eventId, config);
-      // Tournament manager will reload data automatically
+      await createTournament(eventId, config, selectedPlayerIds);
       setShowSetup(false);
     } catch (error) {
       console.error('Failed to create tournament:', error);
@@ -200,6 +199,7 @@ const TournamentView = () => {
               <TournamentBracket 
                 tournament={tournament} 
                 matches={matches}
+                participants={participants}
                 onUpdateMatch={(match) => console.log('Update match:', match)}
               />
             ) : (

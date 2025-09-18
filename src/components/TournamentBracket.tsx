@@ -2,15 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TournamentMatch, Tournament } from '@/types/tournament';
+import { TournamentBracketVisual } from './TournamentBracketVisual';
 import { Trophy, Users, Clock, Play } from 'lucide-react';
 
 interface TournamentBracketProps {
   tournament: Tournament;
   matches: TournamentMatch[];
+  participants: any[];
   onUpdateMatch?: (match: TournamentMatch) => void;
 }
 
-export const TournamentBracket = ({ tournament, matches, onUpdateMatch }: TournamentBracketProps) => {
+export const TournamentBracket = ({ tournament, matches, participants, onUpdateMatch }: TournamentBracketProps) => {
   const getMatchesByStage = (stage: 'group_stage' | 'elimination_stage') => {
     return matches.filter(match => match.stage === stage);
   };
@@ -137,7 +139,7 @@ export const TournamentBracket = ({ tournament, matches, onUpdateMatch }: Tourna
               {tournament.currentStage.replace('_', ' ').toUpperCase()}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {tournament.participants.length} participants
+              {participants.length} participants
             </span>
             <span className="text-sm text-muted-foreground">
               {matches.filter(m => m.status === 'completed').length} / {matches.length} matches completed
@@ -146,7 +148,14 @@ export const TournamentBracket = ({ tournament, matches, onUpdateMatch }: Tourna
         </CardContent>
       </Card>
 
-      {/* Group Stage */}
+      {/* Visual Tournament Bracket */}
+      <TournamentBracketVisual 
+        matches={matches}
+        participants={participants}
+        onUpdateMatch={onUpdateMatch}
+      />
+
+      {/* Group Stage (if double stage tournament) */}
       {tournament.currentStage === 'group_stage' && tournament.tournamentType === 'double_stage' && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Group Stage</h3>
@@ -162,25 +171,6 @@ export const TournamentBracket = ({ tournament, matches, onUpdateMatch }: Tourna
               </CardContent>
             </Card>
           ))}
-        </div>
-      )}
-
-      {/* Elimination Stage */}
-      {(tournament.currentStage === 'elimination_stage' || tournament.tournamentType === 'single_stage') && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">
-            {tournament.tournamentType === 'single_stage' ? 'Tournament Bracket' : 'Elimination Stage'}
-          </h3>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Elimination Matches</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {getMatchesByStage('elimination_stage').map(renderMatch)}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
 

@@ -109,7 +109,7 @@ export const useTournamentManager = () => {
     }
   }, []);
 
-  const createTournament = async (eventId: string, config: TournamentConfig) => {
+  const createTournament = async (eventId: string, config: TournamentConfig, playerIds: string[]) => {
     if (!eventId) throw new Error('Event ID is required');
 
     try {
@@ -125,6 +125,12 @@ export const useTournamentManager = () => {
         .single();
 
       if (error) throw error;
+
+      // Add participants to the tournament
+      await addParticipants(data.id, playerIds);
+
+      // Generate brackets
+      await generateBrackets(data.id, playerIds);
 
       // Also update the event to mark it as tournament type
       await supabase
@@ -145,12 +151,10 @@ export const useTournamentManager = () => {
     }
   };
 
-  const addParticipants = async (playerIds: string[]) => {
-    if (!tournament) throw new Error('Tournament not found');
-
+  const addParticipants = async (tournamentId: string, playerIds: string[]) => {
     try {
       const participantsToAdd = playerIds.map((playerId, index) => ({
-        tournament_id: tournament.id,
+        tournament_id: tournamentId,
         player_id: playerId,
         seed_number: index + 1
       }));
@@ -161,7 +165,6 @@ export const useTournamentManager = () => {
 
       if (error) throw error;
 
-      await loadTournament(tournament.eventId);
       toast.success(`${playerIds.length} participants added successfully!`);
     } catch (error) {
       console.error('Error adding participants:', error);
@@ -170,28 +173,101 @@ export const useTournamentManager = () => {
     }
   };
 
-  const generateBrackets = async () => {
-    if (!tournament) throw new Error('Tournament not found');
-
+  const generateBrackets = async (tournamentId: string, playerIds: string[]) => {
     try {
-      // This would contain the bracket generation logic
-      // For now, we'll just update the stage
+      // Generate single elimination bracket matches
+      const matches = generateSingleEliminationMatches(playerIds);
+      
+      // Insert matches into database
+      const matchesToInsert = matches.map((match, index) => ({
+        tournament_id: tournamentId,
+        stage: 'elimination_stage' as const,
+        round_number: match.round,
+        match_number: match.matchNumber,
+        participant1_id: match.participant1Id,
+        participant2_id: match.participant2Id,
+        status: 'scheduled' as const,
+        bracket_position: `R${match.round}M${match.matchNumber}`
+      }));
+
+      if (matchesToInsert.length > 0) {
+        const { error: matchError } = await supabase
+          .from('tournament_matches')
+          .insert(matchesToInsert);
+
+        if (matchError) throw matchError;
+      }
+
+      // Update tournament stage
       const { error } = await supabase
         .from('tournaments')
         .update({
-          current_stage: tournament.stageConfig.tournamentType === 'double_stage' ? 'group_stage' : 'elimination_stage'
+          current_stage: 'elimination_stage'
         })
-        .eq('id', tournament.id);
+        .eq('id', tournamentId);
 
       if (error) throw error;
 
-      await loadTournament(tournament.eventId);
       toast.success('Brackets generated successfully!');
     } catch (error) {
       console.error('Error generating brackets:', error);
       toast.error('Failed to generate brackets');
       throw error;
     }
+  };
+
+  // Helper function to generate single elimination bracket
+  const generateSingleEliminationMatches = (playerIds: string[]) => {
+    const matches: Array<{
+      round: number;
+      matchNumber: number;
+      participant1Id: string | null;
+      participant2Id: string | null;
+    }> = [];
+
+    const numPlayers = playerIds.length;
+    const numRounds = Math.ceil(Math.log2(numPlayers));
+    let currentRoundPlayers = [...playerIds];
+
+    // Pad with nulls if not power of 2
+    const nextPowerOf2 = Math.pow(2, numRounds);
+    while (currentRoundPlayers.length < nextPowerOf2) {
+      currentRoundPlayers.push('bye');
+    }
+
+    for (let round = 1; round <= numRounds; round++) {
+      const matchesInRound = currentRoundPlayers.length / 2;
+      const nextRoundPlayers: string[] = [];
+
+      for (let match = 1; match <= matchesInRound; match++) {
+        const player1Index = (match - 1) * 2;
+        const player2Index = player1Index + 1;
+        
+        const participant1 = currentRoundPlayers[player1Index];
+        const participant2 = currentRoundPlayers[player2Index];
+
+        // Handle byes
+        if (participant1 === 'bye' || participant2 === 'bye') {
+          const advancer = participant1 === 'bye' ? participant2 : participant1;
+          nextRoundPlayers.push(advancer);
+          continue;
+        }
+
+        matches.push({
+          round,
+          matchNumber: match,
+          participant1Id: participant1,
+          participant2Id: participant2
+        });
+
+        // Placeholder for winner (will be determined after match completion)
+        nextRoundPlayers.push(`winner_R${round}M${match}`);
+      }
+
+      currentRoundPlayers = nextRoundPlayers;
+    }
+
+    return matches;
   };
 
   const updateMatchResult = async (matchId: string, participant1Score: number, participant2Score: number, winnerId: string) => {
@@ -227,8 +303,6 @@ export const useTournamentManager = () => {
     participants,
     loading,
     createTournament,
-    addParticipants,
-    generateBrackets,
     updateMatchResult,
     refetch: loadTournament
   };

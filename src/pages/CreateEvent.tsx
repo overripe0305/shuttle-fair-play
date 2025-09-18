@@ -129,7 +129,7 @@ const CreateEvent = () => {
 
       // Then create the tournament
       if (event?.id) {
-        await createTournament(event.id, config);
+        await createTournament(event.id, config, tournamentPlayerIds);
       }
 
       toast.success('Tournament created successfully!');
