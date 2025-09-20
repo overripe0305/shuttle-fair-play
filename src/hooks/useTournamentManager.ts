@@ -227,44 +227,26 @@ export const useTournamentManager = () => {
 
     const numPlayers = playerIds.length;
     const numRounds = Math.ceil(Math.log2(numPlayers));
-    let currentRoundPlayers = [...playerIds];
+    
+    // First round matches only - future rounds will be generated when matches complete
+    const matchesInFirstRound = Math.ceil(numPlayers / 2);
+    
+    for (let match = 1; match <= matchesInFirstRound; match++) {
+      const player1Index = (match - 1) * 2;
+      const player2Index = player1Index + 1;
+      
+      const participant1 = playerIds[player1Index] || null;
+      const participant2 = playerIds[player2Index] || null;
 
-    // Pad with nulls if not power of 2
-    const nextPowerOf2 = Math.pow(2, numRounds);
-    while (currentRoundPlayers.length < nextPowerOf2) {
-      currentRoundPlayers.push('bye');
-    }
-
-    for (let round = 1; round <= numRounds; round++) {
-      const matchesInRound = currentRoundPlayers.length / 2;
-      const nextRoundPlayers: string[] = [];
-
-      for (let match = 1; match <= matchesInRound; match++) {
-        const player1Index = (match - 1) * 2;
-        const player2Index = player1Index + 1;
-        
-        const participant1 = currentRoundPlayers[player1Index];
-        const participant2 = currentRoundPlayers[player2Index];
-
-        // Handle byes
-        if (participant1 === 'bye' || participant2 === 'bye') {
-          const advancer = participant1 === 'bye' ? participant2 : participant1;
-          nextRoundPlayers.push(advancer);
-          continue;
-        }
-
+      // Only create matches that have at least one participant
+      if (participant1 || participant2) {
         matches.push({
-          round,
+          round: 1,
           matchNumber: match,
           participant1Id: participant1,
           participant2Id: participant2
         });
-
-        // Placeholder for winner (will be determined after match completion)
-        nextRoundPlayers.push(`winner_R${round}M${match}`);
       }
-
-      currentRoundPlayers = nextRoundPlayers;
     }
 
     return matches;
@@ -294,6 +276,20 @@ export const useTournamentManager = () => {
     }
   };
 
+  const addMoreParticipants = async (tournamentId: string, playerIds: string[]) => {
+    try {
+      await addParticipants(tournamentId, playerIds);
+      
+      // Reload tournament data
+      if (tournament?.eventId) {
+        await loadTournament(tournament.eventId);
+      }
+    } catch (error) {
+      console.error('Error adding more participants:', error);
+      throw error;
+    }
+  };
+
   // Remove the useEffect that automatically loads on mount
   // Tournament will be loaded when createTournament is called
 
@@ -304,6 +300,7 @@ export const useTournamentManager = () => {
     loading,
     createTournament,
     updateMatchResult,
+    addMoreParticipants,
     refetch: loadTournament
   };
 };

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TournamentBracket } from '@/components/TournamentBracket';
 import { TournamentSetup } from '@/components/TournamentSetup';
+import { TournamentSettingsDialog } from '@/components/TournamentSettingsDialog';
 import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TournamentConfig } from '@/types/tournament';
@@ -15,7 +16,7 @@ const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
-  const { tournament, matches, participants, loading, createTournament, refetch } = useTournamentManager();
+  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
 
   const event = events.find(e => e.id === eventId);
@@ -36,6 +37,11 @@ const TournamentView = () => {
     } catch (error) {
       console.error('Failed to create tournament:', error);
     }
+  };
+
+  const handleAddParticipants = async (playerIds: string[]) => {
+    if (!tournament) return;
+    await addMoreParticipants(tournament.id, playerIds);
   };
 
   if (loading) {
@@ -104,10 +110,17 @@ const TournamentView = () => {
                 </Button>
               )}
               {tournament && (
-                <Button variant="outline" size="sm">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Button>
+                <TournamentSettingsDialog
+                  tournament={tournament}
+                  participants={participants}
+                  availablePlayers={players}
+                  onAddParticipants={handleAddParticipants}
+                >
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Button>
+                </TournamentSettingsDialog>
               )}
             </div>
           </div>
