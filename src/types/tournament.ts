@@ -1,7 +1,7 @@
 export type TournamentType = 'single_stage' | 'double_stage';
 export type TournamentFormat = 'single_elimination' | 'double_elimination' | 'round_robin';
 export type TournamentStage = 'setup' | 'group_stage' | 'elimination_stage' | 'completed';
-export type MatchStatus = 'scheduled' | 'in_progress' | 'completed' | 'walkover' | 'forfeit' | 'bye';
+export type MatchStatus = 'scheduled' | 'in_progress' | 'completed' | 'walkover' | 'forfeit' | 'bye' | 'awaiting';
 export type SeedingMethod = 'random' | 'by_rating' | 'manual';
 
 export interface TournamentConfig {

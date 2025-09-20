@@ -175,18 +175,18 @@ export const useTournamentManager = () => {
 
   const generateBrackets = async (tournamentId: string, playerIds: string[]) => {
     try {
-      // Generate single elimination bracket matches
-      const matches = generateSingleEliminationMatches(playerIds);
+      // Generate complete single elimination bracket structure
+      const allMatches = generateCompleteSingleEliminationBracket(playerIds);
       
-      // Insert matches into database
-      const matchesToInsert = matches.map((match, index) => ({
+      // Insert all matches into database
+      const matchesToInsert = allMatches.map((match) => ({
         tournament_id: tournamentId,
         stage: 'elimination_stage' as const,
         round_number: match.round,
         match_number: match.matchNumber,
-        participant1_id: match.participant1Id,
-        participant2_id: match.participant2Id,
-        status: 'scheduled' as const,
+        participant1_id: match.participant1Id || null,
+        participant2_id: match.participant2Id || null,
+        status: (match.participant1Id && match.participant2Id) ? 'scheduled' as const : 'awaiting' as const,
         bracket_position: `R${match.round}M${match.matchNumber}`
       }));
 
@@ -208,7 +208,7 @@ export const useTournamentManager = () => {
 
       if (error) throw error;
 
-      toast.success('Brackets generated successfully!');
+      toast.success('Tournament bracket created successfully!');
     } catch (error) {
       console.error('Error generating brackets:', error);
       toast.error('Failed to generate brackets');
@@ -216,8 +216,8 @@ export const useTournamentManager = () => {
     }
   };
 
-  // Helper function to generate single elimination bracket
-  const generateSingleEliminationMatches = (playerIds: string[]) => {
+  // Helper function to generate complete single elimination bracket
+  const generateCompleteSingleEliminationBracket = (playerIds: string[]) => {
     const matches: Array<{
       round: number;
       matchNumber: number;
@@ -226,26 +226,42 @@ export const useTournamentManager = () => {
     }> = [];
 
     const numPlayers = playerIds.length;
+    if (numPlayers < 2) return matches;
+
+    // Calculate total rounds needed
     const numRounds = Math.ceil(Math.log2(numPlayers));
     
-    // First round matches only - future rounds will be generated when matches complete
-    const matchesInFirstRound = Math.ceil(numPlayers / 2);
-    
-    for (let match = 1; match <= matchesInFirstRound; match++) {
-      const player1Index = (match - 1) * 2;
-      const player2Index = player1Index + 1;
+    // Generate all rounds
+    for (let round = 1; round <= numRounds; round++) {
+      const matchesInRound = Math.pow(2, numRounds - round);
       
-      const participant1 = playerIds[player1Index] || null;
-      const participant2 = playerIds[player2Index] || null;
+      for (let match = 1; match <= matchesInRound; match++) {
+        if (round === 1) {
+          // First round - pair up actual players
+          const player1Index = (match - 1) * 2;
+          const player2Index = player1Index + 1;
+          
+          const participant1 = playerIds[player1Index] || null;
+          const participant2 = playerIds[player2Index] || null;
 
-      // Only create matches that have at least one participant
-      if (participant1 || participant2) {
-        matches.push({
-          round: 1,
-          matchNumber: match,
-          participant1Id: participant1,
-          participant2Id: participant2
-        });
+          // Only create matches that have at least one participant
+          if (participant1 || participant2) {
+            matches.push({
+              round: 1,
+              matchNumber: match,
+              participant1Id: participant1,
+              participant2Id: participant2
+            });
+          }
+        } else {
+          // Subsequent rounds - these will be filled as previous rounds complete
+          matches.push({
+            round,
+            matchNumber: match,
+            participant1Id: null,
+            participant2Id: null
+          });
+        }
       }
     }
 
@@ -254,6 +270,7 @@ export const useTournamentManager = () => {
 
   const updateMatchResult = async (matchId: string, participant1Score: number, participant2Score: number, winnerId: string) => {
     try {
+      // Update the completed match
       const { error } = await supabase
         .from('tournament_matches')
         .update({
@@ -267,12 +284,70 @@ export const useTournamentManager = () => {
 
       if (error) throw error;
 
+      // Advance winner to next round
+      await advanceWinnerToNextRound(matchId, winnerId);
+
       await loadTournament(tournament?.eventId || '');
       toast.success('Match result updated successfully!');
     } catch (error) {
       console.error('Error updating match result:', error);
       toast.error('Failed to update match result');
       throw error;
+    }
+  };
+
+  const advanceWinnerToNextRound = async (completedMatchId: string, winnerId: string) => {
+    try {
+      // Get the completed match details
+      const { data: completedMatch, error: matchError } = await supabase
+        .from('tournament_matches')
+        .select('*')
+        .eq('id', completedMatchId)
+        .single();
+
+      if (matchError || !completedMatch) return;
+
+      const currentRound = completedMatch.round_number;
+      const currentMatchNumber = completedMatch.match_number;
+      const nextRound = currentRound + 1;
+      
+      // Calculate which match in the next round this winner should advance to
+      const nextMatchNumber = Math.ceil(currentMatchNumber / 2);
+
+      // Find the next round match
+      const { data: nextMatches, error: nextMatchError } = await supabase
+        .from('tournament_matches')
+        .select('*')
+        .eq('tournament_id', completedMatch.tournament_id)
+        .eq('round_number', nextRound)
+        .eq('match_number', nextMatchNumber);
+
+      if (nextMatchError || !nextMatches || nextMatches.length === 0) return;
+
+      const nextMatch = nextMatches[0];
+      
+      // Determine if winner goes to participant1 or participant2 slot
+      const isOddMatch = currentMatchNumber % 2 === 1;
+      const updateField = isOddMatch ? 'participant1_id' : 'participant2_id';
+      
+      // Update the next round match with the winner
+      const updateData: any = { [updateField]: winnerId };
+      
+      // If both participants are now set, change status to scheduled
+      if ((updateField === 'participant1_id' && nextMatch.participant2_id) || 
+          (updateField === 'participant2_id' && nextMatch.participant1_id)) {
+        updateData.status = 'scheduled';
+      }
+
+      const { error: updateError } = await supabase
+        .from('tournament_matches')
+        .update(updateData)
+        .eq('id', nextMatch.id);
+
+      if (updateError) throw updateError;
+
+    } catch (error) {
+      console.error('Error advancing winner:', error);
     }
   };
 

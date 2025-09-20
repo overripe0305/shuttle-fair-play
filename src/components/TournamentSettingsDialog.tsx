@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Settings, Users, Plus, UserPlus, Camera, Check } from 'lucide-react';
+import { Settings, Users, Plus, UserPlus, Camera, Check, Trophy } from 'lucide-react';
 import { Tournament, TournamentParticipant } from '@/types/tournament';
 import { EnhancedPlayer } from '@/types/enhancedPlayer';
 import { getLevelDisplay } from '@/types/player';
@@ -16,6 +16,7 @@ interface TournamentSettingsDialogProps {
   participants: TournamentParticipant[];
   availablePlayers: EnhancedPlayer[];
   onAddParticipants: (playerIds: string[]) => Promise<void>;
+  onGenerateBracket?: () => Promise<void>;
   children: React.ReactNode;
 }
 
@@ -24,6 +25,7 @@ export const TournamentSettingsDialog = ({
   participants,
   availablePlayers,
   onAddParticipants,
+  onGenerateBracket,
   children 
 }: TournamentSettingsDialogProps) => {
   const [open, setOpen] = useState(false);
@@ -128,6 +130,28 @@ export const TournamentSettingsDialog = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Generate Bracket */}
+          {tournament.currentStage === 'setup' && participants.length >= 2 && onGenerateBracket && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base text-center">Ready to Generate Bracket</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  {participants.length} participants are ready for tournament bracket generation.
+                </div>
+                <Button 
+                  onClick={onGenerateBracket}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Generate Tournament Bracket
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Add More Participants */}
           {eligiblePlayers.length > 0 && (

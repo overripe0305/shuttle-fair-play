@@ -8,16 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TournamentBracket } from '@/components/TournamentBracket';
 import { TournamentSetup } from '@/components/TournamentSetup';
 import { TournamentSettingsDialog } from '@/components/TournamentSettingsDialog';
+import { MatchResultDialog } from '@/components/MatchResultDialog';
 import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { TournamentConfig } from '@/types/tournament';
+import { TournamentConfig, TournamentMatch } from '@/types/tournament';
 
 const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
-  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch } = useTournamentManager();
+  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<TournamentMatch | null>(null);
+  const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
 
   const event = events.find(e => e.id === eventId);
 
@@ -42,6 +45,20 @@ const TournamentView = () => {
   const handleAddParticipants = async (playerIds: string[]) => {
     if (!tournament) return;
     await addMoreParticipants(tournament.id, playerIds);
+  };
+
+  const handleGenerateBracket = async () => {
+    if (!tournament?.eventId) return;
+    await refetch(tournament.eventId);
+  };
+
+  const handleMatchClick = (match: TournamentMatch) => {
+    setSelectedMatch(match);
+    setIsMatchDialogOpen(true);
+  };
+
+  const handleMatchResult = async (matchId: string, participant1Score: number, participant2Score: number, winnerId: string) => {
+    await updateMatchResult(matchId, participant1Score, participant2Score, winnerId);
   };
 
   if (loading) {
@@ -110,17 +127,18 @@ const TournamentView = () => {
                 </Button>
               )}
               {tournament && (
-                <TournamentSettingsDialog
-                  tournament={tournament}
-                  participants={participants}
-                  availablePlayers={players}
-                  onAddParticipants={handleAddParticipants}
-                >
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </Button>
-                </TournamentSettingsDialog>
+            <TournamentSettingsDialog
+              tournament={tournament}
+              participants={participants}
+              availablePlayers={players}
+              onAddParticipants={handleAddParticipants}
+              onGenerateBracket={handleGenerateBracket}
+            >
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </TournamentSettingsDialog>
               )}
             </div>
           </div>
@@ -221,12 +239,22 @@ const TournamentView = () => {
                 </CardContent>
               </Card>
             ) : tournament ? (
-              <TournamentBracket 
-                tournament={tournament} 
-                matches={matches}
-                participants={participants}
-                onUpdateMatch={(match) => console.log('Update match:', match)}
-              />
+              <>
+                <TournamentBracket 
+                  tournament={tournament} 
+                  matches={matches}
+                  participants={participants}
+                  onUpdateMatch={handleMatchClick}
+                />
+                
+                <MatchResultDialog
+                  match={selectedMatch}
+                  participants={participants}
+                  open={isMatchDialogOpen}
+                  onOpenChange={setIsMatchDialogOpen}
+                  onSubmit={handleMatchResult}
+                />
+              </>
             ) : (
               <Card>
                 <CardContent className="py-8">

@@ -56,7 +56,8 @@ export const TournamentBracketVisual = ({
     switch (status) {
       case 'completed': return 'bg-green-500/10 text-green-700 border-green-200';
       case 'in_progress': return 'bg-blue-500/10 text-blue-700 border-blue-200';
-      case 'scheduled': return 'bg-gray-500/10 text-gray-700 border-gray-200';
+      case 'scheduled': return 'bg-yellow-500/10 text-yellow-700 border-yellow-200';
+      case 'awaiting': return 'bg-gray-500/10 text-gray-500 border-gray-200';
       default: return 'bg-gray-500/10 text-gray-700 border-gray-200';
     }
   };
@@ -70,17 +71,20 @@ export const TournamentBracketVisual = ({
   const renderMatch = (match: TournamentMatch, matchIndex: number) => {
     const isCompleted = match.status === 'completed';
     const winner = match.winnerId;
+    const isAwaiting = match.status === 'awaiting';
+    const isScheduled = match.status === 'scheduled';
+    const bothParticipantsSet = match.participant1Id && match.participant2Id;
     
     return (
       <Card 
         key={match.id} 
-        className={`relative transition-all hover:shadow-md ${getStatusColor(match.status)}`}
+        className={`relative transition-all hover:shadow-md ${getStatusColor(match.status)} ${isAwaiting ? 'opacity-60' : ''}`}
       >
         <CardContent className="p-3">
           {/* Match Header */}
           <div className="flex items-center justify-between mb-2">
             <Badge variant="outline" className="text-xs">
-              {match.status.replace('_', ' ')}
+              {match.status === 'awaiting' ? 'Awaiting Players' : match.status.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-muted-foreground">
               Match {match.matchNumber}
@@ -90,10 +94,18 @@ export const TournamentBracketVisual = ({
           {/* Participants */}
           <div className="space-y-2">
             <div className={`flex items-center justify-between p-2 rounded border-2 transition-colors ${
-              winner === match.participant1Id ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200'
+              winner === match.participant1Id 
+                ? 'border-yellow-400 bg-yellow-50' 
+                : !match.participant1Id 
+                  ? 'border-dashed border-gray-300 bg-gray-50' 
+                  : 'border-gray-200'
             }`}>
               <span className={`font-medium text-sm ${
-                winner === match.participant1Id ? 'text-yellow-800' : ''
+                winner === match.participant1Id 
+                  ? 'text-yellow-800' 
+                  : !match.participant1Id 
+                    ? 'text-gray-400 italic' 
+                    : ''
               }`}>
                 {getParticipantName(match.participant1Id)}
                 {winner === match.participant1Id && <Trophy className="inline h-3 w-3 ml-1 text-yellow-600" />}
@@ -108,10 +120,18 @@ export const TournamentBracketVisual = ({
             </div>
             
             <div className={`flex items-center justify-between p-2 rounded border-2 transition-colors ${
-              winner === match.participant2Id ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200'
+              winner === match.participant2Id 
+                ? 'border-yellow-400 bg-yellow-50' 
+                : !match.participant2Id 
+                  ? 'border-dashed border-gray-300 bg-gray-50' 
+                  : 'border-gray-200'
             }`}>
               <span className={`font-medium text-sm ${
-                winner === match.participant2Id ? 'text-yellow-800' : ''
+                winner === match.participant2Id 
+                  ? 'text-yellow-800' 
+                  : !match.participant2Id 
+                    ? 'text-gray-400 italic' 
+                    : ''
               }`}>
                 {getParticipantName(match.participant2Id)}
                 {winner === match.participant2Id && <Trophy className="inline h-3 w-3 ml-1 text-yellow-600" />}
@@ -123,15 +143,22 @@ export const TournamentBracketVisual = ({
           </div>
 
           {/* Action Button */}
-          {onUpdateMatch && match.status === 'scheduled' && (
+          {onUpdateMatch && isScheduled && bothParticipantsSet && (
             <Button 
               size="sm" 
               variant="outline" 
               className="w-full mt-2 text-xs"
               onClick={() => onUpdateMatch(match)}
             >
-              Start Match
+              Enter Result
             </Button>
+          )}
+
+          {/* Awaiting Message */}
+          {isAwaiting && (
+            <div className="text-center mt-2">
+              <span className="text-xs text-gray-500 italic">Waiting for previous round</span>
+            </div>
           )}
 
           {/* Match Time */}
@@ -220,8 +247,11 @@ export const TournamentBracketVisual = ({
                 <Badge variant="outline" className="bg-blue-50">
                   {matches.filter(m => m.status === 'in_progress').length} in progress
                 </Badge>
-                <Badge variant="outline" className="bg-gray-50">
+                <Badge variant="outline" className="bg-yellow-50">
                   {matches.filter(m => m.status === 'scheduled').length} scheduled
+                </Badge>
+                <Badge variant="outline" className="bg-gray-50">
+                  {matches.filter(m => m.status === 'awaiting').length} awaiting
                 </Badge>
               </div>
             </div>
