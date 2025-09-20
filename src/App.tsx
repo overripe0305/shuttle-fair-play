@@ -48,8 +48,8 @@ const App = () => (
             <Route path="/event/:eventId" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
             <Route path="/event/:eventId/play" element={<ProtectedRoute><PlaySwitch /></ProtectedRoute>} />
             <Route path="/event/:eventId/preview" element={<EventPreview />} />
-          <Route path="/event/:eventId/ranking" element={<PublicPlayerRanking />} />
-          <Route path="/club/:clubId/tournament/:eventId" element={<TournamentView />} />
+           <Route path="/event/:eventId/ranking" element={<PublicPlayerRanking />} />
+           <Route path="/club/:clubId/tournament/:eventId" element={<ProtectedRoute><TournamentView /></ProtectedRoute>} />
             <Route path="/club/:clubId/ranking" element={<ProtectedRoute><PublicPlayerRanking /></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

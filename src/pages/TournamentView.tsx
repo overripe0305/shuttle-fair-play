@@ -93,10 +93,22 @@ const TournamentView = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+              {!tournament && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowSetup(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Tournament
+                </Button>
+              )}
+              {tournament && (
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              )}
             </div>
           </div>
         </div>
