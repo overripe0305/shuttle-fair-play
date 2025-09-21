@@ -56,12 +56,13 @@ const ViewAllEvents = () => {
   };
 
   const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete "${eventTitle}"? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete "${eventTitle}"? This will permanently delete all games, matches, and tournament data associated with this event. This action cannot be undone.`)) {
       try {
         await deleteEvent(eventId);
-        toast.success('Event deleted successfully');
+        toast.success('Event and all associated data deleted successfully');
       } catch (error) {
         toast.error('Failed to delete event');
+        console.error('Delete error:', error);
       }
     }
   };
@@ -190,25 +191,27 @@ const ViewAllEvents = () => {
                         </Button>
                       </Link>
                     ) : event.status === 'upcoming' ? (
-                      <>
-                        <Link to="/" className="flex-1">
-                          <Button size="sm" className="w-full">
-                            <Play className="h-3 w-3 mr-1" />
-                            Start Event
-                          </Button>
-                        </Link>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleDeleteEvent(event.id, event.title)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
+                      <Link to="/" className="flex-1">
+                        <Button size="sm" className="w-full">
+                          <Play className="h-3 w-3 mr-1" />
+                          Start Event
                         </Button>
-                      </>
+                      </Link>
                     ) : (
                       <Button size="sm" variant="outline" className="flex-1" disabled>
                         Completed
+                      </Button>
+                    )}
+                    
+                    {/* Delete button for all events except ended */}
+                    {event.status !== 'ended' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDeleteEvent(event.id, event.title)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     )}
                   </div>

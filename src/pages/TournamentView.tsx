@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { useEventManager } from '@/hooks/useEventManager';
@@ -10,13 +10,15 @@ import { TournamentSetup } from '@/components/TournamentSetup';
 import { TournamentBracketPreview } from '@/components/TournamentBracketPreview';
 import { TournamentSettingsDialog } from '@/components/TournamentSettingsDialog';
 import { MatchResultDialog } from '@/components/MatchResultDialog';
-import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus } from 'lucide-react';
+import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TournamentConfig, TournamentMatch, TournamentPair } from '@/types/tournament';
+import { toast } from 'sonner';
 
 const TournamentView = () => {
+  const navigate = useNavigate();
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
-  const { events } = useEventManager(clubId);
+  const { events, deleteEvent } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
   const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult, generateTournamentBracket } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
@@ -88,6 +90,24 @@ const TournamentView = () => {
     await updateMatchResult(matchId, participant1Score, participant2Score, winnerId);
   };
 
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+    
+    const eventStatus = event.status === 'upcoming' ? 'upcoming tournament' : 
+                       event.status === 'active' ? 'active tournament' : 'completed tournament';
+    
+    if (window.confirm(`Are you sure you want to delete this ${eventStatus}? This will permanently delete all games, matches, and tournament data. This action cannot be undone.`)) {
+      try {
+        await deleteEvent(event.id);
+        toast.success('Tournament and all associated data deleted successfully');
+        navigate(`/club/${clubId}/dashboard`);
+      } catch (error) {
+        toast.error('Failed to delete tournament');
+        console.error('Delete error:', error);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -154,18 +174,28 @@ const TournamentView = () => {
                 </Button>
               )}
               {tournament && (
-            <TournamentSettingsDialog
-              tournament={tournament}
-              participants={participants}
-              availablePlayers={players}
-              onAddParticipants={handleAddParticipants}
-              onGenerateBracket={handleGenerateBracket}
-            >
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </TournamentSettingsDialog>
+                <TournamentSettingsDialog
+                  tournament={tournament}
+                  participants={participants}
+                  availablePlayers={players}
+                  onAddParticipants={handleAddParticipants}
+                  onGenerateBracket={handleGenerateBracket}
+                >
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Button>
+                </TournamentSettingsDialog>
+              )}
+              {event && event.status !== 'ended' && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleDeleteEvent}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Event
+                </Button>
               )}
             </div>
           </div>
