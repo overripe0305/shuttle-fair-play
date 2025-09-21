@@ -6,7 +6,7 @@ import { Clock, Trophy, RotateCcw, X, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { Player } from '@/types/player';
 import { TeamSubstituteDialog } from './TeamSubstituteDialog';
-import { getBracketFromMajorSub, MajorLevel, SubLevel } from '@/types/player';
+import { getBracketFromMajorSub, MajorLevel, SubLevel, BracketLevel } from '@/types/player';
 
 interface ActiveGameCardProps {
   game: ActiveGame;
@@ -79,20 +79,25 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
 
   // Get player level data from available players to show correct level colors
   const getPlayerLevel = (playerId: string) => {
-    const player = availablePlayers.find(p => p.id === playerId);
+    const player: any = availablePlayers.find(p => p.id === playerId);
     if (!player) return 0;
-    
-    // Convert database structure to bracket level
-    const majorLevel = (player as any).major_level as MajorLevel;
-    const subLevel = (player as any).sub_level as SubLevel;
-    return getBracketFromMajorSub(majorLevel, subLevel);
+
+    // Prefer EnhancedPlayer shape
+    const bracketFromLevel = player.level?.bracket;
+    if (typeof bracketFromLevel === 'number') return bracketFromLevel;
+
+    // Fallback to DB shape if provided
+    if (player.major_level) {
+      return getBracketFromMajorSub(player.major_level as MajorLevel, player.sub_level as SubLevel | undefined);
+    }
+
+    return 0;
   };
 
   const getPlayerGames = (playerId: string) => {
-    const player = availablePlayers.find(p => p.id === playerId);
-    return (player as any)?.games_played ?? 0;
+    const player: any = availablePlayers.find(p => p.id === playerId);
+    return (player?.gamesPlayed ?? player?.games_played ?? 0) as number;
   };
-
   return (
     <Card className="border-yellow-200 bg-yellow-50">
       <CardHeader className="pb-3">
@@ -281,7 +286,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             { 
               id: game.player1Id, 
               name: game.player1Name, 
-              level: { major: 'Beginner', bracket: getPlayerLevel(game.player1Id) }, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player1Id) as BracketLevel }, 
               gamesPlayed: getPlayerGames(game.player1Id),
               eligible: true,
               gamePenaltyBonus: 0,
@@ -291,7 +296,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             { 
               id: game.player2Id, 
               name: game.player2Name, 
-              level: { major: 'Beginner', bracket: getPlayerLevel(game.player2Id) }, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player2Id) as BracketLevel }, 
               gamesPlayed: getPlayerGames(game.player2Id),
               eligible: true,
               gamePenaltyBonus: 0,
@@ -303,7 +308,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             { 
               id: game.player3Id, 
               name: game.player3Name, 
-              level: { major: 'Beginner', bracket: getPlayerLevel(game.player3Id) }, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player3Id) as BracketLevel }, 
               gamesPlayed: getPlayerGames(game.player3Id),
               eligible: true,
               gamePenaltyBonus: 0,
@@ -313,7 +318,7 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             { 
               id: game.player4Id, 
               name: game.player4Name, 
-              level: { major: 'Beginner', bracket: getPlayerLevel(game.player4Id) }, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player4Id) as BracketLevel }, 
               gamesPlayed: getPlayerGames(game.player4Id),
               eligible: true,
               gamePenaltyBonus: 0,
