@@ -17,11 +17,10 @@ import { AddPlayerToEventDialog } from '@/components/AddPlayerToEventDialog';
 import { PlayerEditDialog } from '@/components/PlayerEditDialog';
 import { CourtSelector } from '@/components/CourtSelector';
 import { EnhancedGameCard } from '@/components/EnhancedGameCard';
-import { DraggableActiveGameCard } from '@/components/DraggableActiveGameCard';
+import { ActiveGameCard } from '@/components/ActiveGameCard';
 import { EventSettingsDialog } from '@/components/EventSettingsDialog';
 import { EventReportDialog } from '@/components/EventReportDialog';
 import { WaitingMatchCard } from '@/components/WaitingMatchCard';
-import { ActiveGameCard } from '@/components/ActiveGameCard';
 import { TournamentBracket } from '@/components/TournamentBracket';
 import { TournamentSetup } from '@/components/TournamentSetup';
 import { Button } from '@/components/ui/button';
@@ -99,6 +98,7 @@ const Index = () => {
     removeWaitingMatch, 
     startWaitingMatch,
     substitutePlayerInWaiting,
+    teamTradeInWaiting,
     loadWaitingMatches
   } = useWaitingMatchManager(eventId);
   
@@ -888,16 +888,16 @@ const Index = () => {
               
               <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
                 {currentActiveGames.map((game) => (
-                  <DraggableActiveGameCard 
+                  <ActiveGameCard 
                     key={game.id} 
                     game={game} 
                     onComplete={handleCompleteGame}
-                    onReplacePlayer={replaceInDbGame}
-                    onUpdateCourt={updateGameCourt}
+                    onSubstitute={replaceInDbGame}
+                    onTeamTrade={teamTradeInActiveGame}
+                    onChangeCourt={updateGameCourt}
                     onCancel={cancelGame}
                     availablePlayers={availablePlayers}
-                    maxCourts={currentEvent?.courtCount || 4}
-                    onPlayerSwap={handleActiveGamePlayerSwap}
+                    courtCount={currentEvent?.courtCount || 4}
                   />
                 ))}
                 

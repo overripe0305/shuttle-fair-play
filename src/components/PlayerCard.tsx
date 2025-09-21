@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Clock, Pause, Play, Trash2, GripVertical, Plus, Minus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
+import { useEventSpecificIdleTime } from '@/hooks/useEventSpecificIdleTime';
 
 interface PlayerCardProps {
   player: Player;
@@ -46,26 +47,9 @@ const statusColors = {
 
 export function PlayerCard({ player, onClick, selected, onTogglePause, onDeletePlayer, onRemoveFromEvent, onGameOverride, isInEvent, isDraggable = false, dragId }: PlayerCardProps) {
   const [idleTime, setIdleTime] = useState('0m');
+  const { getIdleStartTime, setIdleStartTime } = useEventSpecificIdleTime();
   
-  // Use player's last status change time for the specific event
-  const getIdleStartTime = () => {
-    const eventId = window.location.pathname.split('/')[4]; // Extract eventId from URL
-    
-    // Try to get stored start time for this player in this specific event
-    const storedTime = localStorage.getItem(`idle_start_${player.id}_${eventId}`);
-    if (storedTime && player.status === 'available') {
-      return parseInt(storedTime);
-    }
-    
-    // If no stored time and player is available, set it now
-    if (player.status === 'available') {
-      const now = new Date().getTime();
-      localStorage.setItem(`idle_start_${player.id}_${eventId}`, now.toString());
-      return now;
-    }
-    
-    return new Date().getTime();
-  };
+  const eventId = window.location.pathname.split('/')[4]; // Extract eventId from URL
   
   const {
     attributes,
@@ -86,13 +70,20 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
   useEffect(() => {
     if (player.status !== 'available') {
       setIdleTime('');
-      // Don't clear stored time - preserve it for substitutions
       return;
     }
 
-    const updateIdleTime = () => {
+    const updateIdleTime = async () => {
+      if (!eventId) return;
+      
+      let startTime = getIdleStartTime(player.id, eventId);
+      
+      // If no stored time, calculate and set it based on event-specific data
+      if (!startTime) {
+        startTime = await setIdleStartTime(player.id, eventId);
+      }
+      
       const now = new Date().getTime();
-      const startTime = getIdleStartTime();
       const idleMinutes = Math.floor((now - startTime) / 60000);
       
       if (idleMinutes < 60) {
@@ -108,7 +99,7 @@ export function PlayerCard({ player, onClick, selected, onTogglePause, onDeleteP
     const interval = setInterval(updateIdleTime, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, [player.status, player.id]);
+  }, [player.status, player.id, eventId, getIdleStartTime, setIdleStartTime]);
   return (
     <Card 
       ref={setNodeRef}

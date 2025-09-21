@@ -4,14 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Trophy, RotateCcw, X, MapPin } from 'lucide-react';
 import { useState } from 'react';
+import { Player } from '@/types/player';
+import { TeamSubstituteDialog } from './TeamSubstituteDialog';
 
 interface ActiveGameCardProps {
   game: ActiveGame;
   onComplete: (gameId: string, winner?: 'team1' | 'team2') => void;
   onCancel: (gameId: string) => void;
   onSubstitute: (gameId: string, oldPlayerId: string, newPlayerId: string) => void;
+  onTeamTrade: (gameId: string, player1Id: string, player2Id: string) => void;
   onChangeCourt: (gameId: string, courtId: number) => void;
-  availablePlayers: any[];
+  availablePlayers: Player[];
   courtCount: number;
 }
 
@@ -50,19 +53,22 @@ const getLevelBackgroundColor = (bracket: number) => {
   return color;
 };
 
-export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onChangeCourt, availablePlayers, courtCount }: ActiveGameCardProps) {
-  const [substitutingPlayer, setSubstitutingPlayer] = useState<string | null>(null);
+export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTeamTrade, onChangeCourt, availablePlayers, courtCount }: ActiveGameCardProps) {
+  const [selectedPlayerForSubstitute, setSelectedPlayerForSubstitute] = useState<any | null>(null);
 
   const formatPlayerName = (playerName?: string, gamesPlayed?: number) => {
     console.log('Player name and games in ActiveGameCard:', playerName, gamesPlayed);
     return `G${gamesPlayed || 0}-${playerName || 'Unknown'}`;
   };
 
-  const handleSubstitute = (newPlayerId: string) => {
-    if (substitutingPlayer) {
-      onSubstitute(game.id, substitutingPlayer, newPlayerId);
-      setSubstitutingPlayer(null);
-    }
+  const handleSubstitute = (oldPlayerId: string, newPlayerId: string) => {
+    onSubstitute(game.id, oldPlayerId, newPlayerId);
+    setSelectedPlayerForSubstitute(null);
+  };
+
+  const handleTeamTrade = (player1Id: string, player2Id: string) => {
+    onTeamTrade(game.id, player1Id, player2Id);
+    setSelectedPlayerForSubstitute(null);
   };
 
   const getDuration = () => {
@@ -161,7 +167,16 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                 size="sm"
                 variant="ghost"
                 className="h-6 w-6 p-0"
-                onClick={() => setSubstitutingPlayer(game.player1Id)}
+                onClick={() => setSelectedPlayerForSubstitute({
+                  id: game.player1Id,
+                  name: game.player1Name,
+                  level: { major: 'Beginner', bracket: getPlayerLevel(game.player1Id) },
+                  gamesPlayed: getPlayerGames(game.player1Id),
+                  eligible: true,
+                  gamePenaltyBonus: 0,
+                  status: 'in_progress',
+                  matchHistory: []
+                })}
               >
                 <RotateCcw className="h-3 w-3" />
               </Button>
@@ -179,7 +194,16 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                 size="sm"
                 variant="ghost"
                 className="h-6 w-6 p-0"
-                onClick={() => setSubstitutingPlayer(game.player2Id)}
+                onClick={() => setSelectedPlayerForSubstitute({
+                  id: game.player2Id,
+                  name: game.player2Name,
+                  level: { major: 'Beginner', bracket: getPlayerLevel(game.player2Id) },
+                  gamesPlayed: getPlayerGames(game.player2Id),
+                  eligible: true,
+                  gamePenaltyBonus: 0,
+                  status: 'in_progress',
+                  matchHistory: []
+                })}
               >
                 <RotateCcw className="h-3 w-3" />
               </Button>
@@ -202,7 +226,16 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                 size="sm"
                 variant="ghost"
                 className="h-6 w-6 p-0"
-                onClick={() => setSubstitutingPlayer(game.player3Id)}
+                onClick={() => setSelectedPlayerForSubstitute({
+                  id: game.player3Id,
+                  name: game.player3Name,
+                  level: { major: 'Beginner', bracket: getPlayerLevel(game.player3Id) },
+                  gamesPlayed: getPlayerGames(game.player3Id),
+                  eligible: true,
+                  gamePenaltyBonus: 0,
+                  status: 'in_progress',
+                  matchHistory: []
+                })}
               >
                 <RotateCcw className="h-3 w-3" />
               </Button>
@@ -220,7 +253,16 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
                 size="sm"
                 variant="ghost"
                 className="h-6 w-6 p-0"
-                onClick={() => setSubstitutingPlayer(game.player4Id)}
+                onClick={() => setSelectedPlayerForSubstitute({
+                  id: game.player4Id,
+                  name: game.player4Name,
+                  level: { major: 'Beginner', bracket: getPlayerLevel(game.player4Id) },
+                  gamesPlayed: getPlayerGames(game.player4Id),
+                  eligible: true,
+                  gamePenaltyBonus: 0,
+                  status: 'in_progress',
+                  matchHistory: []
+                })}
               >
                 <RotateCcw className="h-3 w-3" />
               </Button>
@@ -228,33 +270,59 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onCha
           </div>
         </div>
 
-        {/* Substitution Panel */}
-        {substitutingPlayer && (
-          <div className="mt-3 p-2 bg-yellow-100 rounded border">
-            <div className="text-sm font-medium mb-2">Select replacement:</div>
-            <div className="flex gap-1 flex-wrap">
-              {availablePlayers.map(player => (
-                <Button
-                  key={player.id}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleSubstitute(player.id)}
-                  className={`text-xs text-white px-2 py-1 rounded ${getLevelBackgroundColor(player.level?.bracket || 0)}`}
-                >
-                  {formatPlayerName(player.name, player.gamesPlayed)}
-                </Button>
-              ))}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSubstitutingPlayer(null)}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Team Substitute Dialog */}
+        <TeamSubstituteDialog
+          open={!!selectedPlayerForSubstitute}
+          onOpenChange={(open) => !open && setSelectedPlayerForSubstitute(null)}
+          selectedPlayer={selectedPlayerForSubstitute}
+          team1Players={[
+            { 
+              id: game.player1Id, 
+              name: game.player1Name, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player1Id) }, 
+              gamesPlayed: getPlayerGames(game.player1Id),
+              eligible: true,
+              gamePenaltyBonus: 0,
+              status: 'in_progress',
+              matchHistory: []
+            },
+            { 
+              id: game.player2Id, 
+              name: game.player2Name, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player2Id) }, 
+              gamesPlayed: getPlayerGames(game.player2Id),
+              eligible: true,
+              gamePenaltyBonus: 0,
+              status: 'in_progress',
+              matchHistory: []
+            }
+          ]}
+          team2Players={[
+            { 
+              id: game.player3Id, 
+              name: game.player3Name, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player3Id) }, 
+              gamesPlayed: getPlayerGames(game.player3Id),
+              eligible: true,
+              gamePenaltyBonus: 0,
+              status: 'in_progress',
+              matchHistory: []
+            },
+            { 
+              id: game.player4Id, 
+              name: game.player4Name, 
+              level: { major: 'Beginner', bracket: getPlayerLevel(game.player4Id) }, 
+              gamesPlayed: getPlayerGames(game.player4Id),
+              eligible: true,
+              gamePenaltyBonus: 0,
+              status: 'in_progress',
+              matchHistory: []
+            }
+          ]}
+          availablePlayers={availablePlayers}
+          onSubstitute={handleSubstitute}
+          onTeamTrade={handleTeamTrade}
+        />
       </CardContent>
     </Card>
   );

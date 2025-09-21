@@ -378,7 +378,7 @@ export function useGameManager(eventId?: string) {
     completeGame,
     cancelGame,
     updateGameCourt,
-    replacePlayerInGame,
+    replacePlayerInGame: replacePlayerInGame,
     loadActiveGames
   };
 }

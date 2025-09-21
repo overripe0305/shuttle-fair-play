@@ -206,6 +206,80 @@ export function useWaitingMatchManager(eventId?: string) {
     }
   }, [waitingMatches]);
 
+  const teamTradeInWaiting = useCallback(async (matchId: string, player1Id: string, player2Id: string) => {
+    try {
+      const match = waitingMatches.find(m => m.id === matchId);
+      if (!match) return;
+
+      // Update the match data to swap the players between teams
+      const updatedMatchData = { ...match.matchData };
+      
+      // Find which teams the players are on and swap them
+      let player1Index = -1, player2Index = -1;
+      let player1Team = -1, player2Team = -1;
+      
+      // Check team 1
+      updatedMatchData.pair1.players.forEach((player, index) => {
+        if (player.id === player1Id) { player1Index = index; player1Team = 1; }
+        if (player.id === player2Id) { player2Index = index; player2Team = 1; }
+      });
+      
+      // Check team 2
+      updatedMatchData.pair2.players.forEach((player, index) => {
+        if (player.id === player1Id) { player1Index = index; player1Team = 2; }
+        if (player.id === player2Id) { player2Index = index; player2Team = 2; }
+      });
+      
+      // Perform the swap
+      if (player1Team === 1 && player2Team === 2) {
+        const temp = updatedMatchData.pair1.players[player1Index];
+        updatedMatchData.pair1.players[player1Index] = updatedMatchData.pair2.players[player2Index];
+        updatedMatchData.pair2.players[player2Index] = temp;
+      } else if (player1Team === 2 && player2Team === 1) {
+        const temp = updatedMatchData.pair2.players[player1Index];
+        updatedMatchData.pair2.players[player1Index] = updatedMatchData.pair1.players[player2Index];
+        updatedMatchData.pair1.players[player2Index] = temp;
+      }
+      
+      // Update database records accordingly
+      const updates: any = { match_data: updatedMatchData };
+      
+      // Update player IDs in the waiting match record
+      if (player1Team === 1 && player2Team === 2) {
+        if (player1Index === 0) updates.player1_id = player2Id;
+        else updates.player2_id = player2Id;
+        if (player2Index === 0) updates.player3_id = player1Id;
+        else updates.player4_id = player1Id;
+      } else if (player1Team === 2 && player2Team === 1) {
+        if (player1Index === 0) updates.player3_id = player2Id;
+        else updates.player4_id = player2Id;
+        if (player2Index === 0) updates.player1_id = player1Id;
+        else updates.player2_id = player1Id;
+      }
+
+      const { error } = await supabase
+        .from('waiting_matches')
+        .update(updates)
+        .eq('id', matchId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Players traded",
+        description: "Players have been successfully traded between teams",
+      });
+
+      loadWaitingMatches();
+    } catch (error) {
+      console.error('Error trading players:', error);
+      toast({
+        title: "Error",
+        description: "Failed to trade players",
+        variant: "destructive"
+      });
+    }
+  }, [waitingMatches, loadWaitingMatches]);
+
   const substitutePlayerInWaiting = useCallback(async (matchId: string, oldPlayerId: string, newPlayerId: string) => {
     try {
       const match = waitingMatches.find(m => m.id === matchId);
@@ -368,6 +442,7 @@ export function useWaitingMatchManager(eventId?: string) {
     removeWaitingMatch,
     startWaitingMatch,
     loadWaitingMatches,
-    substitutePlayerInWaiting
+    substitutePlayerInWaiting,
+    teamTradeInWaiting
   };
 }

@@ -4,13 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Play, X, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
+import { Player } from '@/types/player';
+import { TeamSubstituteDialog } from './TeamSubstituteDialog';
 
 interface WaitingMatchCardProps {
   match: WaitingMatch;
   onStart: (matchId: string, courtId: number) => void;
   onRemove: (matchId: string) => void;
   onSubstitute: (matchId: string, oldPlayerId: string, newPlayerId: string) => void;
-  availablePlayers: any[];
+  onTeamTrade: (matchId: string, player1Id: string, player2Id: string) => void;
+  availablePlayers: Player[];
   courtCount: number;
 }
 
@@ -49,20 +52,23 @@ const getLevelBackgroundColor = (bracket: number) => {
   return color;
 };
 
-export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, availablePlayers, courtCount }: WaitingMatchCardProps) {
+export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTeamTrade, availablePlayers, courtCount }: WaitingMatchCardProps) {
   const [selectedCourt, setSelectedCourt] = useState(1);
-  const [substitutingPlayer, setSubstitutingPlayer] = useState<string | null>(null);
+  const [selectedPlayerForSubstitute, setSelectedPlayerForSubstitute] = useState<any | null>(null);
 
   const formatPlayerName = (player: any) => {
     console.log('Player data in WaitingMatchCard:', player);
     return `G${player.gamesPlayed || 0}-${player.name}`;
   };
 
-  const handleSubstitute = (newPlayerId: string) => {
-    if (substitutingPlayer) {
-      onSubstitute(match.id, substitutingPlayer, newPlayerId);
-      setSubstitutingPlayer(null);
-    }
+  const handleSubstitute = (oldPlayerId: string, newPlayerId: string) => {
+    onSubstitute(match.id, oldPlayerId, newPlayerId);
+    setSelectedPlayerForSubstitute(null);
+  };
+
+  const handleTeamTrade = (player1Id: string, player2Id: string) => {
+    onTeamTrade(match.id, player1Id, player2Id);
+    setSelectedPlayerForSubstitute(null);
   };
 
   return (
@@ -125,7 +131,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
                   size="sm"
                   variant="ghost"
                   className="h-6 w-6 p-0"
-                  onClick={() => setSubstitutingPlayer(player.id)}
+                  onClick={() => setSelectedPlayerForSubstitute(player)}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -150,7 +156,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
                   size="sm"
                   variant="ghost"
                   className="h-6 w-6 p-0"
-                  onClick={() => setSubstitutingPlayer(player.id)}
+                  onClick={() => setSelectedPlayerForSubstitute(player)}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -159,33 +165,17 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, avail
           </div>
         </div>
 
-        {/* Substitution Panel */}
-        {substitutingPlayer && (
-          <div className="mt-3 p-2 bg-yellow-50 rounded border">
-            <div className="text-sm font-medium mb-2">Select replacement:</div>
-            <div className="flex gap-1 flex-wrap">
-              {availablePlayers.map(player => (
-                <Button
-                  key={player.id}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleSubstitute(player.id)}
-                  className={`text-xs text-white px-2 py-1 rounded ${getLevelBackgroundColor(player.level?.bracket || 0)}`}
-                >
-                  {formatPlayerName(player)}
-                </Button>
-              ))}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSubstitutingPlayer(null)}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Team Substitute Dialog */}
+        <TeamSubstituteDialog
+          open={!!selectedPlayerForSubstitute}
+          onOpenChange={(open) => !open && setSelectedPlayerForSubstitute(null)}
+          selectedPlayer={selectedPlayerForSubstitute}
+          team1Players={match.matchData.pair1.players}
+          team2Players={match.matchData.pair2.players}
+          availablePlayers={availablePlayers}
+          onSubstitute={handleSubstitute}
+          onTeamTrade={handleTeamTrade}
+        />
       </CardContent>
     </Card>
   );
