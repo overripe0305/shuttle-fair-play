@@ -125,6 +125,22 @@ const Index = () => {
   
   // Initialize data sync hook
   const { performSync, isSyncing } = useDataSync(eventId, clubId);
+
+  // Auto-sync on data changes
+  React.useEffect(() => {
+    const handleAutoSync = () => {
+      if (eventId && clubId) {
+        performSync();
+      }
+    };
+
+    // Listen for custom sync events
+    window.addEventListener('triggerDataSync', handleAutoSync);
+    
+    return () => {
+      window.removeEventListener('triggerDataSync', handleAutoSync);
+    };
+  }, [eventId, clubId, performSync]);
   
   // Initialize event-specific idle time hook
   const { setIdleStartTime } = useEventSpecificIdleTime();
@@ -262,11 +278,19 @@ const Index = () => {
           match.pair2.players[1].id,
           availableCourt
         );
+        
+        // Trigger sync after manual game creation
+        const syncEvent = new CustomEvent('triggerDataSync');
+        window.dispatchEvent(syncEvent);
       } else {
         // Add to waiting queue
         addWaitingMatch(match, async (playerId: string, status: string) => {
           await updatePlayer(playerId, { status: status as any });
         });
+        
+        // Trigger sync after adding to waiting queue
+        const syncEvent = new CustomEvent('triggerDataSync');
+        window.dispatchEvent(syncEvent);
       }
     }
   };
@@ -836,6 +860,10 @@ const Index = () => {
                     match.pair2.players[1].id,
                     availableCourt
                   );
+                  
+                  // Trigger sync after starting waiting match
+                  const syncEvent = new CustomEvent('triggerDataSync');
+                  window.dispatchEvent(syncEvent);
                 }
               }}
               onPlayerStatusUpdate={async (playerId: string, status: string) => {

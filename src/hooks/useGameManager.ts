@@ -169,6 +169,10 @@ export function useGameManager(eventId?: string) {
         description: `New game created on Court ${courtId}`,
       });
 
+      // Trigger sync after game creation
+      const syncEvent = new CustomEvent('triggerDataSync');
+      window.dispatchEvent(syncEvent);
+
       loadActiveGames();
     } catch (error) {
       console.error('Error creating game:', error);
@@ -227,14 +231,12 @@ export function useGameManager(eventId?: string) {
         description: `Game on Court ${game.courtId} has been marked as complete.`,
       });
 
+      // Trigger sync after game completion
+      const syncEvent = new CustomEvent('triggerDataSync');
+      window.dispatchEvent(syncEvent);
+
       // Force reload active games to refresh the list immediately
       await loadActiveGames();
-      
-      // Trigger a manual database sync event to ensure all hooks refresh
-      // This ensures the event player stats hook picks up the changes immediately
-      setTimeout(() => {
-        console.log('Game completion sync - triggering manual refresh');
-      }, 100);
       
     } catch (error) {
       console.error('Error completing game:', error);

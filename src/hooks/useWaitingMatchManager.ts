@@ -124,16 +124,16 @@ export function useWaitingMatchManager(eventId?: string) {
         return;
       }
 
-      // Update player statuses to 'Waiting'
+      // Update player statuses to 'queued'
       for (const playerId of playerIds) {
         await supabase
           .from('players')
-          .update({ status: 'waiting' })
+          .update({ status: 'queued' })
           .eq('id', playerId);
         
         // Update local state immediately
         if (onPlayerStatusUpdate) {
-          onPlayerStatusUpdate(playerId, 'waiting');
+          onPlayerStatusUpdate(playerId, 'queued');
         }
       }
 
@@ -241,7 +241,7 @@ export function useWaitingMatchManager(eventId?: string) {
 
       await supabase
         .from('players')
-        .update({ status: 'waiting' })
+        .update({ status: 'queued' })
         .eq('id', newPlayerId);
 
       // Update waiting match record
@@ -280,7 +280,7 @@ export function useWaitingMatchManager(eventId?: string) {
          eligible: true,
          gamesPlayed: 0,
          gamePenaltyBonus: 0,
-         status: 'waiting' as const,
+         status: 'queued' as const,
          matchHistory: []
        };
 
@@ -350,6 +350,10 @@ export function useWaitingMatchManager(eventId?: string) {
         .from('waiting_matches')
         .delete()
         .eq('id', matchId);
+
+      // Trigger sync after starting match
+      const syncEvent = new CustomEvent('triggerDataSync');
+      window.dispatchEvent(syncEvent);
 
       onStartGame(match.matchData);
       loadWaitingMatches();

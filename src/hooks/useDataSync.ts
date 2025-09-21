@@ -73,6 +73,9 @@ export const useDataSync = (eventId?: string, clubId?: string) => {
           expectedStatus = 'in_progress';
         } else if (inWaitingMatch) {
           expectedStatus = 'queued';
+        } else if (player.status === 'paused') {
+          // Keep paused status - don't change it to available
+          expectedStatus = 'paused';
         } else {
           expectedStatus = 'available';
         }
