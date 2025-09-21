@@ -6,6 +6,7 @@ import { Clock, Play, X, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Player } from '@/types/player';
 import { TeamSubstituteDialog } from './TeamSubstituteDialog';
+import { getBracketFromMajorSub, MajorLevel, SubLevel, BracketLevel } from '@/types/player';
 
 interface WaitingMatchCardProps {
   match: WaitingMatch;
@@ -70,6 +71,28 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
     setSelectedPlayerForSubstitute(null);
   };
 
+  // Get player level data from available players to show correct level colors
+  const getPlayerLevel = (playerId: string) => {
+    const player: any = availablePlayers.find(p => p.id === playerId);
+    if (!player) return 0;
+
+    // Prefer EnhancedPlayer shape
+    const bracketFromLevel = player.level?.bracket;
+    if (typeof bracketFromLevel === 'number') return bracketFromLevel;
+
+    // Fallback to DB shape if provided
+    if (player.major_level) {
+      return getBracketFromMajorSub(player.major_level as MajorLevel, player.sub_level as SubLevel | undefined);
+    }
+
+    return 0;
+  };
+
+  const getPlayerGames = (playerId: string) => {
+    const player: any = availablePlayers.find(p => p.id === playerId);
+    return (player?.gamesPlayed ?? player?.games_played ?? 0) as number;
+  };
+
   return (
     <Card className="border-orange-200 bg-orange-50">
       <CardHeader className="pb-3">
@@ -113,24 +136,28 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
       
       <CardContent className="pt-0">
         <div className="grid grid-cols-2 gap-3 text-sm">
-          {/* Pair 1 */}
+          {/* Team 1 */}
           <div className="space-y-2">
-            <div className="font-medium text-blue-800">Pair 1</div>
+            <div className="font-medium text-blue-800">Team 1</div>
             {match.matchData.pair1.players.map((player) => (
               <div key={player.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(player.level.bracket)}`}>
-                    {formatPlayerName(player)}
-                  </span>
-                  <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
-                    Level {player.level.bracket}
-                  </Badge>
-                </div>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(player.id))}`}>
+                  {formatPlayerName(player)} - {getPlayerLevel(player.id)}
+                </span>
                 <Button
                   size="sm"
                   variant="ghost"
                   className="h-6 w-6 p-0"
-                  onClick={() => setSelectedPlayerForSubstitute(player)}
+                  onClick={() => setSelectedPlayerForSubstitute({
+                    id: player.id,
+                    name: player.name,
+                    level: { major: 'Beginner', bracket: getPlayerLevel(player.id) },
+                    gamesPlayed: getPlayerGames(player.id),
+                    eligible: true,
+                    gamePenaltyBonus: 0,
+                    status: 'queued',
+                    matchHistory: []
+                  })}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -138,24 +165,28 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
             ))}
           </div>
           
-          {/* Pair 2 */}
+          {/* Team 2 */}
           <div className="space-y-2">
-            <div className="font-medium text-green-800">Pair 2</div>
+            <div className="font-medium text-green-800">Team 2</div>
             {match.matchData.pair2.players.map((player) => (
               <div key={player.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(player.level.bracket)}`}>
-                    {formatPlayerName(player)}
-                  </span>
-                  <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
-                    Level {player.level.bracket}
-                  </Badge>
-                </div>
+                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(player.id))}`}>
+                  {formatPlayerName(player)} - {getPlayerLevel(player.id)}
+                </span>
                 <Button
                   size="sm"
                   variant="ghost"
                   className="h-6 w-6 p-0"
-                  onClick={() => setSelectedPlayerForSubstitute(player)}
+                  onClick={() => setSelectedPlayerForSubstitute({
+                    id: player.id,
+                    name: player.name,
+                    level: { major: 'Beginner', bracket: getPlayerLevel(player.id) },
+                    gamesPlayed: getPlayerGames(player.id),
+                    eligible: true,
+                    gamePenaltyBonus: 0,
+                    status: 'queued',
+                    matchHistory: []
+                  })}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -169,8 +200,26 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
           open={!!selectedPlayerForSubstitute}
           onOpenChange={(open) => !open && setSelectedPlayerForSubstitute(null)}
           selectedPlayer={selectedPlayerForSubstitute}
-          team1Players={match.matchData.pair1.players}
-          team2Players={match.matchData.pair2.players}
+          team1Players={match.matchData.pair1.players.map(player => ({
+            id: player.id,
+            name: player.name,
+            level: { major: 'Beginner', bracket: getPlayerLevel(player.id) as BracketLevel },
+            gamesPlayed: getPlayerGames(player.id),
+            eligible: true,
+            gamePenaltyBonus: 0,
+            status: 'queued',
+            matchHistory: []
+          }))}
+          team2Players={match.matchData.pair2.players.map(player => ({
+            id: player.id,
+            name: player.name,
+            level: { major: 'Beginner', bracket: getPlayerLevel(player.id) as BracketLevel },
+            gamesPlayed: getPlayerGames(player.id),
+            eligible: true,
+            gamePenaltyBonus: 0,
+            status: 'queued',
+            matchHistory: []
+          }))}
           availablePlayers={availablePlayers}
           onSubstitute={handleSubstitute}
           onTeamTrade={handleTeamTrade}
