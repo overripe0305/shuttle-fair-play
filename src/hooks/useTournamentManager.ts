@@ -409,12 +409,18 @@ export const useTournamentManager = () => {
       const isPreRound = currentRound === 1 && hasTbdInNextRound;
 
       if (isPreRound) {
-        // Pre-match winners advance to specific slots in the main bracket
-        // Pre-match 1 winner goes to main match 2, pre-match 2 winner goes to main match 3, etc.
-        const targetMatchNumber = currentMatchNumber + 1;
-        targetMatch = nextRoundMatches.find((m) => m.match_number === targetMatchNumber);
-        if (targetMatch) {
-          updateField = 'participant2_id'; // Pre-match winners always go to participant2 slot
+        // Find all TBD slots in the next round and assign pre-match winners based on seeding
+        const tbdSlots = nextRoundMatches
+          .filter((m) => !m.participant1_id || !m.participant2_id)
+          .sort((a, b) => a.match_number - b.match_number);
+        
+        if (tbdSlots.length > 0 && currentMatchNumber <= tbdSlots.length) {
+          // Pre-match winners advance to TBD slots in order based on their seeding
+          // Pre-match 1 (highest seed) gets first TBD slot, etc.
+          targetMatch = tbdSlots[currentMatchNumber - 1];
+          if (targetMatch) {
+            updateField = !targetMatch.participant1_id ? 'participant1_id' : 'participant2_id';
+          }
         }
       } else {
         // Regular advancement mapping
