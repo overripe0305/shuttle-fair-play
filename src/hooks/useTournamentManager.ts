@@ -261,17 +261,22 @@ export const useTournamentManager = () => {
     const numParticipants = participantIds.length;
     if (numParticipants < 2) return matches;
 
-    // Determine target (power of two) bracket size <= numParticipants
-    const targetSizes = [64, 32, 16, 8, 4, 2];
-    const targetSize = targetSizes.find((s) => s <= numParticipants) || 2;
+    // Find the target bracket size (power of 2) that accommodates the participants
+    let targetSize = 2;
+    while (targetSize < numParticipants) {
+      targetSize *= 2;
+    }
+
+    // Calculate excess players and TBD slots needed
+    const excessPlayers = numParticipants - (targetSize / 2);
+    const tbdSlotsNeeded = excessPlayers;
 
     let roundNumber = 1;
     const availableParticipants: Array<string | null> = [...participantIds];
 
-    // 1) Pre-rounds to trim down to targetSize
-    if (numParticipants > targetSize) {
-      const preRoundMatches = numParticipants - targetSize;
-      for (let match = 1; match <= preRoundMatches; match++) {
+    // 1) Pre-rounds for excess players (should equal TBD slots)
+    if (excessPlayers > 0) {
+      for (let match = 1; match <= excessPlayers; match++) {
         const participant2 = availableParticipants.pop() || null;
         const participant1 = availableParticipants.pop() || null;
         matches.push({
@@ -281,13 +286,13 @@ export const useTournamentManager = () => {
           participant2Id: participant2,
           isPreRound: true,
         });
-        // Winner placeholder feeds into the first main round later
+        // Winner placeholder (TBD) for first main round
         availableParticipants.push(null);
       }
       roundNumber++; // Move to first main round
     }
 
-    // 2) First main round (targetSize). Seed known players; TBDs remain null
+    // 2) First main round - mix of known players and TBD slots
     const matchesInFirstMainRound = Math.floor(targetSize / 2);
     for (let match = 1; match <= matchesInFirstMainRound; match++) {
       const idx1 = (match - 1) * 2;
@@ -437,10 +442,108 @@ export const useTournamentManager = () => {
       // Reload tournament data
       if (tournament?.eventId) {
         await loadTournament(tournament.eventId);
+        
+        // Auto-regenerate brackets if they were already generated
+        if (tournament?.currentStage === 'elimination_stage') {
+          await regenerateBracket(tournamentId);
+        }
       }
     } catch (error) {
       console.error('Error adding more participants:', error);
       throw error;
+    }
+  };
+
+  const removeParticipants = async (tournamentId: string, participantIds: string[]) => {
+    try {
+      // Remove participants from tournament
+      const { error } = await supabase
+        .from('tournament_participants')
+        .delete()
+        .in('id', participantIds);
+
+      if (error) throw error;
+
+      // Reload tournament data
+      if (tournament?.eventId) {
+        await loadTournament(tournament.eventId);
+        
+        // Auto-regenerate brackets if they were already generated
+        if (tournament?.currentStage === 'elimination_stage') {
+          await regenerateBracket(tournamentId);
+        }
+      }
+
+      toast.success(`${participantIds.length} participants removed successfully!`);
+    } catch (error) {
+      console.error('Error removing participants:', error);
+      toast.error('Failed to remove participants');
+      throw error;
+    }
+  };
+
+  const editMatchResult = async (matchId: string, participant1Score: number, participant2Score: number, winnerId: string) => {
+    try {
+      // Update the match result
+      const { error } = await supabase
+        .from('tournament_matches')
+        .update({
+          participant1_score: participant1Score,
+          participant2_score: participant2Score,
+          winner_id: winnerId,
+          status: 'completed',
+          completed_time: new Date().toISOString()
+        })
+        .eq('id', matchId);
+
+      if (error) throw error;
+
+      // Reset all subsequent matches that depend on this result
+      await resetSubsequentMatches(matchId);
+
+      // Re-advance winner to next round
+      await advanceWinnerToNextRound(matchId, winnerId);
+
+      await loadTournament(tournament?.eventId || '');
+      toast.success('Match result updated successfully!');
+    } catch (error) {
+      console.error('Error editing match result:', error);
+      toast.error('Failed to edit match result');
+      throw error;
+    }
+  };
+
+  const resetSubsequentMatches = async (matchId: string) => {
+    try {
+      // Get the completed match details
+      const { data: completedMatch, error: matchError } = await supabase
+        .from('tournament_matches')
+        .select('*')
+        .eq('id', matchId)
+        .single();
+
+      if (matchError || !completedMatch) return;
+
+      const tournamentId = completedMatch.tournament_id;
+      const currentRound = completedMatch.round_number;
+
+      // Reset all matches from the next round onwards
+      await supabase
+        .from('tournament_matches')
+        .update({
+          participant1_id: null,
+          participant2_id: null,
+          participant1_score: null,
+          participant2_score: null,
+          winner_id: null,
+          status: 'awaiting',
+          completed_time: null
+        })
+        .eq('tournament_id', tournamentId)
+        .gt('round_number', currentRound);
+
+    } catch (error) {
+      console.error('Error resetting subsequent matches:', error);
     }
   };
 
@@ -551,7 +654,9 @@ export const useTournamentManager = () => {
     loading,
     createTournament,
     updateMatchResult,
+    editMatchResult,
     addMoreParticipants,
+    removeParticipants,
     generateTournamentBracket,
     reorderParticipants,
     regenerateBracket,
