@@ -186,6 +186,72 @@ export const useEventManager = (clubId?: string) => {
 
   const deleteEvent = async (eventId: string) => {
     try {
+      // First delete all games associated with this event
+      const { error: gamesError } = await supabase
+        .from('games')
+        .delete()
+        .eq('event_id', eventId);
+
+      if (gamesError) throw gamesError;
+
+      // Delete all waiting matches associated with this event
+      const { error: waitingMatchesError } = await supabase
+        .from('waiting_matches')
+        .delete()
+        .eq('event_id', eventId);
+
+      if (waitingMatchesError) throw waitingMatchesError;
+
+      // Delete all event-player associations
+      const { error: eventPlayersError } = await supabase
+        .from('event_players')
+        .delete()
+        .eq('event_id', eventId);
+
+      if (eventPlayersError) throw eventPlayersError;
+
+      // Delete all event payments
+      const { error: paymentsError } = await supabase
+        .from('event_payments')
+        .delete()
+        .eq('event_id', eventId);
+
+      if (paymentsError) throw paymentsError;
+
+      // Check if this is a tournament event and delete tournament data
+      const { data: tournamentData } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('event_id', eventId)
+        .maybeSingle();
+
+      if (tournamentData) {
+        // Delete tournament matches
+        const { error: tournamentMatchesError } = await supabase
+          .from('tournament_matches')
+          .delete()
+          .eq('tournament_id', tournamentData.id);
+
+        if (tournamentMatchesError) throw tournamentMatchesError;
+
+        // Delete tournament participants
+        const { error: tournamentParticipantsError } = await supabase
+          .from('tournament_participants')
+          .delete()
+          .eq('tournament_id', tournamentData.id);
+
+        if (tournamentParticipantsError) throw tournamentParticipantsError;
+
+        // Delete the tournament
+        const { error: tournamentError } = await supabase
+          .from('tournaments')
+          .delete()
+          .eq('id', tournamentData.id);
+
+        if (tournamentError) throw tournamentError;
+      }
+
+      // Finally delete the event itself
       const { error } = await supabase
         .from('events')
         .delete()
@@ -196,6 +262,7 @@ export const useEventManager = (clubId?: string) => {
       setEvents(prev => prev.filter(event => event.id !== eventId));
     } catch (error) {
       console.error('Error deleting event:', error);
+      throw error;
     }
   };
 

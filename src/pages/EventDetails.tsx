@@ -141,13 +141,17 @@ const EventDetails = () => {
   };
 
   const handleDeleteEvent = async () => {
-    if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+    const eventStatus = event.status === 'upcoming' ? 'upcoming event' : 
+                       event.status === 'active' ? 'active event' : 'completed event';
+    
+    if (window.confirm(`Are you sure you want to delete this ${eventStatus}? This will permanently delete all games, matches, and tournament data associated with this event. This action cannot be undone.`)) {
       try {
         await deleteEvent(event.id);
-        toast.success('Event deleted successfully');
+        toast.success('Event and all associated data deleted successfully');
         navigate('/');
       } catch (error) {
         toast.error('Failed to delete event');
+        console.error('Delete error:', error);
       }
     }
   };
@@ -181,7 +185,7 @@ const EventDetails = () => {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
                 {isSyncing ? 'Syncing...' : 'Sync Data'}
               </Button>
-              {event.status === 'upcoming' && (
+              {event.status !== 'ended' && (
                 <Button 
                   variant="destructive" 
                   size="sm" 
