@@ -56,9 +56,8 @@ const getLevelBackgroundColor = (bracket: number) => {
 export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTeamTrade, onChangeCourt, availablePlayers, courtCount }: ActiveGameCardProps) {
   const [selectedPlayerForSubstitute, setSelectedPlayerForSubstitute] = useState<any | null>(null);
 
-  const formatPlayerName = (playerName?: string, gamesPlayed?: number) => {
-    console.log('Player name and games in ActiveGameCard:', playerName, gamesPlayed);
-    return `G${gamesPlayed || 0}-${playerName || 'Unknown'}`;
+  const formatPlayerName = (playerName?: string) => {
+    return playerName || 'Unknown';
   };
 
   const handleSubstitute = (oldPlayerId: string, newPlayerId: string) => {
@@ -114,31 +113,6 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             </select>
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => onComplete(game.id, 'team1')}
-              className="h-7 px-2 text-blue-700 border-blue-300"
-            >
-              Team 1 Wins
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onComplete(game.id, 'team2')}
-              className="h-7 px-2 text-green-700 border-green-300"
-            >
-              Team 2 Wins
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onComplete(game.id)}
-              className="h-7 px-2"
-            >
-              <Trophy className="h-3 w-3 mr-1" />
-              No Contest
-            </Button>
-            <Button
-              size="sm"
               variant="ghost"
               onClick={() => onCancel(game.id)}
               className="h-7 w-7 p-0 text-destructive hover:text-destructive"
@@ -157,10 +131,10 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player1Id))}`}>
-                  {formatPlayerName(game.player1Name, getPlayerGames(game.player1Id))}
+                  {formatPlayerName(game.player1Name)}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player1Id))} variant="secondary">
-                  {getPlayerLevel(game.player1Id)}
+                  Level {getPlayerLevel(game.player1Id)}
                 </Badge>
               </div>
               <Button
@@ -184,10 +158,10 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player2Id))}`}>
-                  {formatPlayerName(game.player2Name, getPlayerGames(game.player2Id))}
+                  {formatPlayerName(game.player2Name)}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player2Id))} variant="secondary">
-                  {getPlayerLevel(game.player2Id)}
+                  Level {getPlayerLevel(game.player2Id)}
                 </Badge>
               </div>
               <Button
@@ -216,10 +190,10 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player3Id))}`}>
-                  {formatPlayerName(game.player3Name, getPlayerGames(game.player3Id))}
+                  {formatPlayerName(game.player3Name)}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player3Id))} variant="secondary">
-                  {getPlayerLevel(game.player3Id)}
+                  Level {getPlayerLevel(game.player3Id)}
                 </Badge>
               </div>
               <Button
@@ -243,10 +217,10 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player4Id))}`}>
-                  {formatPlayerName(game.player4Name, getPlayerGames(game.player4Id))}
+                  {formatPlayerName(game.player4Name)}
                 </span>
                 <Badge className={getLevelColor(getPlayerLevel(game.player4Id))} variant="secondary">
-                  {getPlayerLevel(game.player4Id)}
+                  Level {getPlayerLevel(game.player4Id)}
                 </Badge>
               </div>
               <Button
@@ -268,6 +242,35 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Game Result Buttons */}
+        <div className="flex justify-center gap-2 mt-4 pt-3 border-t">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onComplete(game.id, 'team1')}
+            className="px-4 text-blue-700 border-blue-300"
+          >
+            Team 1 Wins
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onComplete(game.id, 'team2')}
+            className="px-4 text-green-700 border-green-300"
+          >
+            Team 2 Wins
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onComplete(game.id)}
+            className="px-4"
+          >
+            <Trophy className="h-3 w-3 mr-1" />
+            No Contest
+          </Button>
         </div>
 
         {/* Team Substitute Dialog */}

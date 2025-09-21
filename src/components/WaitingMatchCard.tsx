@@ -57,8 +57,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
   const [selectedPlayerForSubstitute, setSelectedPlayerForSubstitute] = useState<any | null>(null);
 
   const formatPlayerName = (player: any) => {
-    console.log('Player data in WaitingMatchCard:', player);
-    return `G${player.gamesPlayed || 0}-${player.name}`;
+    return player.name;
   };
 
   const handleSubstitute = (oldPlayerId: string, newPlayerId: string) => {
@@ -124,7 +123,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
                     {formatPlayerName(player)}
                   </span>
                   <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
-                    {player.level.bracket}
+                    Level {player.level.bracket}
                   </Badge>
                 </div>
                 <Button
@@ -149,7 +148,7 @@ export function WaitingMatchCard({ match, onStart, onRemove, onSubstitute, onTea
                     {formatPlayerName(player)}
                   </span>
                   <Badge className={getLevelColor(player.level.bracket)} variant="secondary">
-                    {player.level.bracket}
+                    Level {player.level.bracket}
                   </Badge>
                 </div>
                 <Button

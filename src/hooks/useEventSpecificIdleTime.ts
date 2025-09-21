@@ -8,21 +8,19 @@ export const useEventSpecificIdleTime = () => {
     // Check if player has any completed games in this event
     const { data: games } = await supabase
       .from('games')
-      .select('*')
+      .select('updated_at, completed')
       .eq('event_id', eventId)
       .eq('completed', true)
       .or(`player1_id.eq.${playerId},player2_id.eq.${playerId},player3_id.eq.${playerId},player4_id.eq.${playerId}`)
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .limit(1);
 
     let idleStartTime: number;
     
     if (games && games.length > 0) {
-      // Use the end time of their last completed game in this event
+      // Use the updated_at time when the game was completed
       const lastGame = games[0];
-      // Estimate game end time (start + 15 minutes default)
-      const gameStartTime = new Date(lastGame.start_time || lastGame.created_at).getTime();
-      idleStartTime = gameStartTime + (15 * 60 * 1000); // Add 15 minutes
+      idleStartTime = new Date(lastGame.updated_at).getTime();
     } else {
       // Check when player was added to the event
       const { data: eventPlayer } = await supabase
