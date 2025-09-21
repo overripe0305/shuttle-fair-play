@@ -211,16 +211,21 @@ export const useTournamentManager = () => {
       const allMatches = generateCompleteSingleEliminationBracket(participantIds);
       
       // Insert all matches into database
-      const matchesToInsert = allMatches.map((match) => ({
-        tournament_id: tournamentId,
-        stage: 'elimination_stage' as const,
-        round_number: match.round,
-        match_number: match.matchNumber,
-        participant1_id: match.participant1Id || null,
-        participant2_id: match.participant2Id || null,
-        status: 'scheduled' as const,
-        bracket_position: `R${match.round}M${match.matchNumber}`
-      }));
+      const matchesToInsert = allMatches.map((match) => {
+        const p1 = match.participant1Id || null;
+        const p2 = match.participant2Id || null;
+        const status = p1 && p2 ? 'scheduled' as const : 'awaiting' as const;
+        return {
+          tournament_id: tournamentId,
+          stage: 'elimination_stage' as const,
+          round_number: match.round,
+          match_number: match.matchNumber,
+          participant1_id: p1,
+          participant2_id: p2,
+          status,
+          bracket_position: `R${match.round}M${match.matchNumber}`
+        };
+      });
 
       if (matchesToInsert.length > 0) {
         const { error: matchError } = await supabase
@@ -280,15 +285,16 @@ export const useTournamentManager = () => {
       const preMatchParticipants = participantIds.slice(-participantsInPreMatches);
       
       for (let match = 1; match <= preMatchCount; match++) {
-        // Apply the correct pairing: first half vs second half
-        const participant1Index = match - 1;
-        const participant2Index = participant1Index + preMatchCount;
+        // Standard seeding: pair middle seeds towards the top
+        // Example (6 players): [3,4,5,6] -> M1: 4 vs 5, M2: 3 vs 6
+        const leftIndex = preMatchCount - match; // preMatchCount-1, ..., 0
+        const rightIndex = preMatchCount + (match - 1); // preMatchCount, ..., preMatchCount*2-1
         
         matches.push({
           round: roundNumber,
           matchNumber: match,
-          participant1Id: preMatchParticipants[participant1Index] || null,
-          participant2Id: preMatchParticipants[participant2Index] || null,
+          participant1Id: preMatchParticipants[leftIndex] || null,
+          participant2Id: preMatchParticipants[rightIndex] || null,
           isPreRound: true,
         });
       }
