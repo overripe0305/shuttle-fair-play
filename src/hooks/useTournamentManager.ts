@@ -276,11 +276,13 @@ export const useTournamentManager = () => {
 
     // 1) Pre-rounds for excess participants (highest numbered participants compete)
     if (excessParticipants > 0) {
+      // Get the participants that will compete in pre-matches
       const preMatchParticipants = participantIds.slice(-participantsInPreMatches);
       
       for (let match = 1; match <= preMatchCount; match++) {
-        const participant1Index = (match - 1) * 2;
-        const participant2Index = participant1Index + 1;
+        // Apply the correct pairing: first half vs second half
+        const participant1Index = match - 1;
+        const participant2Index = participant1Index + preMatchCount;
         
         matches.push({
           round: roundNumber,
@@ -295,13 +297,7 @@ export const useTournamentManager = () => {
 
     // 2) Main bracket using the correct pairing pattern
     const safeParticipants = participantIds.slice(0, targetSize - excessParticipants);
-    const mainBracketParticipants: Array<string | null> = [...safeParticipants];
     
-    // Add TBD slots for pre-match winners
-    for (let i = 0; i < excessParticipants; i++) {
-      mainBracketParticipants.push(null);
-    }
-
     // First main round with proper pairing pattern
     const matchesInFirstRound = targetSize / 2;
     for (let match = 1; match <= matchesInFirstRound; match++) {
@@ -312,8 +308,16 @@ export const useTournamentManager = () => {
       const idx1 = match - 1;
       const idx2 = idx1 + matchesInFirstRound;
 
-      participant1Id = mainBracketParticipants[idx1] || null;
-      participant2Id = mainBracketParticipants[idx2] || null;
+      if (idx1 < safeParticipants.length) {
+        participant1Id = safeParticipants[idx1];
+      }
+      
+      if (idx2 < safeParticipants.length) {
+        participant2Id = safeParticipants[idx2];
+      } else {
+        // This is a TBD slot - will be filled by pre-match winner
+        participant2Id = null;
+      }
 
       matches.push({
         round: roundNumber,
@@ -405,14 +409,12 @@ export const useTournamentManager = () => {
       const isPreRound = currentRound === 1 && hasTbdInNextRound;
 
       if (isPreRound) {
-        // Fill the last available TBD slot (from the end)
-        for (let i = nextRoundMatches.length - 1; i >= 0; i--) {
-          const m = nextRoundMatches[i];
-          if (!m.participant2_id || !m.participant1_id) {
-            targetMatch = m;
-            updateField = !m.participant2_id ? 'participant2_id' : 'participant1_id';
-            break;
-          }
+        // Pre-match winners advance to specific slots in the main bracket
+        // Pre-match 1 winner goes to main match 2, pre-match 2 winner goes to main match 3, etc.
+        const targetMatchNumber = currentMatchNumber + 1;
+        targetMatch = nextRoundMatches.find((m) => m.match_number === targetMatchNumber);
+        if (targetMatch) {
+          updateField = 'participant2_id'; // Pre-match winners always go to participant2 slot
         }
       } else {
         // Regular advancement mapping
