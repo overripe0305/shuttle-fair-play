@@ -401,6 +401,31 @@ export const useTournamentManager = () => {
 
       if (nextErr || !nextRoundMatches || nextRoundMatches.length === 0) return;
 
+      // Ensure the new winner isn't already placed in any next-round match
+      for (const m of nextRoundMatches) {
+        if (m.participant1_id === winnerId || m.participant2_id === winnerId) {
+          const cleanup: any = {};
+          if (m.participant1_id === winnerId) cleanup.participant1_id = null;
+          if (m.participant2_id === winnerId) cleanup.participant2_id = null;
+
+          if (m.status === 'completed' || m.winner_id === winnerId) {
+            cleanup.participant1_score = null;
+            cleanup.participant2_score = null;
+            cleanup.winner_id = null;
+            cleanup.completed_time = null;
+          }
+
+          const remainingP1 = cleanup.participant1_id !== undefined ? cleanup.participant1_id : m.participant1_id;
+          const remainingP2 = cleanup.participant2_id !== undefined ? cleanup.participant2_id : m.participant2_id;
+          cleanup.status = remainingP1 && remainingP2 ? 'scheduled' : 'awaiting';
+
+          await supabase
+            .from('tournament_matches')
+            .update(cleanup)
+            .eq('id', m.id);
+        }
+      }
+
       let targetMatch: any = null;
       let updateField: 'participant1_id' | 'participant2_id' = 'participant1_id';
 
@@ -416,7 +441,6 @@ export const useTournamentManager = () => {
         
         if (tbdSlots.length > 0 && currentMatchNumber <= tbdSlots.length) {
           // Pre-match winners advance to TBD slots in order based on their seeding
-          // Pre-match 1 (highest seed) gets first TBD slot, etc.
           targetMatch = tbdSlots[currentMatchNumber - 1];
           if (targetMatch) {
             updateField = !targetMatch.participant1_id ? 'participant1_id' : 'participant2_id';
