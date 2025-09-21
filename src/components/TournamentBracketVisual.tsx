@@ -78,29 +78,29 @@ export const TournamentBracketVisual = ({
     return (
       <Card 
         key={match.id} 
-        className={`relative transition-all hover:shadow-md ${getStatusColor(match.status)} ${isAwaiting ? 'opacity-60' : ''}`}
+        className={`relative transition-all hover:shadow-md ${getStatusColor(match.status)} ${isAwaiting ? 'opacity-60' : ''} w-60`}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-2">
           {/* Match Header */}
-          <div className="flex items-center justify-between mb-2">
-            <Badge variant="outline" className="text-xs">
-              {match.status === 'awaiting' ? 'Awaiting Players' : match.status.replace('_', ' ')}
+          <div className="flex items-center justify-between mb-1">
+            <Badge variant="outline" className="text-xs px-1 py-0">
+              {match.status === 'awaiting' ? 'Awaiting' : match.status.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              Match {match.matchNumber}
+              M{match.matchNumber}
             </span>
           </div>
 
           {/* Participants */}
-          <div className="space-y-2">
-            <div className={`flex items-center justify-between p-2 rounded border-2 transition-colors ${
+          <div className="space-y-1">
+            <div className={`flex items-center justify-between p-1.5 rounded border transition-colors text-sm ${
               winner === match.participant1Id 
                 ? 'border-yellow-400 bg-yellow-50' 
                 : !match.participant1Id 
                   ? 'border-dashed border-gray-300 bg-gray-50' 
                   : 'border-gray-200'
             }`}>
-              <span className={`font-medium text-sm ${
+              <span className={`font-medium truncate max-w-32 ${
                 winner === match.participant1Id 
                   ? 'text-yellow-800' 
                   : !match.participant1Id 
@@ -110,7 +110,7 @@ export const TournamentBracketVisual = ({
                 {getParticipantName(match.participant1Id)}
                 {winner === match.participant1Id && <Trophy className="inline h-3 w-3 ml-1 text-yellow-600" />}
               </span>
-              <span className="font-bold">
+              <span className="font-bold text-sm">
                 {match.participant1Score ?? '-'}
               </span>
             </div>
@@ -119,14 +119,14 @@ export const TournamentBracketVisual = ({
               <span className="text-xs text-muted-foreground">vs</span>
             </div>
             
-            <div className={`flex items-center justify-between p-2 rounded border-2 transition-colors ${
+            <div className={`flex items-center justify-between p-1.5 rounded border transition-colors text-sm ${
               winner === match.participant2Id 
                 ? 'border-yellow-400 bg-yellow-50' 
                 : !match.participant2Id 
                   ? 'border-dashed border-gray-300 bg-gray-50' 
                   : 'border-gray-200'
             }`}>
-              <span className={`font-medium text-sm ${
+              <span className={`font-medium truncate max-w-32 ${
                 winner === match.participant2Id 
                   ? 'text-yellow-800' 
                   : !match.participant2Id 
@@ -136,7 +136,7 @@ export const TournamentBracketVisual = ({
                 {getParticipantName(match.participant2Id)}
                 {winner === match.participant2Id && <Trophy className="inline h-3 w-3 ml-1 text-yellow-600" />}
               </span>
-              <span className="font-bold">
+              <span className="font-bold text-sm">
                 {match.participant2Score ?? '-'}
               </span>
             </div>
@@ -147,7 +147,7 @@ export const TournamentBracketVisual = ({
             <Button 
               size="sm" 
               variant="outline" 
-              className="w-full mt-2 text-xs"
+              className="w-full mt-1.5 text-xs h-7"
               onClick={() => onUpdateMatch(match)}
             >
               Enter Result
@@ -156,14 +156,14 @@ export const TournamentBracketVisual = ({
 
           {/* Awaiting Message */}
           {isAwaiting && (
-            <div className="text-center mt-2">
+            <div className="text-center mt-1.5">
               <span className="text-xs text-gray-500 italic">Waiting for previous round</span>
             </div>
           )}
 
           {/* Match Time */}
           {match.scheduledTime && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               <Clock className="h-3 w-3" />
               {match.scheduledTime.toLocaleTimeString()}
             </div>
@@ -205,60 +205,79 @@ export const TournamentBracketVisual = ({
 
           {/* Bracket Layout */}
           <div className="relative overflow-x-auto">
-            <div className="flex gap-12 min-w-fit pb-4 justify-center">
+            <div className="flex gap-8 min-w-fit pb-4 items-center justify-center">
               {rounds.map((round, roundIndex) => (
                 <div key={round.roundNumber} className="flex-shrink-0 relative">
                   {/* Round Header */}
                   <div className="text-center mb-4">
-                    <h4 className="font-semibold text-lg">{round.roundName}</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-base">{round.roundName}</h4>
+                    <p className="text-xs text-muted-foreground">
                       {round.matches.length} match{round.matches.length !== 1 ? 'es' : ''}
                     </p>
                   </div>
 
-                  {/* Matches in Round */}
-                  <div className="flex flex-col justify-center" style={{ minWidth: '280px', minHeight: '400px' }}>
-                    <div className={`space-y-${round.matches.length <= 2 ? '12' : '6'}`}>
+                  {/* Matches in Round - Centered Vertically */}
+                  <div className="flex flex-col justify-center items-center" style={{ minWidth: '250px', minHeight: '500px' }}>
+                    <div className={`flex flex-col ${round.matches.length <= 2 ? 'gap-16' : 'gap-8'} justify-center items-center`}>
                       {round.matches.map((match, matchIndex) => (
-                        <div key={match.id} className="relative">
+                        <div key={match.id} className="relative flex justify-center">
                           {renderMatch(match, matchIndex)}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Connection Lines to Next Round */}
+                  {/* Enhanced Connection Lines to Next Round */}
                   {roundIndex < rounds.length - 1 && (
-                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2">
-                      {round.matches.map((match, matchIndex) => {
-                        const nextRoundMatchIndex = Math.floor(matchIndex / 2);
-                        const isTopMatch = matchIndex % 2 === 0;
-                        
-                        return (
-                          <div key={`line-${match.id}`} className="absolute" style={{
-                            top: `${(matchIndex * (round.matches.length <= 2 ? 180 : 120)) - (round.matches.length <= 2 ? 90 : 60)}px`,
-                          }}>
-                            {/* Horizontal line from match */}
-                            <div className="w-6 h-0.5 bg-muted-foreground/30"></div>
-                            
-                            {/* Vertical connector */}
-                            {isTopMatch && matchIndex + 1 < round.matches.length && (
-                              <div className={`absolute left-6 w-0.5 bg-muted-foreground/30 ${
-                                round.matches.length <= 2 ? 'h-24' : 'h-16'
-                              }`}></div>
-                            )}
-                            
-                            {/* Final horizontal line to next match */}
-                            {isTopMatch && (
-                              <div className={`absolute left-6 w-6 h-0.5 bg-muted-foreground/30 ${
-                                round.matches.length <= 2 ? 'top-12' : 'top-8'
-                              }`}>
-                                <div className="absolute right-0 top-0 w-2 h-2 bg-muted-foreground/30 rounded-full transform -translate-y-1/2"></div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="absolute inset-y-0 -right-4 flex items-center">
+                      <div className="relative h-full w-8">
+                        {round.matches.map((match, matchIndex) => {
+                          const nextRoundMatchIndex = Math.floor(matchIndex / 2);
+                          const isTopMatch = matchIndex % 2 === 0;
+                          const spacing = round.matches.length <= 2 ? 160 : 80;
+                          const centerOffset = (round.matches.length - 1) * spacing / 2;
+                          const matchY = matchIndex * spacing - centerOffset;
+                          
+                          return (
+                            <div key={`line-${match.id}`}>
+                              {/* Horizontal line from match */}
+                              <div 
+                                className="absolute w-4 h-0.5 bg-muted-foreground/50"
+                                style={{
+                                  top: `calc(50% + ${matchY}px)`,
+                                  left: '0px'
+                                }}
+                              ></div>
+                              
+                              {/* Vertical connector between paired matches */}
+                              {isTopMatch && matchIndex + 1 < round.matches.length && (
+                                <div 
+                                  className="absolute w-0.5 bg-muted-foreground/50"
+                                  style={{
+                                    top: `calc(50% + ${matchY}px)`,
+                                    left: '16px',
+                                    height: `${spacing}px`
+                                  }}
+                                ></div>
+                              )}
+                              
+                              {/* Horizontal line to next round match */}
+                              {isTopMatch && (
+                                <div 
+                                  className="absolute w-4 h-0.5 bg-muted-foreground/50"
+                                  style={{
+                                    top: `calc(50% + ${matchY + spacing/2}px)`,
+                                    left: '16px'
+                                  }}
+                                >
+                                  {/* Arrow indicator */}
+                                  <div className="absolute right-0 top-0 w-1.5 h-1.5 bg-muted-foreground/50 rounded-full transform -translate-y-1/2"></div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
