@@ -429,9 +429,8 @@ export const useTournamentManager = () => {
       let targetMatch: any = null;
       let updateField: 'participant1_id' | 'participant2_id' = 'participant1_id';
 
-      // Deterministic rebuild: map winners of current round into next round slots (M1->SF1 P1, M2->SF1 P2, etc.)
-      // This avoids duplicates and guarantees correct placement order
-      // Collect all winners from the current round in match order
+      // Rebuild next round based on context: seeded (one side fixed) vs standard pairing
+      // 1) Collect all winners from the current round in match order
       const { data: currentRoundRows } = await supabase
         .from('tournament_matches')
         .select('winner_id, match_number')
@@ -441,26 +440,71 @@ export const useTournamentManager = () => {
 
       const winners: (string | null)[] = (currentRoundRows || []).map((r: any) => r.winner_id || null);
 
-      // Rebuild every next round match strictly by pairing winners [1,2] -> M1, [3,4] -> M2, ...
-      for (const m of nextRoundMatches) {
-        const base = (m.match_number - 1) * 2;
-        const p1 = winners[base] || null;
-        const p2 = winners[base + 1] || null;
+      // Determine if next round is seeded (exactly one participant preset in a match)
+      const seededNextRound = nextRoundMatches.some((m) => {
+        const p1 = !!m.participant1_id;
+        const p2 = !!m.participant2_id;
+        return (p1 && !p2) || (!p1 && p2);
+      });
 
-        const resetData: any = {
-          participant1_id: p1,
-          participant2_id: p2,
-          participant1_score: null,
-          participant2_score: null,
-          winner_id: null,
-          completed_time: null,
-          status: p1 && p2 ? 'scheduled' : 'awaiting',
-        };
+      if (seededNextRound) {
+        // Only fill the empty side of each next-round match in order, preserving seeds
+        const nextMap = new Map(nextRoundMatches.map((m) => [m.id, m]));
+        const openSlots: Array<{ matchId: string; field: 'participant1_id' | 'participant2_id' }> = [];
+        nextRoundMatches
+          .sort((a, b) => a.match_number - b.match_number)
+          .forEach((m) => {
+            if (!m.participant1_id) openSlots.push({ matchId: m.id, field: 'participant1_id' });
+            else if (!m.participant2_id) openSlots.push({ matchId: m.id, field: 'participant2_id' });
+          });
 
-        await supabase
-          .from('tournament_matches')
-          .update(resetData)
-          .eq('id', m.id);
+        let wi = 0;
+        for (const slot of openSlots) {
+          // advance to next non-null winner
+          while (wi < winners.length && !winners[wi]) wi++;
+          if (wi >= winners.length) break;
+          const wId = winners[wi]!;
+
+          const matchRow = nextMap.get(slot.matchId)!;
+          const otherHas = slot.field === 'participant1_id' ? !!matchRow.participant2_id : !!matchRow.participant1_id;
+          const updatePayload: any = {
+            [slot.field]: wId,
+            participant1_score: null,
+            participant2_score: null,
+            winner_id: null,
+            completed_time: null,
+            status: otherHas ? 'scheduled' : 'awaiting',
+          };
+
+          await supabase
+            .from('tournament_matches')
+            .update(updatePayload)
+            .eq('id', slot.matchId);
+
+          wi++;
+        }
+      } else {
+        // Standard pairing: [winner1,winner2] -> next M1, [winner3,winner4] -> next M2, etc.
+        for (const m of nextRoundMatches) {
+          const base = (m.match_number - 1) * 2;
+          const p1 = winners[base] || null;
+          const p2 = winners[base + 1] || null;
+
+          const resetData: any = {
+            participant1_id: p1,
+            participant2_id: p2,
+            participant1_score: null,
+            participant2_score: null,
+            winner_id: null,
+            completed_time: null,
+            status: p1 && p2 ? 'scheduled' : 'awaiting',
+          };
+
+          await supabase
+            .from('tournament_matches')
+            .update(resetData)
+            .eq('id', m.id);
+        }
       }
 
       // Done. No need for regular advancement path
