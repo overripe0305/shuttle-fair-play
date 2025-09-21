@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { EnhancedPlayer } from '@/types/enhancedPlayer';
 import { PlayerStatus, MajorLevel, SubLevel, getBracketFromMajorSub } from '@/types/player';
 import { toast } from 'sonner';
+import { useEventSpecificIdleTime } from './useEventSpecificIdleTime';
 
 interface SyncResult {
   playersFixed: number;
@@ -13,6 +14,7 @@ interface SyncResult {
 
 export const useDataSync = (eventId?: string, clubId?: string) => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const { setIdleStartTime } = useEventSpecificIdleTime();
 
   const syncData = async (): Promise<SyncResult> => {
     if (!eventId || !clubId) {
@@ -171,15 +173,29 @@ export const useDataSync = (eventId?: string, clubId?: string) => {
     try {
       const result = await syncData();
       
+      // Sync idle time for all players in the event
+      if (eventId && clubId) {
+        const { data: eventPlayers } = await supabase
+          .from('event_players')
+          .select('player_id')
+          .eq('event_id', eventId);
+        
+        if (eventPlayers) {
+          await Promise.all(
+            eventPlayers.map(ep => setIdleStartTime(ep.player_id, eventId))
+          );
+        }
+      }
+      
       if (result.playersFixed === 0 && result.gamesFixed === 0 && result.waitingMatchesFixed === 0) {
-        toast.success('Data sync complete - no issues found');
+        toast.success('Data sync complete - no issues found, idle times updated');
       } else {
         const fixedItems = [];
         if (result.playersFixed > 0) fixedItems.push(`${result.playersFixed} player status(es)`);
         if (result.gamesFixed > 0) fixedItems.push(`${result.gamesFixed} game(s)`);
         if (result.waitingMatchesFixed > 0) fixedItems.push(`${result.waitingMatchesFixed} waiting match(es)`);
         
-        toast.success(`Data sync complete - fixed: ${fixedItems.join(', ')}`);
+        toast.success(`Data sync complete - fixed: ${fixedItems.join(', ')}, idle times updated`);
       }
 
       if (result.conflicts.length > 0) {

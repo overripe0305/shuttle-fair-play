@@ -129,14 +129,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
           <div className="space-y-2">
             <div className="font-medium text-blue-800">Team 1</div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player1Id))}`}>
-                  {formatPlayerName(game.player1Name)}
-                </span>
-                <Badge className={getLevelColor(getPlayerLevel(game.player1Id))} variant="secondary">
-                  Level {getPlayerLevel(game.player1Id)}
-                </Badge>
-              </div>
+              <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player1Id))}`}>
+                {formatPlayerName(game.player1Name)} - {getPlayerLevel(game.player1Id)}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -156,14 +151,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
               </Button>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player2Id))}`}>
-                  {formatPlayerName(game.player2Name)}
-                </span>
-                <Badge className={getLevelColor(getPlayerLevel(game.player2Id))} variant="secondary">
-                  Level {getPlayerLevel(game.player2Id)}
-                </Badge>
-              </div>
+              <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player2Id))}`}>
+                {formatPlayerName(game.player2Name)} - {getPlayerLevel(game.player2Id)}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -188,14 +178,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
           <div className="space-y-2">
             <div className="font-medium text-green-800">Team 2</div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player3Id))}`}>
-                  {formatPlayerName(game.player3Name)}
-                </span>
-                <Badge className={getLevelColor(getPlayerLevel(game.player3Id))} variant="secondary">
-                  Level {getPlayerLevel(game.player3Id)}
-                </Badge>
-              </div>
+              <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player3Id))}`}>
+                {formatPlayerName(game.player3Name)} - {getPlayerLevel(game.player3Id)}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -215,14 +200,9 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
               </Button>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player4Id))}`}>
-                  {formatPlayerName(game.player4Name)}
-                </span>
-                <Badge className={getLevelColor(getPlayerLevel(game.player4Id))} variant="secondary">
-                  Level {getPlayerLevel(game.player4Id)}
-                </Badge>
-              </div>
+              <span className={`truncate px-2 py-1 rounded text-white ${getLevelBackgroundColor(getPlayerLevel(game.player4Id))}`}>
+                {formatPlayerName(game.player4Name)} - {getPlayerLevel(game.player4Id)}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -245,32 +225,45 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
         </div>
 
         {/* Game Result Buttons */}
-        <div className="flex justify-center gap-2 mt-4 pt-3 border-t">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onComplete(game.id, 'team1')}
-            className="px-4 text-blue-700 border-blue-300"
-          >
-            Team 1 Wins
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onComplete(game.id, 'team2')}
-            className="px-4 text-green-700 border-green-300"
-          >
-            Team 2 Wins
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onComplete(game.id)}
-            className="px-4"
-          >
-            <Trophy className="h-3 w-3 mr-1" />
-            No Contest
-          </Button>
+        <div className="mt-4 pt-3 border-t space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onComplete(game.id, 'team1')}
+              className="text-blue-700 border-blue-300"
+            >
+              Team 1 Wins
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onComplete(game.id, 'team2')}
+              className="text-green-700 border-green-300"
+            >
+              Team 2 Wins
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onComplete(game.id)}
+              className="flex items-center justify-center gap-1"
+            >
+              <Trophy className="h-3 w-3" />
+              No Contest
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onCancel(game.id)}
+              className="text-destructive border-destructive"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel Game
+            </Button>
+          </div>
         </div>
 
         {/* Team Substitute Dialog */}
