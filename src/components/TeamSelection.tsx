@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useSensor, useSensors, PointerSensor, useDroppable, useDraggable } from '@dnd-kit/core';
 import { supabase } from '@/integrations/supabase/client';
 import { ManualPlayerSelectionDialog } from './ManualPlayerSelectionDialog';
+import { WaitingMatchCard } from './WaitingMatchCard';
 
 interface TeamSelectionProps {
   selectedPlayers: string[];
@@ -31,6 +32,7 @@ interface TeamSelectionProps {
   onPlayerStatusUpdate?: (playerId: string, status: string) => void;
   onReplacePlayer?: (waitingMatchId: string, oldPlayerId: string, newPlayerId: string) => void;
   onSubstituteInWaiting?: (waitingMatchId: string, oldPlayerId: string, newPlayerId: string) => void;
+  onTeamTradeInWaiting?: (waitingMatchId: string, player1Id: string, player2Id: string) => void;
   loadWaitingMatches?: () => void;
   onManualMatch?: (players: Player[]) => void;
 }
@@ -50,6 +52,7 @@ export function TeamSelection({
   onPlayerStatusUpdate,
   onReplacePlayer,
   onSubstituteInWaiting,
+  onTeamTradeInWaiting,
   loadWaitingMatches,
   onManualMatch
 }: TeamSelectionProps) {
@@ -413,92 +416,26 @@ export function TeamSelection({
           </CardHeader>
           <CardContent className="space-y-4">
             {waitingMatches.length > 0 ? (
-              waitingMatches.map((waitingMatch) => {
-                const team1Players = [
-                  { id: waitingMatch.player1Id, name: availablePlayers.find(p => p.id === waitingMatch.player1Id)?.name || 'Player 1' },
-                  { id: waitingMatch.player2Id, name: availablePlayers.find(p => p.id === waitingMatch.player2Id)?.name || 'Player 2' }
-                ];
-                const team2Players = [
-                  { id: waitingMatch.player3Id, name: availablePlayers.find(p => p.id === waitingMatch.player3Id)?.name || 'Player 3' },
-                  { id: waitingMatch.player4Id, name: availablePlayers.find(p => p.id === waitingMatch.player4Id)?.name || 'Player 4' }
-                ];
-
-                return (
-                  <Card key={waitingMatch.id} className="w-full">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center justify-between text-lg">
-                        <span className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Waiting Match
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {Math.floor((new Date().getTime() - waitingMatch.createdAt.getTime()) / 60000)}m
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Team 1 */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm font-medium">
-                            <Users className="h-3 w-3" />
-                            Team 1
-                          </div>
-                          <DroppableTeam teamId={`team-${waitingMatch.id}-1-0`}>
-                            {team1Players.map((player, index) => (
-                              <DraggablePlayer
-                                key={player.id}
-                                playerId={player.id}
-                                playerName={player.name}
-                                teamLabel={`T1P${index + 1}`}
-                                waitingMatchId={waitingMatch.id}
-                              />
-                            ))}
-                          </DroppableTeam>
-                        </div>
-                        
-                        {/* Team 2 */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm font-medium">
-                            <Users className="h-3 w-3" />
-                            Team 2
-                          </div>
-                          <DroppableTeam teamId={`team-${waitingMatch.id}-2-0`}>
-                            {team2Players.map((player, index) => (
-                              <DraggablePlayer
-                                key={player.id}
-                                playerId={player.id}
-                                playerName={player.name}
-                                teamLabel={`T2P${index + 1}`}
-                                waitingMatchId={waitingMatch.id}
-                              />
-                            ))}
-                          </DroppableTeam>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2 pt-2 border-t">
-                        <Button 
-                          size="sm"
-                          onClick={() => startWaitingMatch(waitingMatch.id, 1, onStartGame, onPlayerStatusUpdate)}
-                          disabled={maxCourts - activeGamesCount <= 0}
-                          className="flex-1"
-                        >
-                          Start Now
-                        </Button>
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => removeWaitingMatch(waitingMatch.id)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
+              waitingMatches.map((waitingMatch) => (
+                <WaitingMatchCard
+                  key={waitingMatch.id}
+                  match={waitingMatch}
+                  onStart={(matchId, courtId) => startWaitingMatch(matchId, courtId, onStartGame, onPlayerStatusUpdate)}
+                  onRemove={removeWaitingMatch}
+                  onSubstitute={(matchId, oldPlayerId, newPlayerId) => {
+                    if (onSubstituteInWaiting) {
+                      onSubstituteInWaiting(matchId, oldPlayerId, newPlayerId);
+                    }
+                  }}
+                  onTeamTrade={(matchId, player1Id, player2Id) => {
+                    if (onTeamTradeInWaiting) {
+                      onTeamTradeInWaiting(matchId, player1Id, player2Id);
+                    }
+                  }}
+                  availablePlayers={availablePlayers}
+                  courtCount={maxCourts}
+                />
+              ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 No matches in queue

@@ -871,6 +871,7 @@ const Index = () => {
               }}
               onReplacePlayer={replacePlayerInTeam}
               onSubstituteInWaiting={substitutePlayerInWaiting}
+              onTeamTradeInWaiting={teamTradeInWaiting}
               loadWaitingMatches={loadWaitingMatches}
               onManualMatch={handleManualMatch}
             />
