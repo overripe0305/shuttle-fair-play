@@ -91,7 +91,7 @@ const Index = () => {
 
   const { events, addPlayerToEvent, updateEvent, updateEventCourtCount, updateEventStatus, removePlayerFromEvent } = useEventManager(clubId);
   const { players: allPlayers, addPlayer, updatePlayer, deletePlayer } = useEnhancedPlayerManager(clubId);
-  const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame } = useGameManager(eventId);
+  const { activeGames: dbActiveGames, createGame, completeGame, cancelGame, updateGameCourt, replacePlayerInGame: replaceInDbGame, teamTradeInActiveGame } = useGameManager(eventId);
   const { 
     waitingMatches, 
     addWaitingMatch, 

@@ -328,6 +328,64 @@ export function useGameManager(eventId?: string) {
     }
   }, [activeGames]);
 
+  const teamTradeInActiveGame = useCallback(async (gameId: string, player1Id: string, player2Id: string) => {
+    try {
+      const game = activeGames.find(g => g.id === gameId);
+      if (!game) return;
+
+      // Create update object for swapping players
+      const updates: any = {};
+      
+      // Determine which positions the players are in and swap them
+      if (game.player1Id === player1Id && game.player3Id === player2Id) {
+        updates.player1_id = player2Id;
+        updates.player3_id = player1Id;
+      } else if (game.player1Id === player1Id && game.player4Id === player2Id) {
+        updates.player1_id = player2Id;
+        updates.player4_id = player1Id;
+      } else if (game.player2Id === player1Id && game.player3Id === player2Id) {
+        updates.player2_id = player2Id;
+        updates.player3_id = player1Id;
+      } else if (game.player2Id === player1Id && game.player4Id === player2Id) {
+        updates.player2_id = player2Id;
+        updates.player4_id = player1Id;
+      } else if (game.player3Id === player1Id && game.player1Id === player2Id) {
+        updates.player3_id = player2Id;
+        updates.player1_id = player1Id;
+      } else if (game.player3Id === player1Id && game.player2Id === player2Id) {
+        updates.player3_id = player2Id;
+        updates.player2_id = player1Id;
+      } else if (game.player4Id === player1Id && game.player1Id === player2Id) {
+        updates.player4_id = player2Id;
+        updates.player1_id = player1Id;
+      } else if (game.player4Id === player1Id && game.player2Id === player2Id) {
+        updates.player4_id = player2Id;
+        updates.player2_id = player1Id;
+      }
+
+      const { error } = await supabase
+        .from('games')
+        .update(updates)
+        .eq('id', gameId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Players traded",
+        description: "Players have been successfully traded between teams",
+      });
+
+      loadActiveGames();
+    } catch (error) {
+      console.error('Error trading players in active game:', error);
+      toast({
+        title: "Error",
+        description: "Failed to trade players",
+        variant: "destructive"
+      });
+    }
+  }, [activeGames, loadActiveGames]);
+
   const cancelGame = useCallback(async (gameId: string) => {
     try {
       const game = activeGames.find(g => g.id === gameId);
@@ -379,6 +437,7 @@ export function useGameManager(eventId?: string) {
     cancelGame,
     updateGameCourt,
     replacePlayerInGame: replacePlayerInGame,
+    teamTradeInActiveGame,
     loadActiveGames
   };
 }
