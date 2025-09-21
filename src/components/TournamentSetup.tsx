@@ -8,26 +8,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { TournamentConfig, SeedingMethod } from '@/types/tournament';
+import { TournamentConfig, SeedingMethod, TournamentPlayFormat, TournamentPair } from '@/types/tournament';
 import { EnhancedPlayer } from '@/types/enhancedPlayer';
-import { Trophy, Users, Settings, Play, Camera, Check } from 'lucide-react';
+import { Trophy, Users, Settings, Play, Camera, Check, UserPlus } from 'lucide-react';
 import { getLevelDisplay } from '@/types/player';
 
 interface TournamentSetupProps {
   players: EnhancedPlayer[];
-  onCreateTournament: (config: TournamentConfig, selectedPlayerIds: string[]) => void;
+  onCreateTournament: (config: TournamentConfig, selectedPlayerIds: string[], pairs?: TournamentPair[]) => void;
   onCancel: () => void;
 }
 
 export const TournamentSetup = ({ players, onCreateTournament, onCancel }: TournamentSetupProps) => {
   const [config, setConfig] = useState<TournamentConfig>({
     tournamentType: 'single_stage',
+    playFormat: 'singles',
     singleStage: {
       format: 'single_elimination'
     }
   });
   
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [pairs, setPairs] = useState<TournamentPair[]>([]);
+  const [showPairing, setShowPairing] = useState(false);
 
   const handlePlayerToggle = (playerId: string) => {
     setSelectedPlayerIds(prev => 
@@ -40,6 +43,7 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
   const handleTournamentTypeChange = (isDoubleStage: boolean) => {
     if (isDoubleStage) {
       setConfig({
+        ...config,
         tournamentType: 'double_stage',
         doubleStage: {
           groupStage: {
@@ -54,6 +58,7 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
       });
     } else {
       setConfig({
+        ...config,
         tournamentType: 'single_stage',
         singleStage: {
           format: 'single_elimination'
@@ -62,12 +67,56 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
     }
   };
 
+  const handlePlayFormatChange = (format: TournamentPlayFormat) => {
+    setConfig({
+      ...config,
+      playFormat: format
+    });
+    
+    if (format === 'doubles' && selectedPlayerIds.length >= 2) {
+      setShowPairing(true);
+      generateInitialPairs();
+    } else {
+      setShowPairing(false);
+      setPairs([]);
+    }
+  };
+
+  const generateInitialPairs = () => {
+    const availablePlayers = [...selectedPlayerIds];
+    const newPairs: TournamentPair[] = [];
+    
+    for (let i = 0; i < availablePlayers.length - 1; i += 2) {
+      const player1 = players.find(p => p.id === availablePlayers[i]);
+      const player2 = players.find(p => p.id === availablePlayers[i + 1]);
+      
+      if (player1 && player2) {
+        newPairs.push({
+          id: `pair-${i/2 + 1}`,
+          player1Id: player1.id,
+          player2Id: player2.id,
+          player1Name: player1.name,
+          player2Name: player2.name
+        });
+      }
+    }
+    
+    setPairs(newPairs);
+  };
+
   const handleCreate = () => {
-    if (selectedPlayerIds.length < 2) {
-      alert('Please select at least 2 participants');
+    const minParticipants = config.playFormat === 'doubles' ? 4 : 2;
+    if (selectedPlayerIds.length < minParticipants) {
+      alert(`Please select at least ${minParticipants} participants for ${config.playFormat}`);
       return;
     }
-    onCreateTournament(config, selectedPlayerIds);
+    
+    if (config.playFormat === 'doubles' && selectedPlayerIds.length % 2 !== 0) {
+      alert('For doubles tournament, please select an even number of players');
+      return;
+    }
+    
+    onCreateTournament(config, selectedPlayerIds, config.playFormat === 'doubles' ? pairs : undefined);
   };
 
   const selectedPlayers = players.filter(player => selectedPlayerIds.includes(player.id));
@@ -83,6 +132,29 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Play Format Selection */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Play Format</Label>
+            <Select 
+              value={config.playFormat}
+              onValueChange={(value: TournamentPlayFormat) => handlePlayFormatChange(value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="singles">Singles (1 vs 1)</SelectItem>
+                <SelectItem value="doubles">Doubles (2 vs 2)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {config.playFormat === 'singles' 
+                ? 'Each player competes individually'
+                : 'Players compete in pairs of two'
+              }
+            </p>
+          </div>
+
           {/* Tournament Type Toggle */}
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -239,6 +311,32 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
         </CardContent>
       </Card>
 
+      {/* Doubles Pairing */}
+      {config.playFormat === 'doubles' && showPairing && pairs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Doubles Pairing
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pairs.map((pair, index) => (
+                <div key={pair.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                  <Badge variant="outline">Pair {index + 1}</Badge>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="font-medium">{pair.player1Name}</span>
+                    <span className="text-muted-foreground">+</span>
+                    <span className="font-medium">{pair.player2Name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Participant Selection */}
       <Card>
         <CardHeader>
@@ -249,7 +347,10 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
             </div>
             {selectedPlayerIds.length > 0 && (
               <Badge variant="secondary">
-                {selectedPlayerIds.length} participants
+                {config.playFormat === 'doubles' 
+                  ? `${Math.floor(selectedPlayerIds.length / 2)} pairs` 
+                  : `${selectedPlayerIds.length} participants`
+                }
               </Badge>
             )}
           </CardTitle>
@@ -319,7 +420,7 @@ export const TournamentSetup = ({ players, onCreateTournament, onCancel }: Tourn
         <Button 
           onClick={handleCreate} 
           className="flex-1"
-          disabled={selectedPlayerIds.length < 2}
+          disabled={selectedPlayerIds.length < (config.playFormat === 'doubles' ? 4 : 2)}
         >
           <Play className="h-4 w-4 mr-2" />
           Create Tournament

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { TournamentConfig, Tournament, TournamentMatch, TournamentParticipant } from '@/types/tournament';
+import { TournamentConfig, Tournament, TournamentMatch, TournamentParticipant, TournamentPair } from '@/types/tournament';
 import { toast } from 'sonner';
 
 export const useTournamentManager = () => {
@@ -109,7 +109,7 @@ export const useTournamentManager = () => {
     }
   }, []);
 
-  const createTournament = async (eventId: string, config: TournamentConfig, playerIds: string[]) => {
+  const createTournament = async (eventId: string, config: TournamentConfig, playerIds: string[], pairs?: TournamentPair[]) => {
     if (!eventId) throw new Error('Event ID is required');
 
     try {
@@ -127,21 +127,11 @@ export const useTournamentManager = () => {
       if (error) throw error;
 
       // Add participants to the tournament
-      await addParticipants(data.id, playerIds);
-
-      // Load participant rows and generate brackets using participant IDs
-      const { data: partRows, error: partErr } = await supabase
-        .from('tournament_participants')
-        .select('id, player_id')
-        .eq('tournament_id', data.id)
-        .order('seed_number', { ascending: true });
-
-      if (partErr) throw partErr;
-
-      const participantIds = (partRows || []).map(p => p.id);
-
-      // Generate brackets
-      await generateBrackets(data.id, participantIds);
+      if (config.playFormat === 'doubles' && pairs) {
+        await addPairsToTournament(data.id, pairs);
+      } else {
+        await addParticipants(data.id, playerIds);
+      }
 
       // Also update the event to mark it as tournament type
       await supabase
@@ -180,6 +170,37 @@ export const useTournamentManager = () => {
     } catch (error) {
       console.error('Error adding participants:', error);
       toast.error('Failed to add participants');
+      throw error;
+    }
+  };
+
+  const addPairsToTournament = async (tournamentId: string, pairs: TournamentPair[]) => {
+    try {
+      const participantsToAdd = pairs.flatMap((pair, pairIndex) => [
+        {
+          tournament_id: tournamentId,
+          player_id: pair.player1Id,
+          seed_number: pairIndex * 2 + 1,
+          group_id: `pair_${pair.id}`
+        },
+        {
+          tournament_id: tournamentId,
+          player_id: pair.player2Id,
+          seed_number: pairIndex * 2 + 2,
+          group_id: `pair_${pair.id}`
+        }
+      ]);
+
+      const { error } = await supabase
+        .from('tournament_participants')
+        .insert(participantsToAdd);
+
+      if (error) throw error;
+
+      toast.success(`${pairs.length} pairs added successfully!`);
+    } catch (error) {
+      console.error('Error adding pairs:', error);
+      toast.error('Failed to add pairs');
       throw error;
     }
   };
@@ -227,53 +248,98 @@ export const useTournamentManager = () => {
     }
   };
 
-  // Helper function to generate complete single elimination bracket
-  const generateCompleteSingleEliminationBracket = (playerIds: string[]) => {
+  // Enhanced function to generate single elimination bracket with pre-rounds
+  const generateCompleteSingleEliminationBracket = (participantIds: string[]) => {
     const matches: Array<{
       round: number;
       matchNumber: number;
       participant1Id: string | null;
       participant2Id: string | null;
+      isPreRound?: boolean;
     }> = [];
 
-    const numPlayers = playerIds.length;
-    if (numPlayers < 2) return matches;
+    const numParticipants = participantIds.length;
+    if (numParticipants < 2) return matches;
 
-    // Calculate total rounds needed
-    const numRounds = Math.ceil(Math.log2(numPlayers));
-    
-    // Generate all rounds
-    for (let round = 1; round <= numRounds; round++) {
-      const matchesInRound = Math.pow(2, numRounds - round);
+    // Define target sizes for each stage
+    const targetSizes = [64, 32, 16, 8, 4, 2];
+    let targetIndex = targetSizes.findIndex(size => size <= numParticipants);
+    if (targetIndex === -1) targetIndex = targetSizes.length - 1;
+
+    let currentParticipants = numParticipants;
+    let roundNumber = 1;
+    let availableParticipants = [...participantIds];
+
+    while (currentParticipants > 1) {
+      const targetSize = targetSizes[targetIndex] || 1;
       
-      for (let match = 1; match <= matchesInRound; match++) {
-        if (round === 1) {
-          // First round - pair up actual players
-          const player1Index = (match - 1) * 2;
-          const player2Index = player1Index + 1;
+      if (currentParticipants > targetSize) {
+        // Generate pre-round matches
+        const excessParticipants = currentParticipants - targetSize;
+        const preRoundMatches = excessParticipants;
+        
+        for (let match = 1; match <= preRoundMatches; match++) {
+          // Take participants from the end (lower seeds) for pre-rounds
+          const participant1 = availableParticipants[availableParticipants.length - 2] || null;
+          const participant2 = availableParticipants[availableParticipants.length - 1] || null;
           
-          const participant1 = playerIds[player1Index] || null;
-          const participant2 = playerIds[player2Index] || null;
-
-          // Only create matches that have at least one participant
-          if (participant1 || participant2) {
+          if (participant1 && participant2) {
             matches.push({
-              round: 1,
+              round: roundNumber,
+              matchNumber: match,
+              participant1Id: participant1,
+              participant2Id: participant2,
+              isPreRound: true
+            });
+            
+            // Remove the two participants and add back the "winner slot"
+            availableParticipants.splice(availableParticipants.length - 2, 2);
+          }
+        }
+        
+        currentParticipants = targetSize;
+        roundNumber++;
+      }
+      
+      // Generate regular round matches
+      if (currentParticipants > 1) {
+        const matchesInRound = Math.floor(currentParticipants / 2);
+        
+        for (let match = 1; match <= matchesInRound; match++) {
+          if (roundNumber === 1 || (roundNumber > 1 && availableParticipants.length >= 2)) {
+            // First round or subsequent rounds with available participants
+            const participant1Index = (match - 1) * 2;
+            const participant2Index = participant1Index + 1;
+            
+            const participant1 = availableParticipants[participant1Index] || null;
+            const participant2 = availableParticipants[participant2Index] || null;
+
+            matches.push({
+              round: roundNumber,
               matchNumber: match,
               participant1Id: participant1,
               participant2Id: participant2
             });
+          } else {
+            // Empty matches for subsequent rounds
+            matches.push({
+              round: roundNumber,
+              matchNumber: match,
+              participant1Id: null,
+              participant2Id: null
+            });
           }
-        } else {
-          // Subsequent rounds - these will be filled as previous rounds complete
-          matches.push({
-            round,
-            matchNumber: match,
-            participant1Id: null,
-            participant2Id: null
-          });
+        }
+        
+        currentParticipants = Math.floor(currentParticipants / 2);
+        if (roundNumber === 1) {
+          // For subsequent rounds, we'll have winners advancing
+          availableParticipants = [];
         }
       }
+      
+      roundNumber++;
+      targetIndex++;
     }
 
     return matches;
@@ -376,12 +442,34 @@ export const useTournamentManager = () => {
     }
   };
 
-  const generateTournamentBracket = async (tournamentId: string) => {
+  const generateTournamentBracket = async (tournamentId: string, customOrder?: string[] | TournamentPair[]) => {
     if (!tournament) throw new Error('No tournament found');
     
     try {
-      // Get all participant IDs (tournament_participants.id)
-      const participantIds = participants.map(p => p.id);
+      let participantIds: string[];
+      
+      if (customOrder) {
+        if (typeof customOrder[0] === 'string') {
+          // Singles tournament with custom order
+          participantIds = customOrder as string[];
+        } else {
+          // Doubles tournament - need to get participant IDs for pairs
+          const pairs = customOrder as TournamentPair[];
+          const allParticipantIds: string[] = [];
+          
+          for (const pair of pairs) {
+            const pairParticipants = participants.filter(p => 
+              p.playerId === pair.player1Id || p.playerId === pair.player2Id
+            );
+            allParticipantIds.push(...pairParticipants.map(p => p.id));
+          }
+          
+          participantIds = allParticipantIds;
+        }
+      } else {
+        // Use existing order
+        participantIds = participants.map(p => p.id);
+      }
       
       if (participantIds.length < 2) {
         throw new Error('At least 2 participants are required to generate brackets');

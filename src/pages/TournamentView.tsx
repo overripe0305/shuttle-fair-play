@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TournamentBracket } from '@/components/TournamentBracket';
 import { TournamentSetup } from '@/components/TournamentSetup';
+import { TournamentBracketPreview } from '@/components/TournamentBracketPreview';
 import { TournamentSettingsDialog } from '@/components/TournamentSettingsDialog';
 import { MatchResultDialog } from '@/components/MatchResultDialog';
 import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { TournamentConfig, TournamentMatch } from '@/types/tournament';
+import { TournamentConfig, TournamentMatch, TournamentPair } from '@/types/tournament';
 
 const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
@@ -19,8 +20,12 @@ const TournamentView = () => {
   const { players } = useEnhancedPlayerManager(clubId);
   const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult, generateTournamentBracket } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
+  const [showBracketPreview, setShowBracketPreview] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<TournamentMatch | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
+  const [tournamentConfig, setTournamentConfig] = useState<TournamentConfig | null>(null);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [tournamentPairs, setTournamentPairs] = useState<TournamentPair[]>([]);
 
   const event = events.find(e => e.id === eventId);
 
@@ -31,12 +36,30 @@ const TournamentView = () => {
     }
   }, [eventId, refetch]);
 
-  const handleCreateTournament = async (config: TournamentConfig, selectedPlayerIds: string[]) => {
+  const handleCreateTournament = async (config: TournamentConfig, selectedPlayerIds: string[], pairs?: TournamentPair[]) => {
     if (!eventId) return;
     
+    // Store config and participants for preview
+    setTournamentConfig(config);
+    setSelectedPlayers(selectedPlayerIds);
+    setTournamentPairs(pairs || []);
+    setShowSetup(false);
+    setShowBracketPreview(true);
+  };
+
+  const handleGenerateBracketFromPreview = async (participants: string[] | TournamentPair[]) => {
+    if (!eventId || !tournamentConfig) return;
+    
     try {
-      await createTournament(eventId, config, selectedPlayerIds);
-      setShowSetup(false);
+      // First create the tournament with original player order
+      await createTournament(eventId, tournamentConfig, selectedPlayers, tournamentPairs.length > 0 ? tournamentPairs : undefined);
+      
+      // Then generate bracket with custom order
+      if (tournament?.id) {
+        await generateTournamentBracket(tournament.id, participants);
+      }
+      
+      setShowBracketPreview(false);
     } catch (error) {
       console.error('Failed to create tournament:', error);
     }
@@ -239,6 +262,21 @@ const TournamentView = () => {
                     players={players}
                     onCreateTournament={handleCreateTournament}
                     onCancel={() => setShowSetup(false)}
+                  />
+                </CardContent>
+              </Card>
+            ) : showBracketPreview && tournamentConfig ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tournament Bracket Preview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TournamentBracketPreview
+                    config={tournamentConfig}
+                    selectedPlayers={players.filter(p => selectedPlayers.includes(p.id))}
+                    pairs={tournamentPairs.length > 0 ? tournamentPairs : undefined}
+                    onGenerateBracket={handleGenerateBracketFromPreview}
+                    onCancel={() => setShowBracketPreview(false)}
                   />
                 </CardContent>
               </Card>

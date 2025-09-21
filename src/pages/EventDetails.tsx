@@ -19,7 +19,8 @@ import {
   Camera,
   Plus,
   Edit,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getLevelDisplay, MajorLevel, SubLevel } from '@/types/player';
@@ -28,7 +29,7 @@ import { toast } from 'sonner';
 const EventDetails = () => {
   const { eventId, clubId } = useParams();
   const navigate = useNavigate();
-  const { events, updateEventStatus, addPlayerToEvent } = useEventManager(clubId);
+  const { events, updateEventStatus, addPlayerToEvent, deleteEvent } = useEventManager(clubId);
   const { players, addPlayer, updatePlayer } = useEnhancedPlayerManager(clubId);
   const { getPlayerStats } = useEventPlayerStats(eventId);
   const { performSync, isSyncing } = useDataSync(eventId, clubId);
@@ -139,6 +140,18 @@ const EventDetails = () => {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      try {
+        await deleteEvent(event.id);
+        toast.success('Event deleted successfully');
+        navigate('/');
+      } catch (error) {
+        toast.error('Failed to delete event');
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -168,6 +181,16 @@ const EventDetails = () => {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
                 {isSyncing ? 'Syncing...' : 'Sync Data'}
               </Button>
+              {event.status === 'upcoming' && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleDeleteEvent}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Event
+                </Button>
+              )}
               <Badge 
                 variant={event.status === 'active' ? 'default' : 'secondary'}
               >

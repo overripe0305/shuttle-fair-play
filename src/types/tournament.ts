@@ -3,9 +3,11 @@ export type TournamentFormat = 'single_elimination' | 'double_elimination' | 'ro
 export type TournamentStage = 'setup' | 'group_stage' | 'elimination_stage' | 'completed';
 export type MatchStatus = 'scheduled' | 'in_progress' | 'completed' | 'walkover' | 'forfeit' | 'bye' | 'awaiting';
 export type SeedingMethod = 'random' | 'by_rating' | 'manual';
+export type TournamentPlayFormat = 'singles' | 'doubles';
 
 export interface TournamentConfig {
   tournamentType: TournamentType;
+  playFormat: TournamentPlayFormat;
   singleStage?: {
     format: 'single_elimination' | 'double_elimination';
   };
@@ -19,6 +21,14 @@ export interface TournamentConfig {
       format: 'single_elimination';
     };
   };
+}
+
+export interface TournamentPair {
+  id: string;
+  player1Id: string;
+  player2Id: string;
+  player1Name: string;
+  player2Name: string;
 }
 
 export interface Tournament {
