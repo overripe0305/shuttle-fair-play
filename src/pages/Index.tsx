@@ -896,7 +896,7 @@ const Index = () => {
                     onTeamTrade={teamTradeInActiveGame}
                     onChangeCourt={updateGameCourt}
                     onCancel={cancelGame}
-                    availablePlayers={availablePlayers}
+                    availablePlayers={eventPlayers}
                     courtCount={currentEvent?.courtCount || 4}
                   />
                 ))}
