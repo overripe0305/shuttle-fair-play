@@ -6,6 +6,7 @@ import { Clock, Trophy, RotateCcw, X, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { Player } from '@/types/player';
 import { TeamSubstituteDialog } from './TeamSubstituteDialog';
+import { getBracketFromMajorSub, MajorLevel, SubLevel } from '@/types/player';
 
 interface ActiveGameCardProps {
   game: ActiveGame;
@@ -79,12 +80,17 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
   // Get player level data from available players to show correct level colors
   const getPlayerLevel = (playerId: string) => {
     const player = availablePlayers.find(p => p.id === playerId);
-    return player?.level?.bracket ?? 0;
+    if (!player) return 0;
+    
+    // Convert database structure to bracket level
+    const majorLevel = (player as any).major_level as MajorLevel;
+    const subLevel = (player as any).sub_level as SubLevel;
+    return getBracketFromMajorSub(majorLevel, subLevel);
   };
 
   const getPlayerGames = (playerId: string) => {
     const player = availablePlayers.find(p => p.id === playerId);
-    return player?.gamesPlayed ?? 0;
+    return (player as any)?.games_played ?? 0;
   };
 
   return (

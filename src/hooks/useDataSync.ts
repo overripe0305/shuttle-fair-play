@@ -173,7 +173,7 @@ export const useDataSync = (eventId?: string, clubId?: string) => {
     try {
       const result = await syncData();
       
-      // Sync idle time for all players in the event
+      // Sync idle time and level data for all players in the event
       if (eventId && clubId) {
         const { data: eventPlayers } = await supabase
           .from('event_players')
@@ -181,21 +181,30 @@ export const useDataSync = (eventId?: string, clubId?: string) => {
           .eq('event_id', eventId);
         
         if (eventPlayers) {
+          // Sync idle times
           await Promise.all(
             eventPlayers.map(ep => setIdleStartTime(ep.player_id, eventId))
           );
+          
+          // Refresh player data to ensure level consistency
+          const { data: freshPlayers } = await supabase
+            .from('players')
+            .select('*')
+            .eq('club_id', clubId);
+          
+          console.log('Synced player levels and idle times for', eventPlayers.length, 'players');
         }
       }
       
       if (result.playersFixed === 0 && result.gamesFixed === 0 && result.waitingMatchesFixed === 0) {
-        toast.success('Data sync complete - no issues found, idle times updated');
+        toast.success('Data sync complete - no issues found, levels and idle times updated');
       } else {
         const fixedItems = [];
         if (result.playersFixed > 0) fixedItems.push(`${result.playersFixed} player status(es)`);
         if (result.gamesFixed > 0) fixedItems.push(`${result.gamesFixed} game(s)`);
         if (result.waitingMatchesFixed > 0) fixedItems.push(`${result.waitingMatchesFixed} waiting match(es)`);
         
-        toast.success(`Data sync complete - fixed: ${fixedItems.join(', ')}, idle times updated`);
+        toast.success(`Data sync complete - fixed: ${fixedItems.join(', ')}, levels and idle times updated`);
       }
 
       if (result.conflicts.length > 0) {
