@@ -58,6 +58,7 @@ export const TournamentBracketVisual = ({
       case 'in_progress': return 'bg-blue-500/10 text-blue-700 border-blue-200';
       case 'scheduled': return 'bg-yellow-500/10 text-yellow-700 border-yellow-200';
       case 'awaiting': return 'bg-gray-500/10 text-gray-500 border-gray-200';
+      case 'in_progress': return 'bg-gray-500/10 text-gray-500 border-gray-200';
       default: return 'bg-gray-500/10 text-gray-700 border-gray-200';
     }
   };
@@ -71,7 +72,7 @@ export const TournamentBracketVisual = ({
   const renderMatch = (match: TournamentMatch, matchIndex: number) => {
     const isCompleted = match.status === 'completed';
     const winner = match.winnerId;
-    const isAwaiting = match.status === 'awaiting';
+    const isAwaiting = match.status === 'awaiting' || match.status === 'in_progress';
     const isScheduled = match.status === 'scheduled';
     const bothParticipantsSet = match.participant1Id && match.participant2Id;
     
@@ -84,7 +85,7 @@ export const TournamentBracketVisual = ({
           {/* Match Header */}
           <div className="flex items-center justify-between mb-1">
             <Badge variant="outline" className="text-xs px-1 py-0">
-              {match.status === 'awaiting' ? 'Awaiting' : match.status.replace('_', ' ')}
+              {match.status === 'awaiting' || match.status === 'in_progress' ? 'Awaiting' : match.status.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-muted-foreground">
               M{match.matchNumber}
@@ -316,9 +317,9 @@ export const TournamentBracketVisual = ({
                 <Badge variant="outline" className="bg-yellow-50">
                   {matches.filter(m => m.status === 'scheduled').length} scheduled
                 </Badge>
-                <Badge variant="outline" className="bg-gray-50">
-                  {matches.filter(m => m.status === 'awaiting').length} awaiting
-                </Badge>
+                 <Badge variant="outline" className="bg-gray-50">
+                   {matches.filter(m => m.status === 'awaiting' || m.status === 'in_progress').length} awaiting
+                 </Badge>
               </div>
             </div>
           </div>

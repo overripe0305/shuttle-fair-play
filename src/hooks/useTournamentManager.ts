@@ -214,7 +214,8 @@ export const useTournamentManager = () => {
       const matchesToInsert = allMatches.map((match) => {
         const p1 = match.participant1Id || null;
         const p2 = match.participant2Id || null;
-        const status = p1 && p2 ? 'scheduled' as const : 'awaiting' as const;
+        // Use 'scheduled' for matches with both participants, 'in_progress' for matches awaiting participants
+        const status = p1 && p2 ? 'scheduled' as const : 'in_progress' as const;
         return {
           tournament_id: tournamentId,
           stage: 'elimination_stage' as const,
@@ -479,7 +480,7 @@ export const useTournamentManager = () => {
             participant2_score: null,
             winner_id: null,
             completed_time: null,
-            status: otherHas ? 'scheduled' : 'awaiting',
+            status: otherHas ? 'scheduled' : 'in_progress',
           };
 
           await supabase
@@ -503,7 +504,7 @@ export const useTournamentManager = () => {
             participant2_score: null,
             winner_id: null,
             completed_time: null,
-            status: p1 && p2 ? 'scheduled' : 'awaiting',
+            status: p1 && p2 ? 'scheduled' : 'in_progress',
           };
 
           await supabase
@@ -682,11 +683,11 @@ export const useTournamentManager = () => {
           const newP2 = updateData.participant2_id !== undefined ? updateData.participant2_id : match.participant2_id;
           
           if (!newP1 && !newP2) {
-            updateData.status = 'awaiting';
+            updateData.status = 'in_progress';
           } else if (newP1 && newP2) {
             updateData.status = 'scheduled';
           } else {
-            updateData.status = 'awaiting';
+            updateData.status = 'in_progress';
           }
 
           await supabase
