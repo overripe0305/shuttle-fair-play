@@ -129,8 +129,19 @@ export const useTournamentManager = () => {
       // Add participants to the tournament
       await addParticipants(data.id, playerIds);
 
+      // Load participant rows and generate brackets using participant IDs
+      const { data: partRows, error: partErr } = await supabase
+        .from('tournament_participants')
+        .select('id, player_id')
+        .eq('tournament_id', data.id)
+        .order('seed_number', { ascending: true });
+
+      if (partErr) throw partErr;
+
+      const participantIds = (partRows || []).map(p => p.id);
+
       // Generate brackets
-      await generateBrackets(data.id, playerIds);
+      await generateBrackets(data.id, participantIds);
 
       // Also update the event to mark it as tournament type
       await supabase
@@ -173,10 +184,10 @@ export const useTournamentManager = () => {
     }
   };
 
-  const generateBrackets = async (tournamentId: string, playerIds: string[]) => {
+  const generateBrackets = async (tournamentId: string, participantIds: string[]) => {
     try {
       // Generate complete single elimination bracket structure
-      const allMatches = generateCompleteSingleEliminationBracket(playerIds);
+      const allMatches = generateCompleteSingleEliminationBracket(participantIds);
       
       // Insert all matches into database
       const matchesToInsert = allMatches.map((match) => ({
@@ -186,7 +197,7 @@ export const useTournamentManager = () => {
         match_number: match.matchNumber,
         participant1_id: match.participant1Id || null,
         participant2_id: match.participant2Id || null,
-        status: (match.participant1Id && match.participant2Id) ? 'scheduled' as const : 'awaiting' as const,
+        status: 'scheduled' as const,
         bracket_position: `R${match.round}M${match.matchNumber}`
       }));
 
@@ -369,15 +380,15 @@ export const useTournamentManager = () => {
     if (!tournament) throw new Error('No tournament found');
     
     try {
-      // Get all participant player IDs
-      const participantPlayerIds = participants.map(p => p.playerId);
+      // Get all participant IDs (tournament_participants.id)
+      const participantIds = participants.map(p => p.id);
       
-      if (participantPlayerIds.length < 2) {
+      if (participantIds.length < 2) {
         throw new Error('At least 2 participants are required to generate brackets');
       }
       
       // Generate brackets using existing function
-      await generateBrackets(tournamentId, participantPlayerIds);
+      await generateBrackets(tournamentId, participantIds);
       
       // Update tournament stage to indicate brackets are generated
       await supabase
