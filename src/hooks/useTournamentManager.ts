@@ -510,6 +510,17 @@ export const useTournamentManager = () => {
 
   const editMatchResult = async (matchId: string, participant1Score: number, participant2Score: number, winnerId: string) => {
     try {
+      // Get the match details before updating
+      const { data: match, error: matchError } = await supabase
+        .from('tournament_matches')
+        .select('*')
+        .eq('id', matchId)
+        .single();
+
+      if (matchError || !match) throw matchError;
+
+      const oldWinnerId = match.winner_id;
+
       // Update the match result
       const { error } = await supabase
         .from('tournament_matches')
@@ -524,11 +535,14 @@ export const useTournamentManager = () => {
 
       if (error) throw error;
 
-      // Reset all subsequent matches that depend on this result
-      await resetSubsequentMatches(matchId);
-
-      // Re-advance winner to next round
-      await advanceWinnerToNextRound(matchId, winnerId);
+      // If winner changed, handle advancement properly
+      if (oldWinnerId !== winnerId) {
+        // Remove old winner from next round and reset dependent matches
+        await removeOldWinnerAndResetMatches(matchId, oldWinnerId);
+        
+        // Advance new winner to next round
+        await advanceWinnerToNextRound(matchId, winnerId);
+      }
 
       await loadTournament(tournament?.eventId || '');
       toast.success('Match result updated successfully!');
@@ -539,8 +553,10 @@ export const useTournamentManager = () => {
     }
   };
 
-  const resetSubsequentMatches = async (matchId: string) => {
+  const removeOldWinnerAndResetMatches = async (matchId: string, oldWinnerId: string | null) => {
     try {
+      if (!oldWinnerId) return;
+
       // Get the completed match details
       const { data: completedMatch, error: matchError } = await supabase
         .from('tournament_matches')
@@ -552,24 +568,79 @@ export const useTournamentManager = () => {
 
       const tournamentId = completedMatch.tournament_id;
       const currentRound = completedMatch.round_number;
+      const currentMatchNumber = completedMatch.match_number;
 
-      // Reset all matches from the next round onwards
-      await supabase
+      // Find the next round match where the old winner was placed
+      const { data: nextRoundMatches, error: nextErr } = await supabase
         .from('tournament_matches')
-        .update({
-          participant1_id: null,
-          participant2_id: null,
-          participant1_score: null,
-          participant2_score: null,
-          winner_id: null,
-          status: 'awaiting',
-          completed_time: null
-        })
+        .select('*')
         .eq('tournament_id', tournamentId)
-        .gt('round_number', currentRound);
+        .eq('round_number', currentRound + 1)
+        .order('match_number', { ascending: true });
 
+      if (nextErr || !nextRoundMatches) return;
+
+      // Find which match contains the old winner
+      const affectedMatch = nextRoundMatches.find(m => 
+        m.participant1_id === oldWinnerId || m.participant2_id === oldWinnerId
+      );
+
+      if (affectedMatch) {
+        // Remove the old winner from the next round match
+        const updateData: any = {};
+        if (affectedMatch.participant1_id === oldWinnerId) {
+          updateData.participant1_id = null;
+        }
+        if (affectedMatch.participant2_id === oldWinnerId) {
+          updateData.participant2_id = null;
+        }
+
+        // If the match was completed, reset it
+        if (affectedMatch.status === 'completed') {
+          updateData.participant1_score = null;
+          updateData.participant2_score = null;
+          updateData.winner_id = null;
+          updateData.completed_time = null;
+        }
+
+        // Update status based on remaining participants
+        const remainingP1 = updateData.participant1_id !== null ? updateData.participant1_id : 
+          (affectedMatch.participant1_id !== oldWinnerId ? affectedMatch.participant1_id : null);
+        const remainingP2 = updateData.participant2_id !== null ? updateData.participant2_id : 
+          (affectedMatch.participant2_id !== oldWinnerId ? affectedMatch.participant2_id : null);
+
+        if (!remainingP1 && !remainingP2) {
+          updateData.status = 'awaiting';
+        } else if (remainingP1 && remainingP2) {
+          updateData.status = 'scheduled';
+        } else {
+          updateData.status = 'awaiting';
+        }
+
+        await supabase
+          .from('tournament_matches')
+          .update(updateData)
+          .eq('id', affectedMatch.id);
+
+        // If the affected match was completed, reset all subsequent matches
+        if (affectedMatch.status === 'completed') {
+          await supabase
+            .from('tournament_matches')
+            .update({
+              participant1_id: null,
+              participant2_id: null,
+              participant1_score: null,
+              participant2_score: null,
+              winner_id: null,
+              status: 'awaiting',
+              completed_time: null
+            })
+            .eq('tournament_id', tournamentId)
+            .gt('round_number', currentRound + 1);
+        }
+      }
     } catch (error) {
-      console.error('Error resetting subsequent matches:', error);
+      console.error('Error removing old winner and resetting matches:', error);
     }
   };
 
