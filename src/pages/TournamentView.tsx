@@ -21,7 +21,7 @@ const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events, deleteEvent } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
-  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult, generateTournamentBracket, reorderParticipants, regenerateBracket } = useTournamentManager();
+  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, removeParticipants, refetch, updateMatchResult, editMatchResult, generateTournamentBracket, reorderParticipants, regenerateBracket } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
   const [showBracketPreview, setShowBracketPreview] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<TournamentMatch | null>(null);
@@ -73,6 +73,11 @@ const TournamentView = () => {
     await addMoreParticipants(tournament.id, playerIds);
   };
 
+  const handleRemoveParticipants = async (participantIds: string[]) => {
+    if (!tournament) return;
+    await removeParticipants(tournament.id, participantIds);
+  };
+
   const handleGenerateBracket = async () => {
     if (!tournament?.id) return;
     try {
@@ -106,7 +111,14 @@ const TournamentView = () => {
   };
 
   const handleMatchResult = async (matchId: string, participant1Score: number, participant2Score: number, winnerId: string) => {
-    await updateMatchResult(matchId, participant1Score, participant2Score, winnerId);
+    const match = matches.find(m => m.id === matchId);
+    if (match?.status === 'completed') {
+      // Use editMatchResult for matches that are already completed
+      await editMatchResult(matchId, participant1Score, participant2Score, winnerId);
+    } else {
+      // Use updateMatchResult for new results
+      await updateMatchResult(matchId, participant1Score, participant2Score, winnerId);
+    }
   };
 
   const handleDeleteEvent = async () => {
@@ -198,6 +210,7 @@ const TournamentView = () => {
                   participants={participants}
                   availablePlayers={players}
                   onAddParticipants={handleAddParticipants}
+                  onRemoveParticipants={handleRemoveParticipants}
                   onGenerateBracket={handleGenerateBracket}
                 >
                   <Button variant="outline" size="sm">

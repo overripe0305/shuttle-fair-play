@@ -16,6 +16,7 @@ interface TournamentSettingsDialogProps {
   participants: TournamentParticipant[];
   availablePlayers: EnhancedPlayer[];
   onAddParticipants: (playerIds: string[]) => Promise<void>;
+  onRemoveParticipants?: (participantIds: string[]) => Promise<void>;
   onGenerateBracket?: () => Promise<void>;
   children: React.ReactNode;
 }
@@ -25,12 +26,15 @@ export const TournamentSettingsDialog = ({
   participants,
   availablePlayers,
   onAddParticipants,
+  onRemoveParticipants,
   onGenerateBracket,
   children 
 }: TournamentSettingsDialogProps) => {
   const [open, setOpen] = useState(false);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [isAddingParticipants, setIsAddingParticipants] = useState(false);
+  const [isRemovingParticipants, setIsRemovingParticipants] = useState(false);
 
   // Filter out players who are already participants
   const participantPlayerIds = participants.map(p => p.playerId);
@@ -41,6 +45,14 @@ export const TournamentSettingsDialog = ({
       prev.includes(playerId) 
         ? prev.filter(id => id !== playerId)
         : [...prev, playerId]
+    );
+  };
+
+  const handleParticipantToggle = (participantId: string) => {
+    setSelectedParticipantIds(prev => 
+      prev.includes(participantId) 
+        ? prev.filter(id => id !== participantId)
+        : [...prev, participantId]
     );
   };
 
@@ -60,6 +72,27 @@ export const TournamentSettingsDialog = ({
       toast.error('Failed to add participants');
     } finally {
       setIsAddingParticipants(false);
+    }
+  };
+
+  const handleRemoveParticipants = async () => {
+    if (selectedParticipantIds.length === 0) {
+      toast.error('Please select at least one participant to remove');
+      return;
+    }
+
+    setIsRemovingParticipants(true);
+    try {
+      if (onRemoveParticipants) {
+        await onRemoveParticipants(selectedParticipantIds);
+        setSelectedParticipantIds([]);
+        toast.success(`${selectedParticipantIds.length} participant(s) removed successfully!`);
+      }
+    } catch (error) {
+      console.error('Error removing participants:', error);
+      toast.error('Failed to remove participants');
+    } finally {
+      setIsRemovingParticipants(false);
     }
   };
 
@@ -112,12 +145,29 @@ export const TournamentSettingsDialog = ({
                   <Users className="h-4 w-4" />
                   Current Participants ({participants.length})
                 </div>
+                {selectedParticipantIds.length > 0 && onRemoveParticipants && (
+                  <Badge variant="destructive">
+                    {selectedParticipantIds.length} selected for removal
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
                 {participants.map((participant, index) => (
-                  <div key={participant.id} className="flex items-center gap-3 p-2 border rounded-lg">
+                  <div 
+                    key={participant.id} 
+                    className={`flex items-center gap-3 p-2 border rounded-lg ${
+                      onRemoveParticipants ? 'cursor-pointer hover:bg-muted/50' : ''
+                    }`}
+                    onClick={() => onRemoveParticipants && handleParticipantToggle(participant.id)}
+                  >
+                    {onRemoveParticipants && (
+                      <Checkbox 
+                        checked={selectedParticipantIds.includes(participant.id)}
+                        onChange={() => handleParticipantToggle(participant.id)}
+                      />
+                    )}
                     <div className="text-sm font-medium">#{participant.seedNumber || index + 1}</div>
                     <div className="flex-1">
                       <div className="font-medium">{participant.playerName}</div>
@@ -125,9 +175,23 @@ export const TournamentSettingsDialog = ({
                         {participant.wins}W-{participant.losses}L
                       </div>
                     </div>
+                    {selectedParticipantIds.includes(participant.id) && (
+                      <Check className="h-4 w-4 text-destructive" />
+                    )}
                   </div>
                 ))}
               </div>
+              
+              {selectedParticipantIds.length > 0 && onRemoveParticipants && (
+                <Button 
+                  variant="destructive"
+                  onClick={handleRemoveParticipants} 
+                  disabled={isRemovingParticipants}
+                  className="w-full"
+                >
+                  {isRemovingParticipants ? 'Removing...' : `Remove ${selectedParticipantIds.length} Participant(s)`}
+                </Button>
+              )}
             </CardContent>
           </Card>
 

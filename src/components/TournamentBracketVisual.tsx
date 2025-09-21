@@ -138,7 +138,7 @@ export const TournamentBracketVisual = ({
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Buttons */}
           {onUpdateMatch && isScheduled && bothParticipantsSet && (
             <Button 
               size="sm" 
@@ -147,6 +147,17 @@ export const TournamentBracketVisual = ({
               onClick={() => onUpdateMatch(match)}
             >
               Enter Result
+            </Button>
+          )}
+          
+          {onUpdateMatch && isCompleted && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="w-full mt-1 text-xs h-6"
+              onClick={() => onUpdateMatch(match)}
+            >
+              Edit Result
             </Button>
           )}
 
