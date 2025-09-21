@@ -292,8 +292,9 @@ export const useTournamentManager = () => {
               isPreRound: true
             });
             
-            // Remove the two participants and add back the "winner slot"
+            // Remove the two participants and add a TBD slot for the winner at the end
             availableParticipants.splice(availableParticipants.length - 2, 2);
+            availableParticipants.push(null); // TBD slot for pre-round winner
           }
         }
         
@@ -403,9 +404,36 @@ export const useTournamentManager = () => {
 
       const nextMatch = nextMatches[0];
       
-      // Determine if winner goes to participant1 or participant2 slot
-      const isOddMatch = currentMatchNumber % 2 === 1;
-      const updateField = isOddMatch ? 'participant1_id' : 'participant2_id';
+      // For pre-round matches, winner should go to the last available TBD slot
+      // For regular matches, determine slot based on match number
+      let updateField = 'participant1_id';
+      
+      if (completedMatch.round_number === 1) {
+        // Check if this is a pre-round by looking for null participants in the same round
+        const { data: sameRoundMatches } = await supabase
+          .from('tournament_matches')
+          .select('*')
+          .eq('tournament_id', completedMatch.tournament_id)
+          .eq('round_number', nextRound);
+        
+        if (sameRoundMatches) {
+          // Find the last TBD slot (null participant)
+          const targetMatch = sameRoundMatches.find(m => !m.participant1_id) || 
+                             sameRoundMatches.find(m => !m.participant2_id);
+          
+          if (targetMatch) {
+            if (!targetMatch.participant1_id) {
+              updateField = 'participant1_id';
+            } else if (!targetMatch.participant2_id) {
+              updateField = 'participant2_id';
+            }
+          }
+        }
+      } else {
+        // Regular advancement logic
+        const isOddMatch = currentMatchNumber % 2 === 1;
+        updateField = isOddMatch ? 'participant1_id' : 'participant2_id';
+      }
       
       // Update the next round match with the winner
       const updateData: any = { [updateField]: winnerId };

@@ -205,9 +205,9 @@ export const TournamentBracketVisual = ({
 
           {/* Bracket Layout */}
           <div className="relative overflow-x-auto">
-            <div className="flex gap-8 min-w-fit pb-4">
+            <div className="flex gap-12 min-w-fit pb-4 justify-center">
               {rounds.map((round, roundIndex) => (
-                <div key={round.roundNumber} className="flex-shrink-0">
+                <div key={round.roundNumber} className="flex-shrink-0 relative">
                   {/* Round Header */}
                   <div className="text-center mb-4">
                     <h4 className="font-semibold text-lg">{round.roundName}</h4>
@@ -217,20 +217,50 @@ export const TournamentBracketVisual = ({
                   </div>
 
                   {/* Matches in Round */}
-                  <div className="space-y-6" style={{ minWidth: '280px' }}>
-                    {round.matches.map((match, matchIndex) => (
-                      <div key={match.id} className="relative">
-                        {renderMatch(match, matchIndex)}
-                        
-                        {/* Connection Lines to Next Round */}
-                        {roundIndex < rounds.length - 1 && (
-                          <div className="absolute top-1/2 -right-4 w-8 h-0.5 bg-gray-300 transform -translate-y-1/2">
-                            <div className="absolute right-0 top-0 w-2 h-2 bg-gray-300 rounded-full transform -translate-y-1/2"></div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex flex-col justify-center" style={{ minWidth: '280px', minHeight: '400px' }}>
+                    <div className={`space-y-${round.matches.length <= 2 ? '12' : '6'}`}>
+                      {round.matches.map((match, matchIndex) => (
+                        <div key={match.id} className="relative">
+                          {renderMatch(match, matchIndex)}
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Connection Lines to Next Round */}
+                  {roundIndex < rounds.length - 1 && (
+                    <div className="absolute top-1/2 -right-6 transform -translate-y-1/2">
+                      {round.matches.map((match, matchIndex) => {
+                        const nextRoundMatchIndex = Math.floor(matchIndex / 2);
+                        const isTopMatch = matchIndex % 2 === 0;
+                        
+                        return (
+                          <div key={`line-${match.id}`} className="absolute" style={{
+                            top: `${(matchIndex * (round.matches.length <= 2 ? 180 : 120)) - (round.matches.length <= 2 ? 90 : 60)}px`,
+                          }}>
+                            {/* Horizontal line from match */}
+                            <div className="w-6 h-0.5 bg-muted-foreground/30"></div>
+                            
+                            {/* Vertical connector */}
+                            {isTopMatch && matchIndex + 1 < round.matches.length && (
+                              <div className={`absolute left-6 w-0.5 bg-muted-foreground/30 ${
+                                round.matches.length <= 2 ? 'h-24' : 'h-16'
+                              }`}></div>
+                            )}
+                            
+                            {/* Final horizontal line to next match */}
+                            {isTopMatch && (
+                              <div className={`absolute left-6 w-6 h-0.5 bg-muted-foreground/30 ${
+                                round.matches.length <= 2 ? 'top-12' : 'top-8'
+                              }`}>
+                                <div className="absolute right-0 top-0 w-2 h-2 bg-muted-foreground/30 rounded-full transform -translate-y-1/2"></div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
