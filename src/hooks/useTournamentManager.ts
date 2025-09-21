@@ -500,6 +500,50 @@ export const useTournamentManager = () => {
   // Remove the useEffect that automatically loads on mount
   // Tournament will be loaded when createTournament is called
 
+  const reorderParticipants = async (tournamentId: string, newOrder: TournamentParticipant[]) => {
+    try {
+      // Update seed numbers based on new order
+      const updates = newOrder.map((participant, index) => 
+        supabase
+          .from('tournament_participants')
+          .update({ seed_number: index + 1 })
+          .eq('id', participant.id)
+      );
+
+      await Promise.all(updates);
+      
+      // Reload tournament data
+      if (tournament?.eventId) {
+        await loadTournament(tournament.eventId);
+      }
+      
+      toast.success('Participants reordered successfully');
+    } catch (error) {
+      console.error('Error reordering participants:', error);
+      toast.error('Failed to reorder participants');
+      throw error;
+    }
+  };
+
+  const regenerateBracket = async (tournamentId: string) => {
+    try {
+      // Delete existing matches
+      await supabase
+        .from('tournament_matches')
+        .delete()
+        .eq('tournament_id', tournamentId);
+
+      // Generate new bracket with current participant order
+      await generateTournamentBracket(tournamentId);
+      
+      toast.success('Tournament bracket regenerated');
+    } catch (error) {
+      console.error('Error regenerating bracket:', error);
+      toast.error('Failed to regenerate bracket');
+      throw error;
+    }
+  };
+
   return {
     tournament,
     matches,
@@ -509,6 +553,8 @@ export const useTournamentManager = () => {
     updateMatchResult,
     addMoreParticipants,
     generateTournamentBracket,
+    reorderParticipants,
+    regenerateBracket,
     refetch: loadTournament
   };
 };

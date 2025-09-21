@@ -10,9 +10,10 @@ import { TournamentSetup } from '@/components/TournamentSetup';
 import { TournamentBracketPreview } from '@/components/TournamentBracketPreview';
 import { TournamentSettingsDialog } from '@/components/TournamentSettingsDialog';
 import { MatchResultDialog } from '@/components/MatchResultDialog';
+import { DraggableParticipantList } from '@/components/DraggableParticipantList';
 import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { TournamentConfig, TournamentMatch, TournamentPair } from '@/types/tournament';
+import { TournamentConfig, TournamentMatch, TournamentPair, TournamentParticipant } from '@/types/tournament';
 import { toast } from 'sonner';
 
 const TournamentView = () => {
@@ -20,7 +21,7 @@ const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events, deleteEvent } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
-  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult, generateTournamentBracket } = useTournamentManager();
+  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult, generateTournamentBracket, reorderParticipants, regenerateBracket } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
   const [showBracketPreview, setShowBracketPreview] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<TournamentMatch | null>(null);
@@ -78,6 +79,24 @@ const TournamentView = () => {
       await generateTournamentBracket(tournament.id);
     } catch (error) {
       console.error('Failed to generate bracket:', error);
+    }
+  };
+
+  const handleReorderParticipants = async (newOrder: TournamentParticipant[]) => {
+    if (!tournament?.id) return;
+    try {
+      await reorderParticipants(tournament.id, newOrder);
+    } catch (error) {
+      console.error('Failed to reorder participants:', error);
+    }
+  };
+
+  const handleRegenerateBracket = async () => {
+    if (!tournament?.id) return;
+    try {
+      await regenerateBracket(tournament.id);
+    } catch (error) {
+      console.error('Failed to regenerate bracket:', error);
     }
   };
 
@@ -259,25 +278,12 @@ const TournamentView = () => {
             )}
 
             {/* Participants */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Participants</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {participants.map((participant, index) => (
-                    <div key={participant.id} className="flex items-center justify-between text-sm">
-                      <span className="font-medium">
-                        #{participant.seedNumber || index + 1} {participant.playerName}
-                      </span>
-                      <div className="text-xs text-muted-foreground">
-                        {participant.wins}W-{participant.losses}L
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <DraggableParticipantList
+              participants={participants}
+              onReorder={handleReorderParticipants}
+              onRegenerate={handleRegenerateBracket}
+              disabled={!tournament || matches.length === 0}
+            />
           </div>
 
           {/* Main Tournament View */}
