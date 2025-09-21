@@ -261,86 +261,60 @@ export const useTournamentManager = () => {
     const numParticipants = participantIds.length;
     if (numParticipants < 2) return matches;
 
-    // Define target sizes for each stage
+    // Determine target (power of two) bracket size <= numParticipants
     const targetSizes = [64, 32, 16, 8, 4, 2];
-    let targetIndex = targetSizes.findIndex(size => size <= numParticipants);
-    if (targetIndex === -1) targetIndex = targetSizes.length - 1;
+    const targetSize = targetSizes.find((s) => s <= numParticipants) || 2;
 
-    let currentParticipants = numParticipants;
     let roundNumber = 1;
-    let availableParticipants = [...participantIds];
+    const availableParticipants: Array<string | null> = [...participantIds];
 
+    // 1) Pre-rounds to trim down to targetSize
+    if (numParticipants > targetSize) {
+      const preRoundMatches = numParticipants - targetSize;
+      for (let match = 1; match <= preRoundMatches; match++) {
+        const participant2 = availableParticipants.pop() || null;
+        const participant1 = availableParticipants.pop() || null;
+        matches.push({
+          round: roundNumber,
+          matchNumber: match,
+          participant1Id: participant1,
+          participant2Id: participant2,
+          isPreRound: true,
+        });
+        // Winner placeholder feeds into the first main round later
+        availableParticipants.push(null);
+      }
+      roundNumber++; // Move to first main round
+    }
+
+    // 2) First main round (targetSize). Seed known players; TBDs remain null
+    const matchesInFirstMainRound = Math.floor(targetSize / 2);
+    for (let match = 1; match <= matchesInFirstMainRound; match++) {
+      const idx1 = (match - 1) * 2;
+      const idx2 = idx1 + 1;
+      matches.push({
+        round: roundNumber,
+        matchNumber: match,
+        participant1Id: availableParticipants[idx1] || null,
+        participant2Id: availableParticipants[idx2] || null,
+      });
+    }
+
+    // 3) Subsequent rounds start empty (winners will advance to fill)
+    roundNumber++;
+    let currentParticipants = Math.floor(targetSize / 2);
     while (currentParticipants > 1) {
-      const targetSize = targetSizes[targetIndex] || 1;
-      
-      if (currentParticipants > targetSize) {
-        // Generate pre-round matches
-        const excessParticipants = currentParticipants - targetSize;
-        const preRoundMatches = excessParticipants;
-        
-        for (let match = 1; match <= preRoundMatches; match++) {
-          // Take participants from the end (lower seeds) for pre-rounds
-          const participant1 = availableParticipants[availableParticipants.length - 2] || null;
-          const participant2 = availableParticipants[availableParticipants.length - 1] || null;
-          
-          if (participant1 && participant2) {
-            matches.push({
-              round: roundNumber,
-              matchNumber: match,
-              participant1Id: participant1,
-              participant2Id: participant2,
-              isPreRound: true
-            });
-            
-            // Remove the two participants and add a TBD slot for the winner at the end
-            availableParticipants.splice(availableParticipants.length - 2, 2);
-            availableParticipants.push(null); // TBD slot for pre-round winner
-          }
-        }
-        
-        currentParticipants = targetSize;
-        roundNumber++;
+      const matchesInRound = Math.floor(currentParticipants / 2);
+      for (let match = 1; match <= matchesInRound; match++) {
+        matches.push({
+          round: roundNumber,
+          matchNumber: match,
+          participant1Id: null,
+          participant2Id: null,
+        });
       }
-      
-      // Generate regular round matches
-      if (currentParticipants > 1) {
-        const matchesInRound = Math.floor(currentParticipants / 2);
-        
-        for (let match = 1; match <= matchesInRound; match++) {
-          if (roundNumber === 1 || (roundNumber > 1 && availableParticipants.length >= 2)) {
-            // First round or subsequent rounds with available participants
-            const participant1Index = (match - 1) * 2;
-            const participant2Index = participant1Index + 1;
-            
-            const participant1 = availableParticipants[participant1Index] || null;
-            const participant2 = availableParticipants[participant2Index] || null;
-
-            matches.push({
-              round: roundNumber,
-              matchNumber: match,
-              participant1Id: participant1,
-              participant2Id: participant2
-            });
-          } else {
-            // Empty matches for subsequent rounds
-            matches.push({
-              round: roundNumber,
-              matchNumber: match,
-              participant1Id: null,
-              participant2Id: null
-            });
-          }
-        }
-        
-        currentParticipants = Math.floor(currentParticipants / 2);
-        if (roundNumber === 1) {
-          // For subsequent rounds, we'll have winners advancing
-          availableParticipants = [];
-        }
-      }
-      
+      currentParticipants = Math.floor(currentParticipants / 2);
       roundNumber++;
-      targetIndex++;
     }
 
     return matches;
@@ -387,70 +361,70 @@ export const useTournamentManager = () => {
 
       const currentRound = completedMatch.round_number;
       const currentMatchNumber = completedMatch.match_number;
+      const tournamentId = completedMatch.tournament_id;
       const nextRound = currentRound + 1;
-      
-      // Calculate which match in the next round this winner should advance to
-      const nextMatchNumber = Math.ceil(currentMatchNumber / 2);
 
-      // Find the next round match
-      const { data: nextMatches, error: nextMatchError } = await supabase
+      // Get all matches of the next round
+      const { data: nextRoundMatches, error: nextErr } = await supabase
         .from('tournament_matches')
         .select('*')
-        .eq('tournament_id', completedMatch.tournament_id)
+        .eq('tournament_id', tournamentId)
         .eq('round_number', nextRound)
-        .eq('match_number', nextMatchNumber);
+        .order('match_number', { ascending: true });
 
-      if (nextMatchError || !nextMatches || nextMatches.length === 0) return;
+      if (nextErr || !nextRoundMatches || nextRoundMatches.length === 0) return;
 
-      const nextMatch = nextMatches[0];
-      
-      // For pre-round matches, winner should go to the last available TBD slot
-      // For regular matches, determine slot based on match number
-      let updateField = 'participant1_id';
-      
-      if (completedMatch.round_number === 1) {
-        // Check if this is a pre-round by looking for null participants in the same round
-        const { data: sameRoundMatches } = await supabase
-          .from('tournament_matches')
-          .select('*')
-          .eq('tournament_id', completedMatch.tournament_id)
-          .eq('round_number', nextRound);
-        
-        if (sameRoundMatches) {
-          // Find the last TBD slot (null participant)
-          const targetMatch = sameRoundMatches.find(m => !m.participant1_id) || 
-                             sameRoundMatches.find(m => !m.participant2_id);
-          
-          if (targetMatch) {
-            if (!targetMatch.participant1_id) {
-              updateField = 'participant1_id';
-            } else if (!targetMatch.participant2_id) {
-              updateField = 'participant2_id';
-            }
+      let targetMatch: any = null;
+      let updateField: 'participant1_id' | 'participant2_id' = 'participant1_id';
+
+      // Pre-round if we're in round 1 and next round has TBD slots
+      const hasTbdInNextRound = nextRoundMatches.some((m) => !m.participant1_id || !m.participant2_id);
+      const isPreRound = currentRound === 1 && hasTbdInNextRound;
+
+      if (isPreRound) {
+        // Fill the last available TBD slot (from the end)
+        for (let i = nextRoundMatches.length - 1; i >= 0; i--) {
+          const m = nextRoundMatches[i];
+          if (!m.participant2_id || !m.participant1_id) {
+            targetMatch = m;
+            updateField = !m.participant2_id ? 'participant2_id' : 'participant1_id';
+            break;
           }
         }
       } else {
-        // Regular advancement logic
-        const isOddMatch = currentMatchNumber % 2 === 1;
-        updateField = isOddMatch ? 'participant1_id' : 'participant2_id';
+        // Regular advancement mapping
+        const nextMatchNumber = Math.ceil(currentMatchNumber / 2);
+        targetMatch = nextRoundMatches.find((m) => m.match_number === nextMatchNumber);
+        if (!targetMatch) return;
+
+        const preferredField: 'participant1_id' | 'participant2_id' =
+          currentMatchNumber % 2 === 1 ? 'participant1_id' : 'participant2_id';
+
+        if (!targetMatch[preferredField]) {
+          updateField = preferredField;
+        } else if (!targetMatch[preferredField === 'participant1_id' ? 'participant2_id' : 'participant1_id']) {
+          updateField = preferredField === 'participant1_id' ? 'participant2_id' : 'participant1_id';
+        } else {
+          // Both slots already filled
+          return;
+        }
       }
-      
-      // Update the next round match with the winner
+
+      if (!targetMatch) return;
+
       const updateData: any = { [updateField]: winnerId };
-      
-      // If both participants are now set, change status to scheduled
-      if ((updateField === 'participant1_id' && nextMatch.participant2_id) || 
-          (updateField === 'participant2_id' && nextMatch.participant1_id)) {
-        updateData.status = 'scheduled';
-      }
+
+      // If both participants are now set, mark as scheduled
+      const afterP1 = updateField === 'participant1_id' ? winnerId : targetMatch.participant1_id;
+      const afterP2 = updateField === 'participant2_id' ? winnerId : targetMatch.participant2_id;
+      if (afterP1 && afterP2) updateData.status = 'scheduled';
 
       const { error: updateError } = await supabase
         .from('tournament_matches')
         .update(updateData)
-        .eq('id', nextMatch.id);
+        .eq('id', targetMatch.id);
 
       if (updateError) throw updateError;
-
     } catch (error) {
       console.error('Error advancing winner:', error);
     }
