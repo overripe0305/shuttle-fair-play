@@ -111,6 +111,7 @@ const Index = () => {
     matches, 
     participants, 
     loading: tournamentLoading,
+    createTournament,
     refetch: refetchTournament 
   } = useTournamentManager();
 
@@ -608,12 +609,19 @@ const Index = () => {
               players={allPlayers}
               onCreateTournament={async (config, selectedPlayerIds) => {
                 if (!eventId) return;
-                // Add players to event first
-                for (const playerId of selectedPlayerIds) {
-                  await handleAddExistingPlayer(playerId);
+                try {
+                  // Add players to event first
+                  for (const playerId of selectedPlayerIds) {
+                    await handleAddExistingPlayer(playerId);
+                  }
+                  // Create the tournament with the selected players
+                  await createTournament(eventId, config, selectedPlayerIds);
+                  // Refresh tournament data
+                  await refetchTournament(eventId);
+                } catch (error) {
+                  console.error('Failed to create tournament:', error);
+                  toast.error('Failed to create tournament');
                 }
-                toast.success('Tournament setup completed!');
-                refetchTournament(eventId);
               }}
               onCancel={() => {
                 // Navigate back to dashboard or close setup
