@@ -17,7 +17,7 @@ const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
-  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult } = useTournamentManager();
+  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, refetch, updateMatchResult, generateTournamentBracket } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<TournamentMatch | null>(null);
   const [isMatchDialogOpen, setIsMatchDialogOpen] = useState(false);
@@ -48,8 +48,12 @@ const TournamentView = () => {
   };
 
   const handleGenerateBracket = async () => {
-    if (!tournament?.eventId) return;
-    await refetch(tournament.eventId);
+    if (!tournament?.id) return;
+    try {
+      await generateTournamentBracket(tournament.id);
+    } catch (error) {
+      console.error('Failed to generate bracket:', error);
+    }
   };
 
   const handleMatchClick = (match: TournamentMatch) => {

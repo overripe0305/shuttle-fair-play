@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Tournament, TournamentConfig, TournamentMatch, TournamentParticipant } from '@/types/tournament';
+import { TournamentConfig, Tournament, TournamentMatch, TournamentParticipant } from '@/types/tournament';
 import { toast } from 'sonner';
 
 export const useTournamentManager = () => {
@@ -365,6 +365,37 @@ export const useTournamentManager = () => {
     }
   };
 
+  const generateTournamentBracket = async (tournamentId: string) => {
+    if (!tournament) throw new Error('No tournament found');
+    
+    try {
+      // Get all participant player IDs
+      const participantPlayerIds = participants.map(p => p.playerId);
+      
+      if (participantPlayerIds.length < 2) {
+        throw new Error('At least 2 participants are required to generate brackets');
+      }
+      
+      // Generate brackets using existing function
+      await generateBrackets(tournamentId, participantPlayerIds);
+      
+      // Update tournament stage to indicate brackets are generated
+      await supabase
+        .from('tournaments')
+        .update({ current_stage: 'elimination_stage' })
+        .eq('id', tournamentId);
+      
+      // Reload tournament data to reflect changes
+      await loadTournament(tournament.eventId);
+      
+      toast.success('Tournament bracket generated successfully!');
+    } catch (error) {
+      console.error('Error generating bracket:', error);
+      toast.error('Failed to generate tournament bracket');
+      throw error;
+    }
+  };
+
   // Remove the useEffect that automatically loads on mount
   // Tournament will be loaded when createTournament is called
 
@@ -376,6 +407,7 @@ export const useTournamentManager = () => {
     createTournament,
     updateMatchResult,
     addMoreParticipants,
+    generateTournamentBracket,
     refetch: loadTournament
   };
 };
