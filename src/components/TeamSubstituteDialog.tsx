@@ -125,7 +125,10 @@ export function TeamSubstituteDialog({
                 <Label>Select replacement player:</Label>
               </div>
               <div className="max-h-60 overflow-y-auto space-y-2">
-                {availablePlayers.filter(p => p.status === 'available').map((player) => (
+                {availablePlayers
+                  .filter(p => p.status === 'available')
+                  .sort((a, b) => (a.gamesPlayed || 0) - (b.gamesPlayed || 0))
+                  .map((player) => (
                   <Button
                     key={player.id}
                     variant={selectedNewPlayer === player.id ? "default" : "outline"}
@@ -135,7 +138,7 @@ export function TeamSubstituteDialog({
                     <div className="flex flex-col items-start">
                       <span className="font-medium">{player.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {player.level.major} Level {player.level.bracket} • {player.gamesPlayed} games
+                        {player.level.major} Level {player.level.bracket} • {player.gamesPlayed || 0} games
                       </span>
                     </div>
                   </Button>

@@ -79,12 +79,12 @@ export function ActiveGameCard({ game, onComplete, onCancel, onSubstitute, onTea
   // Get player level data from available players to show correct level colors
   const getPlayerLevel = (playerId: string) => {
     const player = availablePlayers.find(p => p.id === playerId);
-    return player?.level?.bracket || 0;
+    return player?.level?.bracket ?? 0;
   };
 
   const getPlayerGames = (playerId: string) => {
     const player = availablePlayers.find(p => p.id === playerId);
-    return player?.gamesPlayed || 0;
+    return player?.gamesPlayed ?? 0;
   };
 
   return (
