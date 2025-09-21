@@ -434,18 +434,71 @@ export const useTournamentManager = () => {
       const isPreRound = currentRound === 1 && hasTbdInNextRound;
 
       if (isPreRound) {
-        // Find all TBD slots in the next round and assign pre-match winners based on seeding
-        const tbdSlots = nextRoundMatches
-          .filter((m) => !m.participant1_id || !m.participant2_id)
-          .sort((a, b) => a.match_number - b.match_number);
-        
-        if (tbdSlots.length > 0 && currentMatchNumber <= tbdSlots.length) {
-          // Pre-match winners advance to TBD slots in order based on their seeding
-          targetMatch = tbdSlots[currentMatchNumber - 1];
-          if (targetMatch) {
-            updateField = !targetMatch.participant1_id ? 'participant1_id' : 'participant2_id';
-          }
+        // Build ordered list of open slots (match order, then slot order)
+        const openSlots: Array<{ matchId: string; field: 'participant1_id' | 'participant2_id' }> = [];
+        nextRoundMatches
+          .sort((a, b) => a.match_number - b.match_number)
+          .forEach((m) => {
+            if (!m.participant1_id) openSlots.push({ matchId: m.id, field: 'participant1_id' });
+            if (!m.participant2_id) openSlots.push({ matchId: m.id, field: 'participant2_id' });
+          });
+
+        // Clear all open slots first to avoid duplicates/inconsistencies
+        for (const slot of openSlots) {
+          const resetData: any = { [slot.field]: null };
+          // Also reset result fields if match was previously completed
+          resetData.participant1_score = null;
+          resetData.participant2_score = null;
+          resetData.winner_id = null;
+          resetData.completed_time = null;
+          // Status will be recalculated after placements
+          resetData.status = 'awaiting';
+          await supabase
+            .from('tournament_matches')
+            .update(resetData)
+            .eq('id', slot.matchId);
         }
+
+        // Collect all Round 1 winners in match order
+        const { data: round1Matches } = await supabase
+          .from('tournament_matches')
+          .select('winner_id')
+          .eq('tournament_id', tournamentId)
+          .eq('round_number', 1)
+          .order('match_number', { ascending: true });
+
+        const winners: string[] = (round1Matches || [])
+          .map((m: any) => m.winner_id)
+          .filter((id: any): id is string => !!id);
+
+        // Place winners sequentially into open slots
+        const placements = Math.min(openSlots.length, winners.length);
+        for (let i = 0; i < placements; i++) {
+          const slot = openSlots[i];
+          const wId = winners[i];
+          await supabase
+            .from('tournament_matches')
+            .update({ [slot.field]: wId })
+            .eq('id', slot.matchId);
+        }
+
+        // Recalculate status for next round matches based on filled participants
+        const { data: updatedNextRound } = await supabase
+          .from('tournament_matches')
+          .select('id, participant1_id, participant2_id')
+          .eq('tournament_id', tournamentId)
+          .eq('round_number', nextRound);
+
+        for (const m of updatedNextRound || []) {
+          const newStatus = m.participant1_id && m.participant2_id ? 'scheduled' : 'awaiting';
+          await supabase
+            .from('tournament_matches')
+            .update({ status: newStatus })
+            .eq('id', m.id);
+        }
+
+        // We're done, no need to run the regular advancement below
+        return;
       } else {
         // Regular advancement mapping
         const nextMatchNumber = Math.ceil(currentMatchNumber / 2);
