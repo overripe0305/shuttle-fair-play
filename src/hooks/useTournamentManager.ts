@@ -248,7 +248,7 @@ export const useTournamentManager = () => {
     }
   };
 
-  // Enhanced function to generate single elimination bracket with pre-rounds
+  // Enhanced function to generate single elimination bracket with proper pairing
   const generateCompleteSingleEliminationBracket = (participantIds: string[]) => {
     const matches: Array<{
       round: number;
@@ -261,53 +261,71 @@ export const useTournamentManager = () => {
     const numParticipants = participantIds.length;
     if (numParticipants < 2) return matches;
 
-    // Find the target bracket size (power of 2) that accommodates the participants
+    // Find the next lower power of 2 for the main bracket
     let targetSize = 2;
-    while (targetSize < numParticipants) {
+    while (targetSize * 2 <= numParticipants) {
       targetSize *= 2;
     }
 
-    // Calculate excess players and TBD slots needed
-    const excessPlayers = numParticipants - (targetSize / 2);
-    const tbdSlotsNeeded = excessPlayers;
+    // Calculate excess participants that need pre-matches
+    const excessParticipants = numParticipants - targetSize;
+    const preMatchCount = excessParticipants;
+    const participantsInPreMatches = excessParticipants * 2;
 
     let roundNumber = 1;
-    const availableParticipants: Array<string | null> = [...participantIds];
 
-    // 1) Pre-rounds for excess players (should equal TBD slots)
-    if (excessPlayers > 0) {
-      for (let match = 1; match <= excessPlayers; match++) {
-        const participant2 = availableParticipants.pop() || null;
-        const participant1 = availableParticipants.pop() || null;
+    // 1) Pre-rounds for excess participants (highest numbered participants compete)
+    if (excessParticipants > 0) {
+      const preMatchParticipants = participantIds.slice(-participantsInPreMatches);
+      
+      for (let match = 1; match <= preMatchCount; match++) {
+        const participant1Index = (match - 1) * 2;
+        const participant2Index = participant1Index + 1;
+        
         matches.push({
           round: roundNumber,
           matchNumber: match,
-          participant1Id: participant1,
-          participant2Id: participant2,
+          participant1Id: preMatchParticipants[participant1Index] || null,
+          participant2Id: preMatchParticipants[participant2Index] || null,
           isPreRound: true,
         });
-        // Winner placeholder (TBD) for first main round
-        availableParticipants.push(null);
       }
-      roundNumber++; // Move to first main round
+      roundNumber++;
     }
 
-    // 2) First main round - mix of known players and TBD slots
-    const matchesInFirstMainRound = Math.floor(targetSize / 2);
-    for (let match = 1; match <= matchesInFirstMainRound; match++) {
-      const idx1 = (match - 1) * 2;
-      const idx2 = idx1 + 1;
+    // 2) Main bracket using the correct pairing pattern
+    const safeParticipants = participantIds.slice(0, targetSize - excessParticipants);
+    const mainBracketParticipants: Array<string | null> = [...safeParticipants];
+    
+    // Add TBD slots for pre-match winners
+    for (let i = 0; i < excessParticipants; i++) {
+      mainBracketParticipants.push(null);
+    }
+
+    // First main round with proper pairing pattern
+    const matchesInFirstRound = targetSize / 2;
+    for (let match = 1; match <= matchesInFirstRound; match++) {
+      let participant1Id: string | null = null;
+      let participant2Id: string | null = null;
+
+      // Apply pairing pattern: participant i with participant (i + n/2)
+      const idx1 = match - 1;
+      const idx2 = idx1 + matchesInFirstRound;
+
+      participant1Id = mainBracketParticipants[idx1] || null;
+      participant2Id = mainBracketParticipants[idx2] || null;
+
       matches.push({
         round: roundNumber,
         matchNumber: match,
-        participant1Id: availableParticipants[idx1] || null,
-        participant2Id: availableParticipants[idx2] || null,
+        participant1Id,
+        participant2Id,
       });
     }
 
-    // 3) Subsequent rounds start empty (winners will advance to fill)
+    // 3) Subsequent rounds (all TBD until winners advance)
     roundNumber++;
-    let currentParticipants = Math.floor(targetSize / 2);
+    let currentParticipants = matchesInFirstRound;
     while (currentParticipants > 1) {
       const matchesInRound = Math.floor(currentParticipants / 2);
       for (let match = 1; match <= matchesInRound; match++) {
