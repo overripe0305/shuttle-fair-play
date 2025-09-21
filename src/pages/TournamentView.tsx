@@ -11,7 +11,7 @@ import { TournamentBracketPreview } from '@/components/TournamentBracketPreview'
 import { TournamentSettingsDialog } from '@/components/TournamentSettingsDialog';
 import { MatchResultDialog } from '@/components/MatchResultDialog';
 import { DraggableParticipantList } from '@/components/DraggableParticipantList';
-import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trophy, Calendar, Users, Settings, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TournamentConfig, TournamentMatch, TournamentPair, TournamentParticipant } from '@/types/tournament';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ const TournamentView = () => {
   const { clubId, eventId } = useParams<{ clubId: string; eventId: string }>();
   const { events, deleteEvent } = useEventManager(clubId);
   const { players } = useEnhancedPlayerManager(clubId);
-  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, removeParticipants, refetch, updateMatchResult, editMatchResult, generateTournamentBracket, reorderParticipants, regenerateBracket } = useTournamentManager();
+  const { tournament, matches, participants, loading, createTournament, addMoreParticipants, removeParticipants, refetch, updateMatchResult, editMatchResult, generateTournamentBracket, reorderParticipants, regenerateBracket, syncWithDatabase } = useTournamentManager();
   const [showSetup, setShowSetup] = useState(false);
   const [showBracketPreview, setShowBracketPreview] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<TournamentMatch | null>(null);
@@ -29,6 +29,16 @@ const TournamentView = () => {
   const [tournamentConfig, setTournamentConfig] = useState<TournamentConfig | null>(null);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [tournamentPairs, setTournamentPairs] = useState<TournamentPair[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      await syncWithDatabase();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const event = events.find(e => e.id === eventId);
 
@@ -218,6 +228,12 @@ const TournamentView = () => {
                     Settings
                   </Button>
                 </TournamentSettingsDialog>
+              )}
+              {tournament && (
+                <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : 'Sync'}
+                </Button>
               )}
               {event && event.status !== 'ended' && (
                 <Button 
